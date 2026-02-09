@@ -118,15 +118,20 @@ export function createErrorResponse(
 }
 
 // Success response helper
-export function createSuccessResponse<T>(data: T) {
+export function createSuccessResponse<T>(
+  data: T,
+  rateLimitHeaders?: Record<string, string>
+) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (rateLimitHeaders) {
+    Object.assign(headers, rateLimitHeaders);
+  }
+  
   return new Response(
     JSON.stringify({
       success: true,
       data,
     }),
-    {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }
+    { status: 200, headers }
   );
 }
