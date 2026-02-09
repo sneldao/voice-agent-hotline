@@ -1,8 +1,4 @@
-/**
- * ElevenLabs Voice API - Edge Runtime
- */
-
-export const runtime = 'edge';
+// ElevenLabs Voice API - Demo
 
 const VOICES = {
   Rachel: { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', gender: 'female' },

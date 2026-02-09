@@ -1,8 +1,4 @@
-/**
- * ERC-8004 Agent Registry API - Edge Runtime
- */
-
-export const runtime = 'edge';
+// ERC-8004 Agent Registry - Demo
 
 // Demo agents storage
 const agents = new Map<string, {

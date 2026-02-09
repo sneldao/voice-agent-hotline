@@ -1,8 +1,4 @@
-/**
- * Call History API - Edge Runtime
- */
-
-export const runtime = 'edge';
+// Call History API - Demo
 
 const calls = new Map<string, {
   id: string;

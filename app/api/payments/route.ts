@@ -1,5 +1,4 @@
-// Edge runtime for Vercel
-export const runtime = 'edge';
+// x402 Payment API - Demo with built-in data
 
 // In-memory storage for demo (use Redis/KV in production)
 const paymentSessions = new Map<string, {
