@@ -2,5 +2,6 @@
   "git": {
     "deploymentEnabled": false
   },
-  "framework": null
+  "framework": null,
+  "outputDirectory": "out"
 }
