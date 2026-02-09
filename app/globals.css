@@ -3,55 +3,182 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 2, 6, 23;
-  --background-end-rgb: 15, 23, 42;
+  --foreground: 255 255 255;
+  --background: 15 23 42;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
+  color: rgb(var(--foreground));
+  background: rgb(var(--background));
 }
 
-/* Hide scrollbar for horizontal scrolling */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+::-webkit-scrollbar-track {
+  background: #1e293b;
 }
 
-/* Smooth transitions */
-* {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
 }
 
-/* Focus styles */
-button:focus-visible {
-  outline: 2px solid #06b6d4;
-  outline-offset: 2px;
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
-/* Animation utilities */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+/* Animated waveform */
+@keyframes waveform {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.5); }
 }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.waveform-bar {
+  animation: waveform 0.5s ease-in-out infinite;
+}
+
+/* Pulse animation for call status */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold py-3 px-6 rounded-xl 
+         hover:from-cyan-400 hover:to-blue-400 transition-all duration-200
+         shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40;
+}
+
+.btn-secondary {
+  @apply bg-gray-800 text-white font-semibold py-3 px-6 rounded-xl
+         hover:bg-gray-700 transition-all duration-200 border border-gray-700;
+}
+
+.btn-danger {
+  @apply bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold py-3 px-6 rounded-xl
+         hover:from-red-400 hover:to-rose-400 transition-all duration-200
+         shadow-lg shadow-red-500/25;
+}
+
+/* Input styles */
+.input-primary {
+  @apply w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm
+         focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500
+         placeholder-gray-500 transition-all duration-200;
+}
+
+/* Card styles */
+.card {
+  @apply bg-gray-900/50 rounded-xl border border-gray-800 p-4;
+}
+
+.card-hover {
+  @apply card hover:border-gray-700 hover:bg-gray-900/70 transition-all duration-200;
+}
+
+/* Badge styles */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+  @apply badge bg-green-500/20 text-green-400;
+}
+
+.badge-warning {
+  @apply badge bg-yellow-500/20 text-yellow-400;
+}
+
+.badge-error {
+  @apply badge bg-red-500/20 text-red-400;
+}
+
+.badge-info {
+  @apply badge bg-cyan-500/20 text-cyan-400;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-gray-900 rounded-2xl border border-gray-800 p-6 max-w-md w-full mx-4
+         shadow-2xl shadow-black/50;
+}
+
+/* Call status colors */
+.call-status-idle { @apply bg-gray-500; }
+.call-status-connecting { @apply bg-yellow-500 animate-pulse; }
+.call-status-connected { @apply bg-green-500; }
+.call-status-ended { @apply bg-red-500; }
+
+/* Typing indicator */
+@keyframes typing {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+
+.typing-dot {
+  animation: typing 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Avatar with online indicator */
+.avatar-online::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background: #22c55e;
+  border: 2px solid #1e293b;
+  border-radius: 50%;
+}
+
+/* Cost display */
+.cost-display {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rating stars animation */
+@keyframes star-pop {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.star-pop {
+  animation: star-pop 0.3s ease-out forwards;
 }
