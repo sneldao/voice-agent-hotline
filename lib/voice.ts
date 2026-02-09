@@ -180,10 +180,3 @@ export class VoiceService {
 export function createVoiceService(config?: VoiceConfig): VoiceService {
   return new VoiceService(config);
 }
-
-// Browser type augmentation
-declare global {
-  interface Window {
-    speechSynthesis: SpeechSynthesis;
-  }
-}

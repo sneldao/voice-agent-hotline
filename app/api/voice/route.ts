@@ -1,12 +1,12 @@
 // ElevenLabs Voice API - Demo
 
 const VOICES = {
-  Rachel: { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', gender: 'female' },
-  Domi: { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', gender: 'female' },
-  Bella: { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella', gender: 'female' },
-  Antoni: { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', gender: 'male' },
-  Josh: { id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh', gender: 'male' },
-  Adam: { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam', gender: 'male' },
+  Rachel: { voiceId: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', gender: 'female' },
+  Domi: { voiceId: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', gender: 'female' },
+  Bella: { voiceId: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella', gender: 'female' },
+  Antoni: { voiceId: 'ErXwobaYiN019PkySvjV', name: 'Antoni', gender: 'male' },
+  Josh: { voiceId: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh', gender: 'male' },
+  Adam: { voiceId: 'pNInz6obpgDQGcFmaJgB', name: 'Adam', gender: 'male' },
 } as const;
 
 export async function POST(request: Request) {
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.id}`, {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.voiceId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
