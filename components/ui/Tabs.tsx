@@ -5,7 +5,7 @@ import * as React from 'react';
 interface Tab {
   id: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 interface TabsProps {
@@ -38,7 +38,7 @@ export function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
               }
             `}
           >
-            <span className="text-lg">{tab.icon}</span>
+            {tab.icon}
             <span className="text-xs font-medium">{tab.label}</span>
           </button>
         ))}

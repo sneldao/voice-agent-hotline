@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
+// Toast Provider component
+function ToastProvider() {
+  return null; // Will be rendered client-side
+}
+
 export const metadata: Metadata = {
   title: 'Voice Agent Hotline v2',
   description: 'Talk to verified AI agents, pay per minute via x402 micropayments on Celo',
