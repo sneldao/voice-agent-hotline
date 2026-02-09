@@ -1,0 +1,107 @@
+'use client';
+
+import * as React from 'react';
+import { createPortal } from 'react-dom';
+
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  description?: string;
+  children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export function Modal({ 
+  isOpen, 
+  onClose, 
+  title, 
+  description,
+  children,
+  size = 'md',
+}: ModalProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
+
+  if (!mounted || !isOpen) return null;
+
+  const sizes = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+  };
+
+  return createPortal(
+    <>
+      {/* Styles for animations */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scale-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.2s ease-out; }
+        .animate-scale-in { animation: scale-in 0.2s ease-out; }
+      ` }} />
+      
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center"
+      >
+        {/* Overlay */}
+        <div 
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+          onClick={onClose}
+        />
+        
+        {/* Modal */}
+        <div className={`
+          relative
+          w-full
+          mx-4
+          ${sizes[size]}
+          bg-gray-900/95
+          backdrop-blur-xl
+          rounded-2xl
+          border
+          border-gray-700/50
+          shadow-2xl
+          shadow-black/50
+          animate-scale-in
+        `}>
+          {/* Header */}
+          {(title || description) && (
+            <div className="p-6 pb-4 border-b border-gray-800">
+              {title && (
+                <h2 className="text-xl font-bold text-white">{title}</h2>
+              )}
+              {description && (
+                <p className="mt-1 text-sm text-gray-400">{description}</p>
+              )}
+            </div>
+          )}
+          
+          {/* Content */}
+          <div className="p-6">
+            {children}
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+}

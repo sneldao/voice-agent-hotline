@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Button, Card, CardHeader, CardContent, Input, Badge, Avatar, Modal, Tabs, TabPanel } from '@/components/ui';
 
 // Demo data
 const DEMO_AGENTS = [
@@ -64,14 +65,12 @@ const DEMO_CALL_HISTORY = [
   { id: 'call_3', agentName: 'Chef Mario', duration: 45, cost: 0, date: '2 days ago', rating: 4 },
 ];
 
-// Categories for filtering
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
   { id: 'language', name: 'Language', icon: '🗣️' },
   { id: 'coding', name: 'Coding', icon: '💻' },
   { id: 'cooking', name: 'Cooking', icon: '🍳' },
   { id: 'travel', name: 'Travel', icon: '✈️' },
-  { id: 'general', name: 'General', icon: '💡' },
 ];
 
 type Tab = 'discover' | 'calls' | 'profile';
@@ -87,14 +86,12 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [userBalance, setUserBalance] = useState(2.50);
 
-  // Call timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (inCall) {
       interval = setInterval(() => {
         setCallDuration(d => {
           const newDuration = d + 1;
-          // Calculate cost after first 60 seconds
           const newCost = Math.max(0, newDuration - 60) * 0.01 / 60;
           setCallCost(newCost);
           return newDuration;
@@ -122,35 +119,40 @@ export default function Home() {
     const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    
     const matchesCategory = selectedCategory === 'all' || 
       agent.tags.some(t => t.toLowerCase().includes(selectedCategory.toLowerCase()));
-    
     return matchesSearch && matchesCategory;
   });
 
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-lg border-b border-gray-800">
+      <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎙️</span>
-            <h1 className="font-bold text-lg">Hotline</h1>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+              <span className="text-lg">🎙️</span>
+            </div>
+            <div>
+              <h1 className="font-bold text-lg bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                Voice Hotline
+              </h1>
+              <p className="text-xs text-gray-500">AI-Powered Voice Agents</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-xs text-gray-400">
-              <span className="text-cyan-400 font-semibold">${userBalance.toFixed(2)}</span>
+            <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50">
+              <span className="text-sm font-medium text-cyan-400">${userBalance.toFixed(2)}</span>
             </div>
-            <button className="p-2 hover:bg-gray-800 rounded-full">
-              <span className="text-sm">🔔</span>
+            <button className="w-10 h-10 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center hover:bg-gray-800 transition-colors">
+              <span className="text-gray-400">🔔</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-md mx-auto pb-24">
+      <main className="max-w-md mx-auto pb-28">
         {inCall ? (
           <CallView
             agent={selectedAgent!}
@@ -158,62 +160,55 @@ export default function Home() {
             cost={callCost}
             onEnd={endCall}
           />
-        ) : activeTab === 'discover' ? (
-          <DiscoverTab
-            agents={filteredAgents}
-            onSelect={setSelectedAgent}
-            selectedAgent={selectedAgent}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-          />
-        ) : activeTab === 'calls' ? (
-          <CallsHistoryTab history={DEMO_CALL_HISTORY} />
         ) : (
-          <ProfileTab balance={userBalance} />
+          <>
+            {activeTab === 'discover' && (
+              <DiscoverTab
+                agents={filteredAgents}
+                onSelect={setSelectedAgent}
+                selectedAgent={selectedAgent}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                selectedCategory={selectedCategory}
+                onCategoryChange={setSelectedCategory}
+                onCall={startCall}
+              />
+            )}
+            {activeTab === 'calls' && (
+              <CallsHistoryTab history={DEMO_CALL_HISTORY} />
+            )}
+            {activeTab === 'profile' && (
+              <ProfileTab balance={userBalance} />
+            )}
+          </>
         )}
       </main>
 
       {/* Bottom Navigation */}
       {!inCall && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-lg border-t border-gray-800">
-          <div className="max-w-md mx-auto flex">
-            {[
-              { id: 'discover' as Tab, icon: '🔍', label: 'Discover' },
-              { id: 'calls' as Tab, icon: '📞', label: 'Calls' },
-              { id: 'profile' as Tab, icon: '👤', label: 'Profile' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-3 flex flex-col items-center gap-1 transition-colors ${
-                  activeTab === tab.id 
-                    ? 'text-cyan-400' 
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                <span className="text-lg">{tab.icon}</span>
-                <span className="text-xs">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
+        <Tabs
+          tabs={[
+            { id: 'discover', icon: '🔍', label: 'Discover' },
+            { id: 'calls', icon: '📞', label: 'Calls' },
+            { id: 'profile', icon: '👤', label: 'Profile' },
+          ]}
+          activeTab={activeTab}
+          onTabChange={(t) => setActiveTab(t as Tab)}
+        />
       )}
 
       {/* Payment Modal */}
-      {showPaymentModal && (
-        <PaymentModal
-          agent={selectedAgent}
-          duration={callDuration}
-          cost={callCost}
-          onClose={() => setShowPaymentModal(false)}
-          onPay={() => {
-            setUserBalance(prev => prev - callCost);
-            setShowPaymentModal(false);
-          }}
-        />
-      )}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        agent={selectedAgent}
+        duration={callDuration}
+        cost={callCost}
+        onPay={() => {
+          setUserBalance(prev => prev - callCost);
+          setShowPaymentModal(false);
+        }}
+      />
     </div>
   );
 }
@@ -229,6 +224,7 @@ function DiscoverTab({
   onSearchChange,
   selectedCategory,
   onCategoryChange,
+  onCall,
 }: {
   agents: typeof DEMO_AGENTS;
   onSelect: (a: typeof DEMO_AGENTS[0]) => void;
@@ -237,44 +233,52 @@ function DiscoverTab({
   onSearchChange: (q: string) => void;
   selectedCategory: string;
   onCategoryChange: (c: string) => void;
+  onCall: () => void;
 }) {
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-5">
       {/* Search */}
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Search agents..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="input-primary pl-10"
-        />
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
-      </div>
+      <Input
+        placeholder="Search agents..."
+        value={searchQuery}
+        onChange={(e) => onSearchChange(e.target.value)}
+        icon="🔍"
+      />
 
       {/* Categories */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
             onClick={() => onCategoryChange(cat.id)}
-            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              selectedCategory === cat.id
-                ? 'bg-cyan-500 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
+            className={`
+              flex-shrink-0
+              px-4
+              py-2
+              rounded-full
+              text-sm
+              font-medium
+              transition-all
+              duration-200
+              border
+              ${selectedCategory === cat.id
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-transparent shadow-lg shadow-cyan-500/25'
+                : 'bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-gray-600'
+              }
+            `}
           >
-            {cat.icon} {cat.name}
+            <span className="mr-1.5">{cat.icon}</span>
+            {cat.name}
           </button>
         ))}
       </div>
 
       {/* Featured Agents */}
-      <div>
+      <section>
         <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
-          <span>⭐</span> Featured
+          <span className="text-yellow-400">⭐</span> Featured
         </h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
           {agents.filter(a => a.online).map(agent => (
             <FeaturedCard
               key={agent.id}
@@ -284,14 +288,14 @@ function DiscoverTab({
             />
           ))}
         </div>
-      </div>
+      </section>
 
       {/* All Agents */}
-      <div>
+      <section>
         <h2 className="text-sm font-semibold text-gray-400 mb-3">
           {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
         </h2>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {agents.map(agent => (
             <AgentCard
               key={agent.id}
@@ -301,15 +305,14 @@ function DiscoverTab({
             />
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Agent Detail Panel */}
-      {selectedAgent && (
-        <AgentDetailPanel
-          agent={selectedAgent}
-          onClose={() => onSelect(null as any)}
-        />
-      )}
+      {/* Agent Detail Modal */}
+      <AgentDetailModal
+        agent={selectedAgent}
+        onClose={() => onSelect(null as any)}
+        onCall={onCall}
+      />
     </div>
   );
 }
@@ -329,14 +332,24 @@ function FeaturedCard({
   return (
     <button
       onClick={onClick}
-      className={`flex-shrink-0 w-36 bg-gradient-to-br ${agent.color} rounded-2xl p-4 text-left transition-transform hover:scale-105 ${
-        selected ? 'ring-2 ring-cyan-400' : ''
-      }`}
+      className={`
+        flex-shrink-0
+        w-36
+        rounded-2xl
+        p-4
+        text-left
+        transition-all
+        duration-300
+        border-2
+        bg-gradient-to-br
+        ${agent.color}
+        ${selected ? 'border-cyan-400 scale-105' : 'border-transparent hover:scale-105 hover:border-white/20'}
+      `}
     >
-      <div className="text-3xl mb-2">{agent.avatar}</div>
-      <div className="font-bold text-sm truncate">{agent.name}</div>
-      <div className="text-xs opacity-80 truncate">{agent.specialty}</div>
-      <div className="flex items-center gap-2 mt-2 text-xs">
+      <div className="text-3xl mb-3">{agent.avatar}</div>
+      <div className="font-bold text-sm text-white truncate">{agent.name}</div>
+      <div className="text-xs text-white/70 truncate mb-2">{agent.specialty}</div>
+      <div className="flex items-center gap-1.5 text-xs text-white/80">
         <span>⭐ {agent.rating}</span>
         <span>•</span>
         <span>${agent.rate}/min</span>
@@ -358,133 +371,130 @@ function AgentCard({
   selected: boolean;
 }) {
   return (
-    <button
+    <Card
+      interactive
+      variant={selected ? 'gradient' : 'default'}
+      className={`
+        flex items-center gap-4 p-4
+        ${selected ? 'border-cyan-500/50' : ''}
+      `}
       onClick={onClick}
-      className={`w-full flex items-center gap-3 bg-gray-900/50 rounded-xl p-3 border transition-all ${
-        selected
-          ? 'border-cyan-500 bg-gray-900/80'
-          : 'border-gray-800 hover:border-gray-700'
-      }`}
     >
-      <div className="relative">
-        <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center text-xl">
-          {agent.avatar}
-        </div>
-        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-900 ${
-          agent.online ? 'bg-green-500' : 'bg-gray-500'
-        }`} />
-      </div>
+      <Avatar size="lg" online={agent.online}>
+        {agent.avatar}
+      </Avatar>
       
-      <div className="flex-1 text-left">
-        <div className="font-semibold">{agent.name}</div>
-        <div className="text-sm text-gray-400 truncate">{agent.bio}</div>
-        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-          <span>⭐ {agent.rating}</span>
+      <div className="flex-1 text-left min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-semibold truncate">{agent.name}</span>
+          {agent.online && (
+            <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+          )}
+        </div>
+        <p className="text-sm text-gray-400 truncate">{agent.bio}</p>
+        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+          <span className="flex items-center gap-1">
+            <span className="text-yellow-400">⭐</span> {agent.rating}
+          </span>
           <span>{agent.totalRatings} reviews</span>
         </div>
       </div>
 
-      <div className="text-right">
-        <div className="text-cyan-400 font-bold">${agent.rate}</div>
+      <div className="text-right flex-shrink-0">
+        <div className="text-lg font-bold text-cyan-400">${agent.rate}</div>
         <div className="text-xs text-gray-500">/min</div>
-        <div className={`text-xs mt-1 ${agent.online ? 'text-green-500' : 'text-gray-500'}`}>
+        <Badge variant={agent.online ? 'success' : 'default'} size="sm" className="mt-1">
           {agent.online ? 'Available' : 'Offline'}
-        </div>
+        </Badge>
       </div>
-    </button>
+    </Card>
   );
 }
 
 /**
- * Agent Detail Panel
+ * Agent Detail Modal
  */
-function AgentDetailPanel({
+function AgentDetailModal({
   agent,
   onClose,
+  onCall,
 }: {
-  agent: typeof DEMO_AGENTS[0];
+  agent: typeof DEMO_AGENTS[0] | null;
   onClose: () => void;
+  onCall: () => void;
 }) {
   const [calling, setCalling] = useState(false);
+
+  if (!agent) return null;
 
   const handleCall = () => {
     setCalling(true);
     setTimeout(() => {
-      // Navigate to call
-      window.location.href = `?agent=${agent.id}`;
+      onCall();
     }, 1500);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-3xl border border-gray-800 w-full max-w-md overflow-hidden">
-        {/* Header gradient */}
-        <div className={`bg-gradient-to-br ${agent.color} p-6 text-center`}>
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white"
-          >
-            ✕
-          </button>
-          
-          <div className="w-24 h-24 mx-auto rounded-full bg-white/20 flex items-center justify-center text-5xl mb-4">
-            {agent.avatar}
-          </div>
-          <h2 className="text-xl font-bold">{agent.name}</h2>
-          <p className="opacity-80">{agent.specialty}</p>
-          
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <div className="text-center">
-              <div className="font-bold flex items-center justify-center gap-1">
-                ⭐ {agent.rating}
-              </div>
-              <div className="text-xs opacity-70">{agent.totalRatings} reviews</div>
+    <Modal
+      isOpen={!!agent}
+      onClose={onClose}
+      size="md"
+    >
+      {/* Header gradient */}
+      <div className={`-mx-6 -mt-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-br ${agent.color} text-center`}>
+        <Avatar size="xl" online={agent.online} className="mx-auto mb-4 border-4 border-white/20">
+          {agent.avatar}
+        </Avatar>
+        <h2 className="text-xl font-bold text-white">{agent.name}</h2>
+        <p className="text-white/70 text-sm">{agent.specialty}</p>
+        
+        <div className="flex items-center justify-center gap-6 mt-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1 font-bold text-white">
+              <span>⭐</span> {agent.rating}
             </div>
-            <div className="text-center">
-              <div className="font-bold">${agent.rate}</div>
-              <div className="text-xs opacity-70">/minute</div>
-            </div>
+            <div className="text-xs text-white/60">{agent.totalRatings} reviews</div>
           </div>
-        </div>
-
-        {/* Info */}
-        <div className="p-4 space-y-4">
-          <div>
-            <h3 className="font-semibold mb-2 text-sm text-gray-400">About</h3>
-            <p className="text-sm text-gray-300">{agent.bio}</p>
+          <div className="text-center">
+            <div className="font-bold text-white">${agent.rate}</div>
+            <div className="text-xs text-white/60">/minute</div>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {agent.tags.map(tag => (
-              <span key={tag} className="badge-info">
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <button
-            onClick={handleCall}
-            disabled={!agent.online || calling}
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-              agent.online && !calling
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40'
-                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {calling ? 'Connecting...' : agent.online ? '🎙️ Call Now' : 'Offline'}
-          </button>
-
-          <p className="text-xs text-center text-gray-500">
-            First minute free • x402 micropayments on Celo
-          </p>
         </div>
       </div>
-    </div>
+
+      {/* Content */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-400 mb-2">About</h3>
+          <p className="text-sm text-gray-300">{agent.bio}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {agent.tags.map(tag => (
+            <Badge key={tag} variant="info">{tag}</Badge>
+          ))}
+        </div>
+
+        <Button
+          onClick={handleCall}
+          disabled={!agent.online || calling}
+          isLoading={calling}
+          className="w-full"
+          size="lg"
+        >
+          {calling ? 'Connecting...' : agent.online ? '🎙️ Call Now' : 'Offline'}
+        </Button>
+
+        <p className="text-xs text-center text-gray-500">
+          First minute free • x402 micropayments on Celo
+        </p>
+      </div>
+    </Modal>
   );
 }
 
 /**
- * Call View with waveform
+ * Call View
  */
 function CallView({
   agent,
@@ -498,72 +508,74 @@ function CallView({
   onEnd: () => void;
 }) {
   const [muted, setMuted] = useState(false);
-  const waveformRef = useRef<HTMLDivElement>(null);
-
   const minutes = Math.floor(duration / 60);
   const seconds = duration % 60;
-  const freeMinutesUsed = Math.min(duration, 60);
+  const isFree = duration <= 60;
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900">
       {/* Header */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-6">
-        {/* Agent Avatar with pulse */}
-        <div className="relative mb-6">
-          <div className={`w-32 h-32 rounded-full bg-gradient-to-br ${agent.color} flex items-center justify-center text-6xl animate-pulse`}>
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        {/* Avatar with pulse */}
+        <div className="relative mb-8">
+          <div className={`w-40 h-40 rounded-full bg-gradient-to-br ${agent.color} flex items-center justify-center text-7xl shadow-2xl shadow-black/50 animate-pulse-slow`}>
             {agent.avatar}
           </div>
-          <span className="absolute bottom-2 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-800 animate-pulse" />
+          <span className="absolute bottom-2 right-2 w-5 h-5 bg-green-500 rounded-full border-4 border-gray-900 animate-pulse" />
         </div>
 
-        <h2 className="text-xl font-bold">{agent.name}</h2>
-        <p className="text-gray-400 text-sm">{agent.specialty}</p>
+        <h2 className="text-2xl font-bold mb-2">{agent.name}</h2>
+        <p className="text-gray-400 text-sm mb-4">{agent.specialty}</p>
 
-        {/* Call Status */}
-        <div className="mt-6 flex items-center gap-2 text-green-400">
+        {/* Status */}
+        <div className="flex items-center gap-2 text-green-400 mb-8">
           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-sm">Connected</span>
+          <span className="text-sm font-medium">Connected</span>
         </div>
 
-        {/* Timer & Cost */}
-        <div className="mt-8 text-center">
-          <div className="text-4xl font-mono font-bold text-cyan-400">
-            {minutes}:{seconds.toString().padStart(2, '0')}
+        {/* Timer */}
+        <div className="text-center mb-6">
+          <div className="text-5xl font-mono font-bold text-cyan-400 tracking-wider">
+            {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
           </div>
-          <div className="flex items-center justify-center gap-4 mt-2 text-sm">
-            <span className={duration > 60 ? 'text-amber-400' : 'text-gray-400'}>
+          <div className="flex items-center justify-center gap-3 mt-3">
+            <span className={isFree ? 'text-gray-400' : 'text-amber-400'}>
               ${cost.toFixed(3)} incurred
             </span>
-            {duration <= 60 && (
-              <span className="text-green-400">Free</span>
+            {isFree && (
+              <Badge variant="success">Free</Badge>
             )}
           </div>
         </div>
 
-        {/* Waveform visualization */}
+        {/* Waveform */}
         <Waveform muted={muted} />
       </div>
 
       {/* Controls */}
-      <div className="bg-gray-950 p-6">
-        <div className="flex items-center justify-center gap-4">
+      <div className="bg-gray-950/50 backdrop-blur-xl border-t border-gray-800 p-6">
+        <div className="flex items-center justify-center gap-6">
           <button
             onClick={() => setMuted(!muted)}
-            className={`w-14 h-14 rounded-full flex items-center justify-center text-xl transition-colors ${
-              muted ? 'bg-red-500 text-white' : 'bg-gray-800 text-white hover:bg-gray-700'
-            }`}
+            className={`
+              w-14 h-14 rounded-2xl flex items-center justify-center text-xl transition-all
+              ${muted 
+                ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' 
+                : 'bg-gray-800 text-white hover:bg-gray-700'
+              }
+            `}
           >
             {muted ? '🔇' : '🎤'}
           </button>
           
           <button
             onClick={onEnd}
-            className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-xl shadow-lg shadow-red-500/30 hover:bg-red-400 transition-colors"
+            className="w-16 h-16 rounded-2xl bg-gradient-to-r from-red-500 to-rose-500 flex items-center justify-center text-xl shadow-xl shadow-red-500/30 hover:scale-105 transition-transform"
           >
             📞
           </button>
           
-          <button className="w-14 h-14 rounded-full bg-gray-800 flex items-center justify-center text-xl hover:bg-gray-700 transition-colors">
+          <button className="w-14 h-14 rounded-2xl bg-gray-800 flex items-center justify-center text-xl text-gray-400 hover:bg-gray-700 transition-colors">
             💬
           </button>
         </div>
@@ -576,28 +588,39 @@ function CallView({
  * Animated Waveform
  */
 function Waveform({ muted }: { muted: boolean }) {
-  const [heights, setHeights] = useState<number[]>(Array(40).fill(20));
+  const [heights, setHeights] = useState<number[]>(Array(50).fill(20));
 
   useEffect(() => {
     if (muted) {
-      setHeights(Array(40).fill(10));
+      setHeights(Array(50).fill(10));
       return;
     }
 
     const interval = setInterval(() => {
-      setHeights(Array(40).fill(0).map(() => 15 + Math.random() * 60));
-    }, 100);
+      setHeights(Array(50).fill(0).map(() => 15 + Math.random() * 60));
+    }, 80);
 
     return () => clearInterval(interval);
   }, [muted]);
 
   return (
-    <div className="mt-8 flex items-center justify-center gap-0.5 h-16 px-8">
+    <div className="flex items-center justify-center gap-0.5 h-20 px-12">
       {heights.map((height, i) => (
         <div
           key={i}
-          className="w-1 bg-cyan-500 rounded-full transition-all duration-75"
-          style={{ height: `${height}%`, opacity: muted ? 0.3 : 0.8 }}
+          className={`
+            w-1.5
+            rounded-full
+            transition-all
+            duration-75
+            bg-gradient-to-t
+            from-cyan-500 to-blue-500
+            ${muted ? 'opacity-30' : 'opacity-80'}
+          `}
+          style={{ 
+            height: `${height}%`,
+            animationDelay: `${i * 0.02}s`
+          }}
         />
       ))}
     </div>
@@ -609,44 +632,49 @@ function Waveform({ muted }: { muted: boolean }) {
  */
 function CallsHistoryTab({ history }: { history: typeof DEMO_CALL_HISTORY }) {
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-bold mb-4">Call History</h2>
+    <div className="p-4 space-y-5">
+      <h2 className="text-xl font-bold">Call History</h2>
       
       <div className="space-y-3">
         {history.map(call => (
-          <div key={call.id} className="card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">
-              📞
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold">{call.agentName}</div>
+          <Card key={call.id} variant="default" className="flex items-center gap-4 p-4">
+            <Avatar size="md">
+              {call.agentName.charAt(0)}
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold truncate">{call.agentName}</div>
               <div className="text-sm text-gray-400">
-                {call.duration}s • {call.date}
+                {Math.floor(call.duration / 60)}m {call.duration % 60}s • {call.date}
               </div>
             </div>
             <div className="text-right">
               <div className="font-bold text-cyan-400">${call.cost.toFixed(2)}</div>
-              <div className="flex items-center gap-1 text-xs text-yellow-400">
-                {'⭐'.repeat(call.rating)}
+              <div className="flex items-center justify-end gap-0.5 mt-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <span key={i} className={i < call.rating ? 'text-yellow-400' : 'text-gray-600'}>
+                    ⭐
+                  </span>
+                ))}
               </div>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
-      <div className="mt-6 p-4 bg-gray-900/50 rounded-xl">
-        <div className="text-sm text-gray-400 mb-2">This Month</div>
+      {/* Monthly Stats */}
+      <Card variant="gradient" className="p-5">
+        <div className="text-sm text-gray-400 mb-4">This Month</div>
         <div className="flex justify-between">
           <div>
-            <div className="text-2xl font-bold">2h 34m</div>
+            <div className="text-3xl font-bold text-white">2h 34m</div>
             <div className="text-xs text-gray-500">Total time</div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-cyan-400">$1.24</div>
+            <div className="text-3xl font-bold text-cyan-400">$1.24</div>
             <div className="text-xs text-gray-500">Total spent</div>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -656,35 +684,60 @@ function CallsHistoryTab({ history }: { history: typeof DEMO_CALL_HISTORY }) {
  */
 function ProfileTab({ balance }: { balance: number }) {
   return (
-    <div className="p-4">
+    <div className="p-4 space-y-6">
       {/* Profile Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-2xl">
+      <div className="flex items-center gap-4">
+        <Avatar size="xl" online className="bg-gradient-to-br from-cyan-500 to-blue-500">
           👤
-        </div>
+        </Avatar>
         <div>
           <h2 className="text-xl font-bold">Demo User</h2>
-          <div className="text-sm text-gray-400">0x1234...5678</div>
+          <div className="text-sm text-gray-400 font-mono">0x1234...5678</div>
         </div>
       </div>
 
       {/* Balance Card */}
-      <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-2xl p-6 mb-6">
-        <div className="text-sm opacity-80 mb-1">Balance</div>
-        <div className="text-4xl font-bold">${balance.toFixed(2)}</div>
-        <div className="flex gap-2 mt-4">
-          <button className="flex-1 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
-            Add Funds
-          </button>
-          <button className="flex-1 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
-            Withdraw
-          </button>
+      <Card variant="gradient" className="overflow-hidden">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20" />
+          <div className="relative p-6">
+            <div className="text-sm text-white/70 mb-1">Balance</div>
+            <div className="text-4xl font-bold text-white mb-4">${balance.toFixed(2)}</div>
+            <div className="flex gap-3">
+              <Button variant="secondary" size="sm" className="flex-1 bg-white/10 border-white/20 hover:bg-white/20">
+                Add Funds
+              </Button>
+              <Button variant="secondary" size="sm" className="flex-1 bg-white/10 border-white/20 hover:bg-white/20">
+                Withdraw
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      </Card>
+
+      {/* ERC-8004 Reputation */}
+      <Card variant="default" className="p-4">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+            <span className="text-lg">🏷️</span>
+          </div>
+          <div>
+            <div className="font-semibold">ERC-8004 Reputation</div>
+            <div className="text-xs text-gray-400">Trustless Agent Identity</div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-400">Reputation Score</span>
+          <span className="font-bold text-violet-400">847</span>
+        </div>
+        <div className="mt-3 h-2 bg-gray-800 rounded-full overflow-hidden">
+          <div className="h-full w-[84%] bg-gradient-to-r from-violet-500 to-purple-500 rounded-full" />
+        </div>
+      </Card>
 
       {/* Settings */}
       <div className="space-y-2">
-        <h3 className="font-semibold text-gray-400 mb-3">Settings</h3>
+        <h3 className="font-semibold text-gray-400 px-1">Settings</h3>
         {[
           { icon: '🔔', label: 'Notifications', desc: 'Call & message alerts' },
           { icon: '🎤', label: 'Voice Settings', desc: 'Default voice & language' },
@@ -692,14 +745,19 @@ function ProfileTab({ balance }: { balance: number }) {
           { icon: '🔒', label: 'Privacy', desc: 'Data & security' },
           { icon: '❓', label: 'Help & Support', desc: 'FAQ & contact' },
         ].map(item => (
-          <button key={item.label} className="w-full flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl hover:bg-gray-900 transition-colors">
+          <Card
+            key={item.label}
+            interactive
+            variant="default"
+            className="flex items-center gap-3 p-4"
+          >
             <span className="text-lg">{item.icon}</span>
             <div className="flex-1 text-left">
               <div className="font-medium">{item.label}</div>
               <div className="text-xs text-gray-500">{item.desc}</div>
             </div>
             <span className="text-gray-500">›</span>
-          </button>
+          </Card>
         ))}
       </div>
     </div>
@@ -710,16 +768,18 @@ function ProfileTab({ balance }: { balance: number }) {
  * Payment Modal
  */
 function PaymentModal({
+  isOpen,
+  onClose,
   agent,
   duration,
   cost,
-  onClose,
   onPay,
 }: {
+  isOpen: boolean;
+  onClose: () => void;
   agent: typeof DEMO_AGENTS[0] | null;
   duration: number;
   cost: number;
-  onClose: () => void;
   onPay: () => void;
 }) {
   const [processing, setProcessing] = useState(false);
@@ -732,61 +792,60 @@ function PaymentModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-2">💰</div>
-          <h2 className="text-xl font-bold">Payment Summary</h2>
-        </div>
-
-        {agent && (
-          <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-xl mb-4">
-            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-              {agent.avatar}
-            </div>
-            <div className="flex-1">
-              <div className="font-medium">{agent.name}</div>
-              <div className="text-xs text-gray-400">{duration}s call</div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Payment Summary"
+      size="sm"
+    >
+      {agent && (
+        <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-xl mb-4">
+          <Avatar size="md">{agent.avatar}</Avatar>
+          <div className="flex-1">
+            <div className="font-medium">{agent.name}</div>
+            <div className="text-xs text-gray-400">
+              {Math.floor(duration / 60)}m {duration % 60}s call
             </div>
           </div>
-        )}
-
-        <div className="space-y-2 mb-6">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Duration</span>
-            <span>{Math.floor(duration / 60)}m {duration % 60}s</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">First minute</span>
-            <span className="text-green-400">Free</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Additional time</span>
-            <span>${(Math.max(0, duration - 60) * 0.01 / 60).toFixed(3)}</span>
-          </div>
-          <div className="border-t border-gray-700 pt-2 flex justify-between font-bold">
-            <span>Total</span>
-            <span className="text-cyan-400">${cost.toFixed(3)}</span>
-          </div>
         </div>
+      )}
 
-        <div className="flex gap-3">
-          <button onClick={onClose} className="btn-secondary flex-1">
-            Cancel
-          </button>
-          <button
-            onClick={handlePay}
-            disabled={processing || cost === 0}
-            className={`btn-primary flex-1 ${processing ? 'opacity-50' : ''}`}
-          >
-            {processing ? 'Processing...' : cost === 0 ? 'Free Call' : 'Pay Now'}
-          </button>
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between text-gray-400">
+          <span>Duration</span>
+          <span>{Math.floor(duration / 60)}m {duration % 60}s</span>
         </div>
-
-        <p className="text-xs text-center text-gray-500 mt-4">
-          Paid via x402 micropayments on Celo
-        </p>
+        <div className="flex justify-between text-green-400">
+          <span>First minute</span>
+          <span>Free</span>
+        </div>
+        <div className="flex justify-between text-gray-400">
+          <span>Additional time</span>
+          <span>${(Math.max(0, duration - 60) * 0.01 / 60).toFixed(3)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-700">
+          <span>Total</span>
+          <span className="text-cyan-400">${cost.toFixed(3)}</span>
+        </div>
       </div>
-    </div>
+
+      <div className="flex gap-3 mt-6">
+        <Button variant="secondary" onClick={onClose} className="flex-1">
+          Cancel
+        </Button>
+        <Button 
+          onClick={handlePay} 
+          isLoading={processing} 
+          disabled={cost === 0}
+          className="flex-1"
+        >
+          {cost === 0 ? 'Free Call' : 'Pay Now'}
+        </Button>
+      </div>
+
+      <p className="text-xs text-center text-gray-500 mt-4">
+        Paid via x402 micropayments on Celo
+      </p>
+    </Modal>
   );
 }
