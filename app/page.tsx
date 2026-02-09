@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Card, CardHeader, CardContent, Input, Badge, Avatar, Modal, Tabs, TabPanel } from '@/components/ui';
+import { announce } from '@/lib/accessibility';
 
 // Demo data
 const DEMO_AGENTS = [
@@ -85,21 +86,38 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [userBalance, setUserBalance] = useState(2.50);
+  const mainContentRef = useRef<HTMLElement>(null);
 
+  // Keyboard navigation for accessibility
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (inCall) {
-      interval = setInterval(() => {
-        setCallDuration(d => {
-          const newDuration = d + 1;
-          const newCost = Math.max(0, newDuration - 60) * 0.01 / 60;
-          setCallCost(newCost);
-          return newDuration;
-        });
-      }, 1000);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape closes modals and call view
+      if (e.key === 'Escape') {
+        if (inCall) {
+          endCall();
+          announce('Call ended');
+        } else if (showPaymentModal) {
+          setShowPaymentModal(false);
+          announce('Payment modal closed');
+        } else if (selectedAgent) {
+          setSelectedAgent(null);
+          announce('Agent details closed');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inCall, showPaymentModal, selectedAgent]);
+
+  // Focus management when modals open/close
+  useEffect(() => {
+    if (selectedAgent || showPaymentModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
-    return () => clearInterval(interval);
-  }, [inCall]);
+  }, [selectedAgent, showPaymentModal]);
 
   const startCall = useCallback(() => {
     if (selectedAgent) {
@@ -126,12 +144,20 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
+      {/* Skip to main content for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-cyan-500 focus:text-white focus:rounded-lg"
+      >
+        Skip to main content
+      </a>
+
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50">
+      <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50" role="banner">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-              <span className="text-lg">🎙️</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25" role="img" aria-label="Voice Hotline logo">
+              <span className="text-lg" aria-hidden="true">🎙️</span>
             </div>
             <div>
               <h1 className="font-bold text-lg bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
@@ -140,19 +166,22 @@ export default function Home() {
               <p className="text-xs text-gray-500">AI-Powered Voice Agents</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" role="group" aria-label="User balance and notifications">
             <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50">
               <span className="text-sm font-medium text-cyan-400">${userBalance.toFixed(2)}</span>
             </div>
-            <button className="w-10 h-10 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center hover:bg-gray-800 transition-colors">
-              <span className="text-gray-400">🔔</span>
+            <button
+              className="w-10 h-10 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center hover:bg-gray-800 transition-colors"
+              aria-label="Notifications"
+            >
+              <span className="text-gray-400" aria-hidden="true">🔔</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-md mx-auto pb-28">
+      <main id="main-content" className="max-w-md mx-auto pb-28" role="main" aria-label="Main content">
         {inCall ? (
           <CallView
             agent={selectedAgent!}
