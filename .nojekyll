@@ -1,0 +1,2 @@
+# This file prevents Jekyll from processing GitHub Pages
+# We use Next.js static export instead
