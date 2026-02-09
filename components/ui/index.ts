@@ -14,3 +14,4 @@ export {
   CallHistorySkeleton 
 } from './Skeleton';
 export { ErrorBoundary, useAsyncData } from './ErrorBoundary';
+export { ThemeToggle, ThemeScript } from './ThemeToggle';

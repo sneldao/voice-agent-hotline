@@ -3,12 +3,14 @@ import * as React from 'react';
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'gradient' | 'glass';
   interactive?: boolean;
+  animated?: boolean;
 }
 
 export function Card({ 
   className = '', 
   variant = 'default', 
   interactive = false,
+  animated = false,
   children, 
   ...props 
 }: CardProps) {
@@ -21,9 +23,10 @@ export function Card({
   return (
     <div
       className={`
-        ${variants[variant]}
         rounded-2xl
-        ${interactive ? 'hover:border-gray-600 hover:bg-gray-900/70 transition-all duration-200 cursor-pointer' : ''}
+        ${variants[variant]}
+        ${interactive ? 'cursor-pointer' : ''}
+        ${animated ? 'animate-fade-in' : ''}
         ${className}
       `}
       {...props}
