@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Card, CardHeader, CardContent, Input, Badge, Avatar, Modal, Tabs, TabPanel } from '@/components/ui';
+import { useState, useEffect, useCallback } from 'react';
+import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight } from '@/components/ui';
 import { announce } from '@/lib/accessibility';
 
 // Demo data
@@ -144,6 +144,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
+      <ToastProvider />
       {/* Skip to main content for keyboard users */}
       <a
         href="#main-content"
@@ -157,24 +158,23 @@ export default function Home() {
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25" role="img" aria-label="Voice Hotline logo">
-              <span className="text-lg" aria-hidden="true">🎙️</span>
+              <Phone className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                Voice Hotline
-              </h1>
+              <h1 className="font-bold text-lg">Voice Hotline</h1>
               <p className="text-xs text-gray-500">AI-Powered Voice Agents</p>
             </div>
           </div>
-          <div className="flex items-center gap-3" role="group" aria-label="User balance and notifications">
-            <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50">
+          <div className="flex items-center gap-2" role="group" aria-label="User balance and notifications">
+            <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-cyan-400" />
               <span className="text-sm font-medium text-cyan-400">${userBalance.toFixed(2)}</span>
             </div>
             <button
               className="w-10 h-10 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center hover:bg-gray-800 transition-colors"
               aria-label="Notifications"
             >
-              <span className="text-gray-400" aria-hidden="true">🔔</span>
+              <Bell className="w-5 h-5 text-gray-400" />
             </button>
           </div>
         </div>
@@ -217,9 +217,9 @@ export default function Home() {
       {!inCall && (
         <Tabs
           tabs={[
-            { id: 'discover', icon: '🔍', label: 'Discover' },
-            { id: 'calls', icon: '📞', label: 'Calls' },
-            { id: 'profile', icon: '👤', label: 'Profile' },
+            { id: 'discover', icon: <Search className="w-5 h-5" />, label: 'Discover' },
+            { id: 'calls', icon: <Phone className="w-5 h-5" />, label: 'Calls' },
+            { id: 'profile', icon: <User className="w-5 h-5" />, label: 'Profile' },
           ]}
           activeTab={activeTab}
           onTabChange={(t) => setActiveTab(t as Tab)}
@@ -264,85 +264,116 @@ function DiscoverTab({
   onCategoryChange: (c: string) => void;
   onCall: () => void;
 }) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsRefreshing(false);
+    showSuccess('Agents refreshed');
+  }, []);
+
+  const hasSearchQuery = searchQuery.trim().length > 0;
+  const hasNoResults = agents.length === 0 && !hasSearchQuery;
+  const hasNoSearchResults = agents.length === 0 && hasSearchQuery;
+
   return (
-    <div className="p-4 space-y-5">
-      {/* Search */}
-      <Input
-        placeholder="Search agents..."
-        value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
-        icon="🔍"
-      />
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="p-4 space-y-5">
+        {/* Search with refresh */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search agents..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+            />
+          </div>
+          <RefreshButton onRefresh={handleRefresh} />
+        </div>
 
-      {/* Categories */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => onCategoryChange(cat.id)}
-            className={`
-              flex-shrink-0
-              px-4
-              py-2
-              rounded-full
-              text-sm
-              font-medium
-              transition-all
-              duration-200
-              border
-              ${selectedCategory === cat.id
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-transparent shadow-lg shadow-cyan-500/25'
-                : 'bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-gray-600'
-              }
-            `}
-          >
-            <span className="mr-1.5">{cat.icon}</span>
-            {cat.name}
-          </button>
-        ))}
+        {/* Categories */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => onCategoryChange(cat.id)}
+              className={`
+                flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border
+                ${selectedCategory === cat.id
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-transparent shadow-lg shadow-cyan-500/25'
+                  : 'bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-gray-600'
+                }
+              `}
+            >
+              <span className="mr-1.5">{cat.icon}</span>
+              {cat.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Empty states */}
+        {hasNoSearchResults && (
+          <EmptySearchState onClear={() => onSearchChange('')} />
+        )}
+
+        {hasNoResults && (
+          <EmptySearchState onClear={() => onCategoryChange('all')} />
+        )}
+
+        {/* Content */}
+        {!hasNoResults && !hasNoSearchResults && (
+          <>
+            {/* Featured Agents */}
+            {agents.filter(a => a.online).length > 0 && (
+              <section>
+                <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                  <Star className="w-4 h-4 text-yellow-400" /> Featured
+                </h2>
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+                  {agents.filter(a => a.online).map(agent => (
+                    <FeaturedCard
+                      key={agent.id}
+                      agent={agent}
+                      onClick={() => onSelect(agent)}
+                      selected={selectedAgent?.id === agent.id}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* All Agents */}
+            <section>
+              <h2 className="text-sm font-semibold text-gray-400 mb-3">
+                {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
+              </h2>
+              <div className="space-y-3">
+                {agents.map(agent => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    onClick={() => onSelect(agent)}
+                    selected={selectedAgent?.id === agent.id}
+                  />
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* Agent Detail Modal */}
+        <AgentDetailModal
+          agent={selectedAgent}
+          onClose={() => onSelect(null as any)}
+          onCall={onCall}
+        />
       </div>
-
-      {/* Featured Agents */}
-      <section>
-        <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
-          <span className="text-yellow-400">⭐</span> Featured
-        </h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
-          {agents.filter(a => a.online).map(agent => (
-            <FeaturedCard
-              key={agent.id}
-              agent={agent}
-              onClick={() => onSelect(agent)}
-              selected={selectedAgent?.id === agent.id}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* All Agents */}
-      <section>
-        <h2 className="text-sm font-semibold text-gray-400 mb-3">
-          {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
-        </h2>
-        <div className="space-y-3">
-          {agents.map(agent => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onClick={() => onSelect(agent)}
-              selected={selectedAgent?.id === agent.id}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Agent Detail Modal */}
-      <AgentDetailModal
-        agent={selectedAgent}
-        onClose={() => onSelect(null as any)}
-        onCall={onCall}
-      />
-    </div>
+    </PullToRefresh>
   );
 }
 
@@ -662,44 +693,54 @@ function Waveform({ muted }: { muted: boolean }) {
 function CallsHistoryTab({ history }: { history: typeof DEMO_CALL_HISTORY }) {
   return (
     <div className="p-4 space-y-5">
-      <h2 className="text-xl font-bold">Call History</h2>
-      
-      <div className="space-y-3">
-        {history.map(call => (
-          <Card key={call.id} variant="default" className="flex items-center gap-4 p-4">
-            <Avatar size="md">
-              {call.agentName.charAt(0)}
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold truncate">{call.agentName}</div>
-              <div className="text-sm text-gray-400">
-                {Math.floor(call.duration / 60)}m {call.duration % 60}s • {call.date}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="font-bold text-cyan-400">${call.cost.toFixed(2)}</div>
-              <div className="flex items-center justify-end gap-0.5 mt-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <span key={i} className={i < call.rating ? 'text-yellow-400' : 'text-gray-600'}>
-                    ⭐
-                  </span>
-                ))}
-              </div>
-            </div>
-          </Card>
-        ))}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Call History</h2>
+        <RefreshButton variant="full" onRefresh={async () => {}} />
       </div>
+      
+      {history.length > 0 ? (
+        <div className="space-y-3">
+          {history.map(call => (
+            <Card key={call.id} variant="default" className="flex items-center gap-4 p-4">
+              <Avatar size="md">
+                {call.agentName.charAt(0)}
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold truncate">{call.agentName}</div>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Clock className="w-4 h-4" />
+                  {Math.floor(call.duration / 60)}m {call.duration % 60}s • {call.date}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-bold text-cyan-400">${call.cost.toFixed(2)}</div>
+                <div className="flex items-center justify-end gap-0.5 mt-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className={`w-3 h-3 ${i < call.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
+                  ))}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <EmptySearchState title="No calls yet" description="Your call history will appear here after you make your first call." />
+      )}
 
       {/* Monthly Stats */}
       <Card variant="gradient" className="p-5">
         <div className="text-sm text-gray-400 mb-4">This Month</div>
         <div className="flex justify-between">
           <div>
-            <div className="text-3xl font-bold text-white">2h 34m</div>
+            <div className="text-3xl font-bold text-white flex items-center gap-2">
+              <Clock className="w-6 h-6 text-cyan-400" /> 2h 34m
+            </div>
             <div className="text-xs text-gray-500">Total time</div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-cyan-400">$1.24</div>
+            <div className="text-3xl font-bold text-cyan-400 flex items-center justify-end gap-2">
+              $1.24 <Wallet className="w-6 h-6" />
+            </div>
             <div className="text-xs text-gray-500">Total spent</div>
           </div>
         </div>
@@ -717,7 +758,7 @@ function ProfileTab({ balance }: { balance: number }) {
       {/* Profile Header */}
       <div className="flex items-center gap-4">
         <Avatar size="xl" online className="bg-gradient-to-br from-cyan-500 to-blue-500">
-          👤
+          <User className="w-8 h-8" />
         </Avatar>
         <div>
           <h2 className="text-xl font-bold">Demo User</h2>
@@ -730,7 +771,9 @@ function ProfileTab({ balance }: { balance: number }) {
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20" />
           <div className="relative p-6">
-            <div className="text-sm text-white/70 mb-1">Balance</div>
+            <div className="flex items-center gap-2 text-sm text-white/70 mb-1">
+              <Wallet className="w-4 h-4" /> Balance
+            </div>
             <div className="text-4xl font-bold text-white mb-4">${balance.toFixed(2)}</div>
             <div className="flex gap-3">
               <Button variant="secondary" size="sm" className="flex-1 bg-white/10 border-white/20 hover:bg-white/20">
@@ -748,7 +791,7 @@ function ProfileTab({ balance }: { balance: number }) {
       <Card variant="default" className="p-4">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
-            <span className="text-lg">🏷️</span>
+            <Star className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="font-semibold">ERC-8004 Reputation</div>
@@ -768,11 +811,11 @@ function ProfileTab({ balance }: { balance: number }) {
       <div className="space-y-2">
         <h3 className="font-semibold text-gray-400 px-1">Settings</h3>
         {[
-          { icon: '🔔', label: 'Notifications', desc: 'Call & message alerts' },
-          { icon: '🎤', label: 'Voice Settings', desc: 'Default voice & language' },
-          { icon: '💳', label: 'Payment Methods', desc: 'Manage wallets & cards' },
-          { icon: '🔒', label: 'Privacy', desc: 'Data & security' },
-          { icon: '❓', label: 'Help & Support', desc: 'FAQ & contact' },
+          { icon: <Bell className="w-5 h-5" />, label: 'Notifications', desc: 'Call & message alerts' },
+          { icon: <Settings className="w-5 h-5" />, label: 'Voice Settings', desc: 'Default voice & language' },
+          { icon: <Wallet className="w-5 h-5" />, label: 'Payment Methods', desc: 'Manage wallets & cards' },
+          { icon: <Settings className="w-5 h-5" />, label: 'Privacy', desc: 'Data & security' },
+          { icon: <Settings className="w-5 h-5" />, label: 'Help & Support', desc: 'FAQ & contact' },
         ].map(item => (
           <Card
             key={item.label}
@@ -780,12 +823,12 @@ function ProfileTab({ balance }: { balance: number }) {
             variant="default"
             className="flex items-center gap-3 p-4"
           >
-            <span className="text-lg">{item.icon}</span>
+            <span className="text-gray-400">{item.icon}</span>
             <div className="flex-1 text-left">
               <div className="font-medium">{item.label}</div>
               <div className="text-xs text-gray-500">{item.desc}</div>
             </div>
-            <span className="text-gray-500">›</span>
+            <ChevronRight className="w-5 h-5 text-gray-500" />
           </Card>
         ))}
       </div>

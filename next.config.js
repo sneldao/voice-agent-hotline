@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export',
+  // Enable server-side rendering (remove static export)
+  // output: 'export', // Removed for Vercel SSR
+  
   images: {
     unoptimized: true,
   },
-  // GitHub Pages serves from subdirectory
-  basePath: '/voice-agent-hotline',
 };
 
 module.exports = nextConfig;
