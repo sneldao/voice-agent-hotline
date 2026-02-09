@@ -3,9 +3,7 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Toaster, toast } from 'sonner';
-
-// Icons
-export {
+import {
   Wallet,
   Phone,
   User,
@@ -87,3 +85,38 @@ export function showLoading(message: string): string | number {
 export function dismissToast(id: string | number) {
   toast.dismiss(id);
 }
+
+// Icon exports
+export {
+  Wallet,
+  Phone,
+  User,
+  Search,
+  Star,
+  Clock,
+  CreditCard,
+  Settings,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+  Check,
+  AlertCircle,
+  Loader2,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  RefreshCw,
+  Menu,
+  MoreVertical,
+  Heart,
+  Share2,
+  History,
+  LogOut,
+  HelpCircle,
+  Shield,
+  Zap,
+  Sparkles,
+};

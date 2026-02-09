@@ -724,7 +724,7 @@ function CallsHistoryTab({ history }: { history: typeof DEMO_CALL_HISTORY }) {
           ))}
         </div>
       ) : (
-        <EmptySearchState title="No calls yet" description="Your call history will appear here after you make your first call." />
+        <EmptyHistoryState />
       )}
 
       {/* Monthly Stats */}
