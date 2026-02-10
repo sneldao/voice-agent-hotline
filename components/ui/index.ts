@@ -78,3 +78,6 @@ export { WalletConnect, WalletSelector, BalanceDisplay } from './WalletConnect';
 
 // Agent Creation
 export { AgentCreationModal } from './AgentCreation';
+
+// Better Search
+export { BetterSearch } from './BetterSearch';
