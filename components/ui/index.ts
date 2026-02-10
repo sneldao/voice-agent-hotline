@@ -81,3 +81,9 @@ export { AgentCreationModal } from './AgentCreation';
 
 // Better Search
 export { BetterSearch } from './BetterSearch';
+
+// Payment Flow (x402)
+export { PaymentFlow, DelegationPayment } from './PaymentFlow';
+
+// Call UI
+export { CallUI } from './CallUI';
