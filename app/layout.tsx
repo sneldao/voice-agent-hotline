@@ -1,10 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-
-// Toast Provider component
-function ToastProvider() {
-  return null; // Will be rendered client-side
-}
+import { Providers } from '@/lib/WalletContext';
 
 export const metadata: Metadata = {
   title: 'Voice Agent Hotline v2',
@@ -21,7 +17,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Theme initialization script */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -35,7 +30,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Providers>
+          {children}
+        </Providers>
+      </body>
     </html>
   );
 }
