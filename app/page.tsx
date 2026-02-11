@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight } from '@/components/ui';
 import { announce } from '@/lib/accessibility';
 import { useWallet } from '@/lib/WalletContext';
+import { ReferralSection } from '@/components/ReferralSection';
 
 // Demo data
 const DEMO_AGENTS = [
@@ -864,6 +865,9 @@ function ProfileTab({ balance }: { balance: number }) {
       </div>
     </div>
   );
+
+      {/* Referral Section */}
+      <ReferralSection />
 }
 
 /**
