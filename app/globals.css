@@ -5,11 +5,15 @@
   --foreground-light: 15 23 42;
   --background-light: 248 250 252;
   --background-secondary-light: 241 245 249;
+  --card-light: 255 255 255;
+  --border-light: 226 232 240;
   
-  /* Dark theme colors (default) */
+  /* Dark theme colors */
   --foreground-dark: 255 255 255;
   --background-dark: 15 23 42;
   --background-secondary-dark: 30 41 59;
+  --card-dark: 30 41 59;
+  --border-dark: 71 85 105;
   
   /* Semantic colors */
   --primary: 6 182 212; /* cyan-500 */
@@ -36,22 +40,33 @@
 }
 
 /* Default to dark theme */
-body {
+:root,
+:root.dark-mode {
   --foreground: var(--foreground-dark);
   --background: var(--background-dark);
   --background-secondary: var(--background-secondary-dark);
+  --card: var(--card-dark);
+  --border: var(--border-dark);
+  --card-bg: rgba(30, 41, 59, 0.5);
+  --input-bg: rgba(30, 41, 59, 0.5);
+}
+
+:root.light-mode {
+  --foreground: var(--foreground-light);
+  --background: var(--background-light);
+  --background-secondary: var(--background-secondary-light);
+  --card: var(--card-light);
+  --border: var(--border-light);
+  --card-bg: rgba(255, 255, 255, 0.5);
+  --input-bg: rgba(255, 255, 255, 0.5);
+}
+
+body {
   color: rgb(var(--foreground));
   background: rgb(var(--background));
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* Light theme class */
-body[data-theme="light"] {
-  --foreground: var(--foreground-light);
-  --background: var(--background-light);
-  --background-secondary: var(--background-secondary-light);
 }
 
 /* Smooth transitions for theme switching */
@@ -181,48 +196,73 @@ body,
 
 /* Card styles */
 .card {
-  @apply bg-gray-900/50 rounded-xl border border-gray-800 p-4;
+  @apply rounded-xl border p-4;
+  background: var(--card-bg);
+  border-color: rgba(var(--border), 0.5);
 }
 
 .card-hover {
-  @apply hover:border-gray-700 hover:bg-gray-900/70 transition-all duration-200;
+  @apply transition-all duration-200;
+  border-color: rgba(var(--border), 0.7);
 }
 
-/* Badge styles */
-.badge {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+/* Button styles */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200;
+  min-height: var(--touch-min);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.badge-success {
-  @apply bg-green-500/20 text-green-400;
+.btn-primary {
+  background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
+  @apply text-white shadow-lg;
+  --tw-shadow-color: rgba(var(--primary), 0.25);
 }
 
-.badge-warning {
-  @apply bg-yellow-500/20 text-yellow-400;
+.btn-primary:hover {
+  background: linear-gradient(135deg, rgb(var(--primary-hover)), rgb(var(--secondary)));
+  --tw-shadow-color: rgba(var(--primary), 0.4);
+  transform: translateY(-1px);
 }
 
-.badge-error {
-  @apply bg-red-500/20 text-red-400;
+.btn-secondary {
+  background: var(--card-bg);
+  @apply border;
+  border-color: rgba(var(--border), 0.5);
+  color: var(--foreground);
 }
 
-.badge-info {
-  @apply bg-cyan-500/20 text-cyan-400;
+.btn-secondary:hover {
+  background: rgba(var(--border), 0.2);
 }
 
-/* Modal overlay */
-.modal-overlay {
-  @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50;
+/* Input styles */
+.input {
+  @apply w-full rounded-xl border px-4 py-3 text-sm transition-all duration-200;
+  background: var(--input-bg);
+  border-color: rgba(var(--border), 0.5);
+  color: var(--foreground);
+  min-height: var(--touch-min);
 }
 
+.input:focus {
+  @apply outline-none ring-2;
+  --tw-ring-color: rgba(var(--primary), 0.2);
+  border-color: rgb(var(--primary));
+}
+
+.input::placeholder {
+  opacity: 0.6;
+}
+
+/* Modal */
 .modal-content {
-  @apply bg-gray-900 rounded-2xl border border-gray-800 p-6 max-w-md w-full mx-4 shadow-2xl;
+  @apply rounded-2xl border p-6 max-w-md w-full shadow-2xl;
+  background: var(--card);
+  border-color: rgba(var(--border), 0.5);
 }
-
-/* Touch-friendly modal actions */
-.modal-actions {
-  @apply flex gap-3 mt-6;
-}
-
 .modal-actions .btn {
   flex: 1;
 }

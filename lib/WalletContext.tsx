@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
 
 // Types for Ethereum
 interface EthereumProvider {
@@ -49,10 +49,13 @@ export function Providers({ children }: { children: ReactNode }) {
     chainId: null,
     isConnecting: false,
   });
+  
+  const initialized = useRef(false);
 
   // Check for existing connection on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.ethereum) {
+    if (typeof window !== 'undefined' && window.ethereum && !initialized.current) {
+      initialized.current = true;
       const checkConnection = async () => {
         try {
           const accounts = await window.ethereum!.request({ method: 'eth_accounts' });
@@ -209,4 +212,42 @@ export async function sendTransaction(to: string, value: string): Promise<string
       value,
     }],
   });
+}
+
+// ERC-8004 Delegation helper
+export async function createDelegation(
+  delegateAddress: string,
+  scope: {
+    canBook?: boolean;
+    canOrder?: boolean;
+    canSchedule?: boolean;
+    canResearch?: boolean;
+    maxSpend?: bigint;
+  }
+): Promise<{ success: boolean; delegationId?: string; error?: string }> {
+  try {
+    // In production, this would:
+    // 1. Prepare ERC-8004 delegation data
+    // 2. Get user signature
+    // 3. Submit to smart contract
+    
+    const delegationData = {
+      delegate: delegateAddress,
+      scope,
+      timestamp: Date.now(),
+    };
+    
+    console.log('Creating delegation:', delegationData);
+    
+    // For demo, just return success
+    return {
+      success: true,
+      delegationId: `delegation_${Date.now()}`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }

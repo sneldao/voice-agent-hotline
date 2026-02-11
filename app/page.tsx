@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight } from '@/components/ui';
 import { announce } from '@/lib/accessibility';
+import { useWallet } from '@/lib/WalletContext';
 
 // Demo data
 const DEMO_AGENTS = [
@@ -85,8 +86,26 @@ export default function Home() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [userBalance, setUserBalance] = useState(2.50);
+  const [userBalance, setUserBalance] = useState(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const mainContentRef = useRef<HTMLElement>(null);
+
+  // Get wallet connection state
+  const { connected, address, isConnecting, connect, formatAddress } = useWallet();
+
+  // Load user balance when connected
+  useEffect(() => {
+    if (connected && address) {
+      setIsLoadingBalance(true);
+      fetch(`/api/users/${address}/balance`)
+        .then(res => res.json())
+        .then(data => setUserBalance(data.balance || 0))
+        .catch(() => setUserBalance(0))
+        .finally(() => setIsLoadingBalance(false));
+    } else {
+      setUserBalance(0);
+    }
+  }, [connected, address]);
 
   // Keyboard navigation for accessibility
   useEffect(() => {
@@ -165,11 +184,22 @@ export default function Home() {
               <p className="text-xs text-gray-500">AI-Powered Voice Agents</p>
             </div>
           </div>
-          <div className="flex items-center gap-2" role="group" aria-label="User balance and notifications">
-            <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm font-medium text-cyan-400">${userBalance.toFixed(2)}</span>
-            </div>
+          <div className="flex items-center gap-2" role="group" aria-label="User wallet and notifications">
+            {connected ? (
+              <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-cyan-400" />
+                <span className="text-sm font-medium text-cyan-400">${userBalance.toFixed(2)}</span>
+                <span className="text-xs text-gray-500">{formatAddress()}</span>
+              </div>
+            ) : (
+              <button
+                onClick={connect}
+                disabled={isConnecting}
+                className="px-4 py-1.5 rounded-full bg-cyan-500 text-white text-sm font-medium hover:bg-cyan-400 transition-colors disabled:opacity-50"
+              >
+                {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            )}
             <button
               className="w-10 h-10 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center hover:bg-gray-800 transition-colors"
               aria-label="Notifications"

@@ -1,21 +1,42 @@
-// x402 Payment Service for Micropayments on Celo (Simplified)
+// ============================================
+// x402 Payment Service for Micropayments on Celo
+// ============================================
 
-interface PaymentAuthorization {
+// ============================================
+// Payment Types
+// ============================================
+
+export type PaymentMode = 'x402' | 'streaming';
+
+export interface PaymentAuthorization {
   id: string;
   payer: string;
   payee: string;
-  amount: number; // in cents
+  amount: number;
   token: string;
   expiresAt: number;
+  mode: PaymentMode;
 }
 
-interface SessionPayment {
+export interface SessionPayment {
   sessionId: string;
   authorizationId: string;
   totalAuthorized: number;
   spent: number;
   lastUpdate: number;
+  mode: PaymentMode;
 }
+
+export interface StreamingState {
+  status: 'idle' | 'pending' | 'streaming' | 'stopped' | 'error';
+  flowRate: string;
+  startedAt: Date | null;
+  stoppedAt: Date | null;
+}
+
+// ============================================
+// x402 Payment Service (Per-Call)
+// ============================================
 
 export class X402PaymentService {
   private authorization: PaymentAuthorization | null = null;
@@ -37,6 +58,7 @@ export class X402PaymentService {
       amount: amountCents,
       token: 'USDC',
       expiresAt,
+      mode: 'x402',
     };
 
     this.authorization = authorization;
@@ -63,6 +85,7 @@ export class X402PaymentService {
       totalAuthorized: this.authorization.amount,
       spent: 0,
       lastUpdate: Date.now(),
+      mode: 'x402',
     };
   }
 
@@ -100,7 +123,7 @@ export class X402PaymentService {
   }
 
   // Get current session status
-  getSessionStatus(): { spent: number; remaining: number; duration: number } | null {
+  getSessionStatus(): { spent: number; remaining: number; duration: number; mode: PaymentMode } | null {
     if (!this.sessionPayment || !this.authorization) {
       return null;
     }
@@ -110,6 +133,7 @@ export class X402PaymentService {
       spent: this.sessionPayment.spent,
       remaining,
       duration: Math.floor((Date.now() - this.sessionPayment.lastUpdate) / 1000),
+      mode: 'x402',
     };
   }
 
@@ -125,6 +149,59 @@ export class X402PaymentService {
     }
     const perSecond = this.authorization.amount / 60;
     return perSecond * seconds;
+  }
+}
+
+// ============================================
+// Streaming Payment Service (Superfluid)
+// ============================================
+
+export class StreamingPaymentService {
+  private streamingState: StreamingState = {
+    status: 'idle',
+    flowRate: '0',
+    startedAt: null,
+    stoppedAt: null,
+  };
+
+  // Start streaming payment
+  async startStreaming(
+    recipient: string,
+    monthlyUSDC: number
+  ): Promise<StreamingState> {
+    // Calculate flow rate
+    const secondsPerMonth = 30 * 24 * 60 * 60;
+    const flowRateUSDCx = (monthlyUSDC * 1e18) / secondsPerMonth;
+
+    this.streamingState = {
+      status: 'streaming',
+      flowRate: flowRateUSDCx.toString(),
+      startedAt: new Date(),
+      stoppedAt: null,
+    };
+
+    return this.streamingState;
+  }
+
+  // Stop streaming payment
+  async stopStreaming(): Promise<StreamingState> {
+    this.streamingState = {
+      ...this.streamingState,
+      status: 'stopped',
+      stoppedAt: new Date(),
+    };
+
+    return this.streamingState;
+  }
+
+  // Get streaming status
+  getStreamingStatus(): StreamingState {
+    return this.streamingState;
+  }
+
+  // Get current balance (would query Superfluid in production)
+  async getBalance(): Promise<string> {
+    return '0';
   }
 }
 

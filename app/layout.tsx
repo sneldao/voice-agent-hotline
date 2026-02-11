@@ -1,12 +1,19 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from '@/lib/WalletContext';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { DarkModeToggle } from '@/components/DarkModeToggle';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#0f172a',
+};
 
 export const metadata: Metadata = {
-  title: 'Voice Agent Hotline v2',
-  description: 'Talk to verified AI agents, pay per minute via x402 micropayments on Celo',
-  themeColor: '#0f172a',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  title: 'VOISSS - Voice Agent Hotline',
+  description: 'Talk to AI agents, pay per second via x402 micropayments on Celo. Delegate agents to take actions with ERC-8004 permissions.',
 };
 
 export default function RootLayout({
@@ -15,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -24,7 +31,7 @@ export default function RootLayout({
                 var savedTheme = localStorage.getItem('theme');
                 var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 var theme = savedTheme || (prefersDark ? 'dark' : 'light');
-                document.body.setAttribute('data-theme', theme);
+                document.documentElement.classList.add(theme + '-mode');
               })();
             `,
           }}
@@ -32,7 +39,10 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <Providers>
-          {children}
+          <ThemeProvider>
+            <DarkModeToggle />
+            {children}
+          </ThemeProvider>
         </Providers>
       </body>
     </html>
