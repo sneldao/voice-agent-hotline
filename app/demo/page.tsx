@@ -18,6 +18,7 @@ import { CallEstimator } from '@/components/CallEstimator';
 import { AgentToAgentChat } from '@/components/AgentToAgentChat';
 import { RateLimitDemo } from '@/components/RateLimitDisplay';
 import { MobilePolish } from '@/components/MobilePolish';
+import { AgentSkillsPanel } from '@/components/AgentSkillsPanel';
 
 export default function VoiceAgentDemo() {
   const [apiKey, setApiKey] = useState('');
@@ -292,6 +293,9 @@ export default function VoiceAgentDemo() {
 
       {/* Mobile Polish */}
       <MobilePolish />
+
+      {/* Agent Skills Panel */}
+      <AgentSkillsPanel />
       {/* Integrations Status */}
       <div className="status-section">
         <h3>🔗 Integrations</h3>
