@@ -15,6 +15,7 @@ import { StreamingPaymentModal } from '@/components/StreamingPaymentModal';
 import { AnimatedPaymentFlow } from '@/components/AnimatedPaymentFlow';
 import { AgentComparison } from '@/components/AgentComparison';
 import { CallEstimator } from '@/components/CallEstimator';
+import { AgentToAgentChat } from '@/components/AgentToAgentChat';
 
 export default function VoiceAgentDemo() {
   const [apiKey, setApiKey] = useState('');
@@ -110,6 +111,9 @@ export default function VoiceAgentDemo() {
       </div>
 
       {showComparison && <AgentComparison agents={(Object.values(AGENT_PERSONALITIES) as unknown as any[])} />}
+
+      {/* Agent-to-Agent Chat Demo */}
+      <AgentToAgentChat agents={Object.values(AGENT_PERSONALITIES) as unknown as any[]} />
 
       {/* Configuration */}
       <div className="config-section">
