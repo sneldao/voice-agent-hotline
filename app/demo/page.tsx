@@ -16,6 +16,7 @@ import { AnimatedPaymentFlow } from '@/components/AnimatedPaymentFlow';
 import { AgentComparison } from '@/components/AgentComparison';
 import { CallEstimator } from '@/components/CallEstimator';
 import { AgentToAgentChat } from '@/components/AgentToAgentChat';
+import { RateLimitDemo } from '@/components/RateLimitDisplay';
 
 export default function VoiceAgentDemo() {
   const [apiKey, setApiKey] = useState('');
@@ -280,6 +281,13 @@ export default function VoiceAgentDemo() {
         </div>
       </div>
 
+
+      {/* Rate Limiting Demo */}
+      <div className="rate-limit-section">
+        <h3>🛡️ Rate Limiting</h3>
+        <p className="section-desc">Upstash Redis with ERC-8004 rate limiting</p>
+        <RateLimitDemo />
+      </div>
       {/* Integrations Status */}
       <div className="status-section">
         <h3>🔗 Integrations</h3>
@@ -488,6 +496,21 @@ export default function VoiceAgentDemo() {
         }
         .voice-section,
         .payment-section,
+
+      .rate-limit-section {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+      }
+      .rate-limit-section h3 {
+        margin: 0 0 10px 0;
+      }
+      .section-desc {
+        color: #666;
+        font-size: 14px;
+        margin: 0 0 20px 0;
+      }
         .status-section {
           background: #f8f9fa;
           padding: 25px;
