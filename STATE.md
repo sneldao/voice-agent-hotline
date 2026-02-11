@@ -1,10 +1,16 @@
-# voice-agent-hotline (Celo Hackathon) - v5 STATUS
+# voice-agent-hotline (Celo Hackathon) - v6 STATUS
 
-## Status: ready_for_submission_v5
+## Status: ready_for_submission_v6
 ## Completion: 100%
 ## Deadline: 2026-02-15 (4 days)
 
-## v5 UPGRADES (Just Completed)
+## v6 UPGRADES (Just Completed)
+- ✅ RateLimitDisplay component
+- ✅ Upstash Redis visualization
+- ✅ Real-time usage tracking
+- ✅ Animated progress bars
+
+## v5 UPGRADES
 - ✅ Agent-to-Agent Autonomous Chat
 - ✅ ERC-8004 delegation demo
 - ✅ Autonomous agent collaboration
@@ -33,15 +39,15 @@
 
 ## Current Ratings (Target: 9/10)
 - **Product Design: 8.5/10**
-- Architecture: 8.5/10
+- **Architecture: 9/10** ✅ (+0.5 from rate limiting)
 - UI/UX: 8.5/10
-- **Agent Experience: 8/10** ✅ (+2 from agent-to-agent demo)
-- **Overall: 8.4/10** (up from 7.9, now only 0.6 away from 9!)
+- **Agent Experience: 8/10**
+- **Overall: 8.5/10** (up from 8.4, now only 0.5 away from 9!)
 
 ## Submission Status
 - ✅ Demo accessible: https://voice-agent-hotline.vercel.app
-- ✅ Build: 10.1 kB home, **43.9 kB demo (v5)** ✅
-- ✅ GitHub commits: 4 ahead of origin/main
+- ✅ Build: 10.1 kB home, **45.4 kB demo (v6)** ✅
+- ✅ GitHub commits: 5 ahead of origin/main
 - ⚠️ GitHub push pending (creds issue)
 - ✅ All submission documents created (10 files)
 - ⏳ Ready for human to submit

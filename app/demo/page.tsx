@@ -17,6 +17,7 @@ import { AgentComparison } from '@/components/AgentComparison';
 import { CallEstimator } from '@/components/CallEstimator';
 import { AgentToAgentChat } from '@/components/AgentToAgentChat';
 import { RateLimitDemo } from '@/components/RateLimitDisplay';
+import { MobilePolish } from '@/components/MobilePolish';
 
 export default function VoiceAgentDemo() {
   const [apiKey, setApiKey] = useState('');
@@ -288,6 +289,9 @@ export default function VoiceAgentDemo() {
         <p className="section-desc">Upstash Redis with ERC-8004 rate limiting</p>
         <RateLimitDemo />
       </div>
+
+      {/* Mobile Polish */}
+      <MobilePolish />
       {/* Integrations Status */}
       <div className="status-section">
         <h3>🔗 Integrations</h3>
