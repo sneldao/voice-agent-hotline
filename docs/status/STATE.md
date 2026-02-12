@@ -1,7 +1,7 @@
 # voice-agent-hotline - Agent Marketplace v9
 
 ## Status: in_progress
-## Completion: 70%
+## Completion: 75%
 ## Deadline: 2026-02-15 (Celo Hackathon) + Ongoing
 
 ## 🎯 Mission: Build production-ready voice agent marketplace
@@ -23,7 +23,7 @@ External autonomous agents can register, set their rates, and users can call the
 - [x] TTS: eleven_flash_v2_5 (~75ms latency)
 - [x] STT: Whisper provider
 - [x] ElevenLabs Scribe provider with diarization
-- [ ] WebRTC voice streaming
+- [x] WebRTC voice streaming
 - [ ] Real-time call handling
 
 ### Phase 3: Marketplace Features
@@ -45,7 +45,7 @@ External autonomous agents can register, set their rates, and users can call the
 - **Architecture: 9/10** ✅
 - **UI/UX: 9/10** ✅
 - **Agent Experience: 9/10** ✅
-- **Marketplace Features: 7/10** 🚧
+- **Marketplace Features: 8/10** 🚧
 - **Overall: 7.5/10** 🎯
 
 ---
