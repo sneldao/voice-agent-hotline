@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { getBrowserInfo, getAudioConstraints, getRTCConfig, ConnectionMonitor } from '@/lib/browser-utils'
 
 interface Agent {
   id: string
@@ -19,6 +20,8 @@ export function CallRoom({ agent, onEnd }: CallRoomProps) {
   const [duration, setDuration] = useState(0)
   const [cost, setCost] = useState(0)
   const [transcript, setTranscript] = useState<string[]>([])
+  const [connectionQuality, setConnectionQuality] = useState<'good' | 'fair' | 'poor'>('good')
+  const [browserInfo, setBrowserInfo] = useState<string>('')
   
   const localAudioRef = useRef<HTMLAudioElement>(null)
   const remoteAudioRef = useRef<HTMLAudioElement>(null)
@@ -48,26 +51,37 @@ export function CallRoom({ agent, onEnd }: CallRoomProps) {
 
   const startCall = async () => {
     try {
+      // Detect browser and optimize
+      const browser = getBrowserInfo()
+      console.log(`[Call] Browser: ${browser.name} ${browser.version} on ${browser.os}`)
+      console.log(`[Call] Quality: ${browser.recommendedQuality}, Mobile: ${browser.isMobile}`)
+      
+      setBrowserInfo(`${browser.name} ${browser.version} (${browser.os})`)
+
+      if (!browser.supportsWebRTC) {
+        throw new Error('WebRTC not supported in this browser')
+      }
+
       // Get call session from API
       const res = await fetch('/api/calls/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agentId: agent.id,
-          userAddress: '0xUser...' // Would come from wallet
+          userAddress: '0xUser...'
         })
       })
 
       const { callId, voiceId } = await res.json()
       callIdRef.current = callId
 
-      // Get user media
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Get user media with browser-optimized constraints
+      const constraints = getAudioConstraints(browser)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
 
-      // Create peer connection
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      })
+      // Create peer connection with browser-optimized config
+      const rtcConfig = getRTCConfig(browser)
+      const pc = new RTCPeerConnection(rtcConfig)
       peerConnectionRef.current = pc
 
       // Add tracks
@@ -126,6 +140,16 @@ export function CallRoom({ agent, onEnd }: CallRoomProps) {
            status === 'active' ? 'Active' : 'Ended'}
         </span>
       </div>
+
+      {browserInfo && (
+        <div className="browser-info">
+          <span className={`quality ${connectionQuality}`}>
+            {connectionQuality === 'good' ? '🟢' : connectionQuality === 'fair' ? '🟡' : '🔴'}
+            {connectionQuality}
+          </span>
+          <span className="browser">{browserInfo}</span>
+        </div>
+      )}
 
       <div className="call-stats">
         <div className="stat">
@@ -237,6 +261,24 @@ export function CallRoom({ agent, onEnd }: CallRoomProps) {
         }
         .end-call:hover {
           transform: scale(1.05);
+        }
+        .browser-info {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+          margin-bottom: 1rem;
+          font-size: 0.875rem;
+        }
+        .quality {
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-weight: 600;
+        }
+        .quality.good { background: #d1fae5; color: #065f46; }
+        .quality.fair { background: #fef3c7; color: #92400e; }
+        .quality.poor { background: #fee2e2; color: #991b1b; }
+        .browser {
+          color: #6b7280;
         }
       `}</style>
     </div>
