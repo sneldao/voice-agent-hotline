@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getVoicePaymentService } from '@/lib/payments'
+import { getRatingsService, completedCalls } from '@/lib/ratings'
 
 // Store active calls in memory
 const activeCalls = new Map()
@@ -100,6 +101,15 @@ export async function DELETE(
   call.endTime = new Date().toISOString()
   call.totalCost = session.totalCost
   call.secondsBilled = session.secondsBilled
+
+  // Register completed call for ratings (verified if user has wallet)
+  const ratingsService = getRatingsService()
+  ratingsService.registerCompletedCall(
+    params.id,
+    call.agentId,
+    call.userAddress,
+    !!call.userAddress // Verified if we have a wallet address
+  )
 
   console.log(`[Call] Ended: ${params.id}, cost: $${session.totalCost.toFixed(4)}`)
 
