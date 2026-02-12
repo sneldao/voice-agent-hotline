@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { CallRoom } from '@/components/CallRoom'
 
 interface Agent {
   id: string
@@ -21,6 +22,7 @@ export default function Marketplace() {
   const [filter, setFilter] = useState('')
   const [maxRate, setMaxRate] = useState('')
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
+  const [inCall, setInCall] = useState(false)
   const [calling, setCalling] = useState(false)
 
   useEffect(() => {
@@ -45,14 +47,12 @@ export default function Marketplace() {
   }
 
   const handleCall = async (agent: Agent) => {
-    setCalling(true)
     setSelectedAgent(agent)
-    
-    // Simulate call connection
-    await new Promise(r => setTimeout(r, 1500))
-    
-    alert(`Connecting you to ${agent.name}...\n\nRate: $${agent.ratePerMinute}/min\n\n(This is a demo - real WebRTC integration coming soon!)`)
-    setCalling(false)
+    setInCall(true)
+  }
+
+  if (inCall && selectedAgent) {
+    return <CallRoom agent={selectedAgent} onEnd={() => { setInCall(false); setSelectedAgent(null) }} />
   }
 
   const capabilities = [...new Set(agents.flatMap(a => a.capabilities))]
@@ -109,9 +109,9 @@ export default function Marketplace() {
               <button 
                 className="call-button"
                 onClick={() => handleCall(agent)}
-                disabled={calling}
+                disabled={calling || inCall}
               >
-                {calling && selectedAgent?.id === agent.id ? 'Connecting...' : '📞 Call Now'}
+                {calling ? 'Connecting...' : inCall ? 'In Call...' : '📞 Call Now'}
               </button>
             </div>
           ))}
