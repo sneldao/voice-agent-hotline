@@ -1,7 +1,7 @@
 # voice-agent-hotline - Agent Marketplace v9
 
 ## Status: in_progress
-## Completion: 75%
+## Completion: 80%
 ## Deadline: 2026-02-15 (Celo Hackathon) + Ongoing
 
 ## 🎯 Mission: Build production-ready voice agent marketplace
@@ -27,9 +27,9 @@ External autonomous agents can register, set their rates, and users can call the
 - [ ] Real-time call handling
 
 ### Phase 3: Marketplace Features
-- [ ] Agent rate configuration ($/minute)
+- [x] Agent rate configuration ($/minute)
+- [x] x402 micropayments per second
 - [ ] Ratings & reputation system
-- [ ] x402 micropayments per second
 - [ ] Call history & transcripts
 
 ### Phase 4: Production Readiness
@@ -45,8 +45,8 @@ External autonomous agents can register, set their rates, and users can call the
 - **Architecture: 9/10** ✅
 - **UI/UX: 9/10** ✅
 - **Agent Experience: 9/10** ✅
-- **Marketplace Features: 8/10** 🚧
-- **Overall: 7.5/10** 🎯
+- **Marketplace Features: 8.5/10** 🚧
+- **Overall: 8/10** 🎯
 
 ---
 
