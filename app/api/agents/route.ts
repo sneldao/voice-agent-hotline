@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimit, validateAgentInput, sanitizeInput } from '@/lib/security'
 
 // In-memory agent store
 const agents = new Map()
@@ -90,6 +91,19 @@ initializeAgents()
 
 // GET /api/agents - List all agents
 export async function GET(request: NextRequest) {
+  // Apply rate limiting (60 req/min for listing)
+  const { allowed, remaining } = rateLimit(`list:${request.headers.get('x-forwarded-for') || 'ip'}`, {
+    windowMs: 60000,
+    maxRequests: 60
+  })
+  
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
+    )
+  }
+
   const { searchParams } = new URL(request.url)
   const capability = searchParams.get('capability')
   const maxRate = searchParams.get('maxRate')
@@ -124,25 +138,46 @@ export async function GET(request: NextRequest) {
 
 // POST /api/agents - Register new agent
 export async function POST(request: NextRequest) {
+  // Apply rate limiting (10 req/min for registration)
+  const ip = request.headers.get('x-forwarded-for') || 'ip'
+  const { allowed } = rateLimit(`register:${ip}`, {
+    windowMs: 60000,
+    maxRequests: 10
+  })
+  
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429 }
+    )
+  }
+
   try {
     const body = await request.json()
-    const { address, name, description, voiceId, capabilities, ratePerMinute } = body
 
-    if (!address || !name || !voiceId || !capabilities || !ratePerMinute) {
+    // Validate input
+    const validation = validateAgentInput(body)
+    if (!validation.valid) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Validation failed', details: validation.errors },
         { status: 400 }
       )
     }
+
+    const { address, name, description, voiceId, capabilities, ratePerMinute } = body
 
     if (agents.has(address)) {
       return NextResponse.json({ error: 'Agent already registered' }, { status: 409 })
     }
 
+    // Sanitize inputs
+    const sanitizedName = sanitizeInput(name)
+    const sanitizedDescription = description ? sanitizeInput(description) : ''
+
     const agent = {
       id: address,
       address,
-      name,
+      name: sanitizedName,
       description: description || '',
       voiceId,
       capabilities: Array.isArray(capabilities) ? capabilities : [capabilities],

@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getRatingsService } from '../../../lib/ratings'
+import { rateLimit, validateRatingInput } from '@/lib/security'
+import { getRatingsService } from '@/lib/ratings'
 
 // GET /api/ratings?agentId=xxx - Get agent ratings
 export async function GET(request: NextRequest) {
+  // Rate limit: 60 req/min
+  const ip = request.headers.get('x-forwarded-for') || 'ip'
+  const { allowed } = rateLimit(`ratings:${ip}`, { windowMs: 60000, maxRequests: 60 })
+  if (!allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+  }
+
   const { searchParams } = new URL(request.url)
   const agentId = searchParams.get('agentId')
 
   if (!agentId) {
-    return NextResponse.json(
-      { error: 'Missing agentId' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Missing agentId' }, { status: 400 })
   }
 
   const ratingsService = getRatingsService()
@@ -21,23 +26,23 @@ export async function GET(request: NextRequest) {
 
 // POST /api/ratings - Submit a rating
 export async function POST(request: NextRequest) {
+  // Rate limit: 10 ratings/min
+  const ip = request.headers.get('x-forwarded-for') || 'ip'
+  const { allowed } = rateLimit(`rate:${ip}`, { windowMs: 60000, maxRequests: 10 })
+  if (!allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+  }
+
   try {
     const body = await request.json()
+
+    // Validate input
+    const validation = validateRatingInput(body)
+    if (!validation.valid) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 })
+    }
+
     const { agentId, userAddress, callId, score, comment } = body
-
-    if (!agentId || !userAddress || !callId || score === undefined) {
-      return NextResponse.json(
-        { error: 'Missing required fields: agentId, userAddress, callId, score' },
-        { status: 400 }
-      )
-    }
-
-    if (score < 1 || score > 5) {
-      return NextResponse.json(
-        { error: 'Score must be between 1 and 5' },
-        { status: 400 }
-      )
-    }
 
     const ratingsService = getRatingsService()
     const rating = await ratingsService.submitRating(
@@ -51,9 +56,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ rating }, { status: 201 })
 
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Invalid request' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: error.message || 'Invalid request' }, { status: 400 })
   }
 }
