@@ -207,6 +207,14 @@ export class VoicePipeline {
       tts: true
     }
   }
+
+  /**
+   * Transcribe audio to text (STT only)
+   * Used by WebRTC for real-time transcription
+   */
+  async transcribe(audio: AudioInput): Promise<TextOutput> {
+    return await this.stt.transcribe(audio)
+  }
 }
 
 // Singleton instance for easy import

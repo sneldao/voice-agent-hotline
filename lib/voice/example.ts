@@ -8,7 +8,8 @@ import {
   VoicePipeline,
   CostTracker,
   AgentPersonality,
-  ConversationContext
+  ConversationContext,
+  AudioInput
 } from './'
 
 // ============================================================================
@@ -29,7 +30,10 @@ async function basicExample() {
   }
 
   // Simulated user audio (in production, from microphone)
-  const userAudio: Buffer = Buffer.from('...') // Audio data
+  const userAudio: AudioInput = {
+    data: new Uint8Array(1024), // Placeholder audio data
+    mimeType: 'audio/webm'
+  }
 
   // Process the conversation
   const responseAudio = await pipeline.process(userAudio, therapist)
