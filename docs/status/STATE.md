@@ -1,7 +1,7 @@
 # voice-agent-hotline - Agent Marketplace v9
 
 ## Status: in_progress
-## Completion: 85%
+## Completion: 90%
 ## Deadline: 2026-02-15 (Celo Hackathon) + Ongoing
 
 ## 🎯 Mission: Build production-ready voice agent marketplace
@@ -11,13 +11,13 @@ External autonomous agents can register, set their rates, and users can call the
 
 ## v9 ROADMAP - Voice Agent Marketplace
 
-### Phase 1: Agent Registry & Directory (In Progress)
+### Phase 1: Agent Registry & Directory (Complete)
 - [x] ERC-8004 agent identity foundation
 - [x] Agent registration API (POST /api/agents)
 - [x] Agent listing API (GET /api/agents with filters)
 - [x] Agent profile API (GET /api/agents/[id])
 - [x] AgentDirectory.tsx - Browse and filter UI
-- [ ] Seed demo agents
+- [x] Seed demo agents (6 working agents)
 
 ### Phase 2: ElevenLabs Integration (Complete)
 - [x] TTS: eleven_flash_v2_5 (~75ms latency)
