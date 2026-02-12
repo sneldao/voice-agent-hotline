@@ -1,95 +1,83 @@
-# voice-agent-hotline (Celo Hackathon) - v8 STATUS
+# voice-agent-hotline - Agent Marketplace v9
 
-## Status: ready_for_submission_v8
-## Completion: 100%
-## Deadline: 2026-02-15 (4 days)
+## Status: in_progress
+## Completion: 60%
+## Deadline: 2026-02-15 (Celo Hackathon) + Ongoing
 
-## v8 UPGRADES (Just Completed)
-- ✅ AgentSkillsPanel component
-- ✅ ERC-8004 skills customization
-- ✅ Delegation management UI
-- ✅ Permission tags
-- ✅ Skill level progression
+## 🎯 Mission: Build production-ready voice agent marketplace
+External autonomous agents can register, set their rates, and users can call them via voice.
 
-## v7 UPGRADES
-- ✅ MobilePolish component
-- ✅ Touch-friendly buttons with haptic feedback
-- ✅ Gesture support (tap, swipe, long press)
-- ✅ Safe area insets for notches
-- ✅ Performance stats (60fps, <50ms)
+---
 
-## v6 UPGRADES
-- ✅ RateLimitDisplay component
-- ✅ Upstash Redis visualization
-- ✅ Real-time usage tracking
-- ✅ Animated progress bars
+## v9 ROADMAP - Voice Agent Marketplace
 
-## v5 UPGRADES
-- ✅ Agent-to-Agent Autonomous Chat
-- ✅ ERC-8004 delegation demo
-- ✅ Autonomous agent collaboration
-- ✅ Animated conversation replay
+### Phase 1: Agent Registry & Directory (In Progress)
+- [x] ERC-8004 agent identity foundation
+- [ ] Agent registration API
+- [ ] Agent directory listing
+- [ ] Search/filter by capability, rate, rating
 
-## v4 UPGRADES
-- ✅ Viral referral system (share → earn $0.01/referral)
-- ✅ Twitter/X sharing integration
-- ✅ Telegram sharing integration
-- ✅ Referral code generation
-- ✅ Stats tracking UI
+### Phase 2: ElevenLabs Integration (Complete)
+- [x] TTS: eleven_flash_v2_5 (~75ms latency)
+- [x] STT: Whisper provider
+- [x] ElevenLabs Scribe provider with diarization
+- [ ] WebRTC voice streaming
+- [ ] Real-time call handling
 
-## v3 UPGRADES
-- ✅ Dark mode toggle (☀️/🌙)
-- ✅ ThemeProvider with CSS variables
-- ✅ Theme-aware components
+### Phase 3: Marketplace Features
+- [ ] Agent rate configuration ($/minute)
+- [ ] Ratings & reputation system
+- [ ] x402 micropayments per second
+- [ ] Call history & transcripts
 
-## v2 UPGRADES
-- ✅ Animated waveform visualization
-- ✅ Voice recording with live duration
-- ✅ Real-time transcription UI
-- ✅ Call cost estimator (calculator)
-- ✅ Agent comparison tool
-- ✅ Animated payment flow (x402/Superfluid)
-- ✅ 4 agents (Chef Mario added)
+### Phase 4: Production Readiness
+- [ ] Error handling & retries
+- [ ] Rate limiting & abuse prevention
+- [ ] Analytics & monitoring
+- [ ] Load testing
+
+---
 
 ## Current Ratings (Target: 9/10)
 - **Product Design: 8.5/10**
 - **Architecture: 9/10** ✅
 - **UI/UX: 9/10** ✅
-- **Agent Experience: 9/10** ✅ (+1 from skills panel)
-- **Overall: 9/10** 🎉
+- **Agent Experience: 9/10** ✅
+- **Marketplace Features: 5/10** 🚧
+- **Overall: 7.5/10** 🎯
 
-## Submission Status
-- ✅ Demo accessible: https://voice-agent-hotline.vercel.app
-- ✅ Build: 10.1 kB home, **48.3 kB demo (v8)** ✅
-- ✅ GitHub commits: 7 ahead of origin/main
-- ⚠️ GitHub push pending (creds issue)
-- ✅ All submission documents created (10 files)
-- ⏳ Ready for human to submit
+---
 
-**🎉 REACHED 9/10 OVERALL!**
-**Only need 0.25 → NOW AT 9/10!**
+## Completed Features
+- ✅ Voice pipeline (STT → LLM → TTS)
+- ✅ ElevenLabs optimized settings
+- ✅ AgentSkillsPanel
+- ✅ ERC-8004 integration
+- ✅ Mobile-first UI
 
-## Next Action
-Human to submit to Celo AI Partner Hackathon:
+---
 
-1. Open: `HUMAN_QUICK_SUBMIT.md` - copy-paste form fields
-2. Visit: https://celoplatform.notion.site/Build-Agents-for-the-Real-World-Celo-Hackathon
-3. Sign in with X (Twitter)
-4. Submit before Feb 15 deadline
+## Next Actions (Priority Order)
 
-**New!** Created `HUMAN_QUICK_SUBMIT.md` with one-click copy-paste form fields.
+### 1. Agent Directory API
+```
+POST /api/agents/register
+GET /api/agents?capability=coding&maxRate=1.00
+```
 
-## Core Features
-- 🎙️ Real AI voice via ElevenLabs
-- 💰 x402 direct payments
-- 💧 Superfluid streaming
-- 🤖 ERC-8004 agent registry
-- 📱 Mobile-first design
+### 2. WebRTC Integration
+- Connect user microphone to voice pipeline
+- Stream audio to agent
+- Receive audio response
+
+### 3. x402 Payment Flow
+- Pre-authorize max call cost
+- Per-second billing during call
+- Settlement on call end
+
+---
 
 ## Resources
 - **Demo:** https://voice-agent-hotline.vercel.app
 - **Repo:** https://github.com/sneldao/voice-agent-hotline
-- **Celo Notion:** https://celoplatform.notion.site/Build-Agents-for-the-Real-World-Celo-Hackathon
-
-## 🎯 IMMEDIATE ACTION
-Submit to Celo hackathon platform before Feb 15!
+- **ElevenLabs Skills:** `~/.openclaw/workspace/.agents/skills/`
