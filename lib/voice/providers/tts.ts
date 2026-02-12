@@ -54,13 +54,17 @@ export class ElevenLabsProvider implements TTSProvider {
           },
           body: JSON.stringify({
             text: input.text,
-            model_id: 'eleven_multilingual_v2',
+            // Use eleven_flash_v2_5 for ultra-low latency (~75ms) for real-time voice agents
+            // For highest quality, use 'eleven_v3' or 'eleven_multilingual_v2'
+            model_id: this.config.model || 'eleven_flash_v2_5',
             voice_settings: {
-              stability: this.config.stability || 0.5,
-              similarity_boost: this.config.clarity || 0.75,
-              style: 0,
-              use_speaker_boost: true
-            }
+              stability: this.config.stability ?? 0.5,
+              similarity_boost: this.config.similarityBoost ?? 0.75,
+              style: this.config.style ?? 0.2,
+              use_speaker_boost: this.config.speakerBoost ?? true
+            },
+            // Optimize for streaming
+            output_format: 'mp3_44100_128'
           })
         }
       )

@@ -53,12 +53,43 @@ ELEVENLABS_API_KEY=xi_...
 ```typescript
 import { VoicePipeline } from '@/lib/voice'
 
+// Optimized for real-time voice agents (ultra-low latency)
 const pipeline = new VoicePipeline({
-  stt: { provider: 'whisper', language: 'en' },
-  llm: { provider: 'openai', model: 'gpt-4', temperature: 0.7 },
-  tts: { provider: 'elevenlabs', stability: 0.5, clarity: 0.75 },
+  // STT: Use 'whisper' or 'elevenlabs-scribe' for native ElevenLabs
+  stt: { 
+    provider: 'whisper', 
+    language: 'en',
+    diarize: true  // Know WHO said WHAT
+  },
+  
+  // LLM: GPT-4 for agent intelligence
+  llm: { 
+    provider: 'openai', 
+    model: 'gpt-4', 
+    temperature: 0.7 
+  },
+  
+  // TTS: eleven_flash_v2_5 for ultra-low latency (~75ms)
+  tts: { 
+    provider: 'elevenlabs',
+    model: 'eleven_flash_v2_5',  // Ultra-low latency for real-time
+    stability: 0.5,
+    similarityBoost: 0.75,
+    style: 0.2,
+    speakerBoost: true
+  },
+  
   costTracking: { enabled: true, perSecondRate: 0.01, perTokenRate: 0.0001 }
 })
+```
+
+### Model Selection Guide
+
+| Use Case | STT Model | TTS Model |
+|----------|-----------|-----------|
+| Real-time voice agent | `whisper` or `elevenlabs-scribe` | `eleven_flash_v2_5` (~75ms) |
+| Highest quality | `scribe_v2` | `eleven_v3` |
+| Balanced | `whisper` | `eleven_multilingual_v2` |
 ```
 
 ## Cost Tracking

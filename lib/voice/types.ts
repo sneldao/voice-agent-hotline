@@ -64,10 +64,14 @@ export interface PipelineConfig {
 }
 
 export interface STTProviderConfig {
-  provider: 'whisper' | 'custom'
+  provider: 'whisper' | 'elevenlabs-scribe' | 'custom'
   apiKey?: string
   language?: string
   enablePunctuation?: boolean
+  // ElevenLabs Scribe specific
+  diarize?: boolean       // Speaker diarization - know WHO said WHAT
+  timestampsGranularity?: 'word' | 'sentence'
+  keyterms?: string[]    // Help recognize specific terms
 }
 
 export interface LLMProviderConfig {
@@ -82,8 +86,13 @@ export interface TTSProviderConfig {
   provider: 'elevenlabs' | 'custom'
   apiKey?: string
   defaultVoiceId?: string
-  stability?: number
-  clarity?: number
+  // Voice settings
+  stability?: number        // 0-1: Lower=expressive, Higher=consistent
+  similarityBoost?: number // 0-1: Higher=more like reference voice
+  style?: number           // 0-1: Exaggerates voice characteristics
+  speakerBoost?: boolean  // Enhances clarity
+  // Model selection
+  model?: string          // 'eleven_flash_v2_5' (ultra-low latency), 'eleven_multilingual_v2' (high quality), 'eleven_v3' (best quality)
 }
 
 export interface CostTrackingConfig {

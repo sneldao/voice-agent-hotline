@@ -29,9 +29,19 @@ export class VoicePipeline {
 
   constructor(config: Partial<PipelineConfig> = {}) {
     this.config = {
+      // STT: Use Whisper for now, or 'elevenlabs-scribe' for native ElevenLabs
       stt: config.stt || { provider: 'whisper' },
+      // LLM: Default to GPT-4 for agent intelligence
       llm: config.llm || { provider: 'openai', model: 'gpt-4' },
-      tts: config.tts || { provider: 'elevenlabs' },
+      // TTS: Use eleven_flash_v2_5 for ultra-low latency (~75ms) for real-time voice
+      tts: config.tts || { 
+        provider: 'elevenlabs',
+        model: 'eleven_flash_v2_5',  // Ultra-low latency for real-time
+        stability: 0.5,
+        similarityBoost: 0.75,
+        style: 0.2,
+        speakerBoost: true
+      },
       costTracking: config.costTracking || { 
         enabled: true, 
         perSecondRate: 0.01, 
