@@ -1,21 +1,92 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// In-memory agent registry (replace with database in production)
-const agents: Map<string, AgentProfile> = new Map()
+// In-memory agent store
+const agents = new Map()
 
-export interface AgentProfile {
-  id: string
-  address: string          // ERC-8004 identity
-  name: string
-  description: string
-  voiceId: string          // ElevenLabs voice ID
-  capabilities: string[]   // ['coding', 'legal', 'medical', 'therapy']
-  ratePerMinute: number    // $/minute
-  rating: number           // 0-5 stars
-  ratingsCount: number
-  callsCompleted: number
-  createdAt: string
+// Seed demo agents
+const seedAgents = [
+  {
+    address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0eB1E',
+    name: 'Dr. Sarah Chen',
+    description: 'Licensed therapist specializing in anxiety and stress management. Warm, empathetic, and evidence-based approaches.',
+    voiceId: 'EXAVITQu4vr4xnSDxMaL',
+    capabilities: ['therapy', 'mental-health', 'support'],
+    ratePerMinute: 2.50,
+    rating: 4.8,
+    ratingsCount: 127,
+    callsCompleted: 543
+  },
+  {
+    address: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
+    name: 'Chef Mario',
+    description: 'Italian cuisine expert. Can guide you through recipes, suggest wine pairings, and teach cooking techniques.',
+    voiceId: '21m00Tcm4TlvDq8ikWAM',
+    capabilities: ['cooking', 'recipes', 'wine', 'culinary'],
+    ratePerMinute: 1.50,
+    rating: 4.9,
+    ratingsCount: 89,
+    callsCompleted: 234
+  },
+  {
+    address: '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
+    name: 'CodeWizard',
+    description: 'Full-stack developer specializing in React, TypeScript, and Node.js. Debug, architect, and teach coding.',
+    voiceId: 'JBFqnCBsd6RMkjVDRZzb',
+    capabilities: ['coding', 'react', 'typescript', 'debugging', 'programming'],
+    ratePerMinute: 3.00,
+    rating: 4.7,
+    ratingsCount: 203,
+    callsCompleted: 891
+  },
+  {
+    address: '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
+    name: 'Legal Eagle',
+    description: 'Contract law specialist. Help with agreements, terms of service, and legal document review.',
+    voiceId: 'AZnzlk1XvdvUe5bTIl8b',
+    capabilities: ['legal', 'contracts', 'compliance', 'law'],
+    ratePerMinute: 5.00,
+    rating: 4.6,
+    ratingsCount: 45,
+    callsCompleted: 112
+  },
+  {
+    address: '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955',
+    name: 'FitCoach',
+    description: 'Personal fitness coach. Workouts, nutrition advice, and motivation for your health journey.',
+    voiceId: 'MF3mGyEYrkw8f8mmU3L0',
+    capabilities: ['fitness', 'nutrition', 'wellness', 'health'],
+    ratePerMinute: 1.50,
+    rating: 4.9,
+    ratingsCount: 167,
+    callsCompleted: 456
+  },
+  {
+    address: '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8',
+    name: 'MathMentor',
+    description: 'Math tutor from algebra to calculus. Patient explanations and step-by-step problem solving.',
+    voiceId: 'onwK4e9ZLuTAKqWW03F9',
+    capabilities: ['math', 'tutoring', 'education', 'calculus', 'algebra'],
+    ratePerMinute: 1.00,
+    rating: 4.8,
+    ratingsCount: 312,
+    callsCompleted: 789
+  }
+]
+
+// Initialize seed data
+function initializeAgents() {
+  seedAgents.forEach(agent => {
+    agents.set(agent.address, {
+      ...agent,
+      id: agent.address,
+      createdAt: new Date().toISOString()
+    })
+  })
+  console.log('[Seed] Initialized', seedAgents.length, 'demo agents')
 }
+
+// Initialize on module load
+initializeAgents()
 
 // GET /api/agents - List all agents
 export async function GET(request: NextRequest) {
@@ -26,19 +97,16 @@ export async function GET(request: NextRequest) {
 
   let agentList = Array.from(agents.values())
 
-  // Filter by capability
   if (capability) {
     agentList = agentList.filter(a => 
-      a.capabilities.map(c => c.toLowerCase()).includes(capability.toLowerCase())
+      a.capabilities.some(c => c.toLowerCase().includes(capability.toLowerCase()))
     )
   }
 
-  // Filter by max rate
   if (maxRate) {
     agentList = agentList.filter(a => a.ratePerMinute <= parseFloat(maxRate))
   }
 
-  // Sort
   switch (sortBy) {
     case 'rating':
       agentList.sort((a, b) => b.rating - a.rating)
@@ -51,38 +119,28 @@ export async function GET(request: NextRequest) {
       break
   }
 
-  return NextResponse.json({
-    agents: agentList,
-    total: agentList.length
-  })
+  return NextResponse.json({ agents: agentList, total: agentList.length })
 }
 
-// POST /api/agents - Register a new agent
+// POST /api/agents - Register new agent
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
     const { address, name, description, voiceId, capabilities, ratePerMinute } = body
 
-    // Validation
     if (!address || !name || !voiceId || !capabilities || !ratePerMinute) {
       return NextResponse.json(
-        { error: 'Missing required fields: address, name, voiceId, capabilities, ratePerMinute' },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    // Check if agent already exists
     if (agents.has(address)) {
-      return NextResponse.json(
-        { error: 'Agent already registered' },
-        { status: 409 }
-      )
+      return NextResponse.json({ error: 'Agent already registered' }, { status: 409 })
     }
 
-    // Create agent profile
-    const agent: AgentProfile = {
-      id: address, // Use address as ID
+    const agent = {
+      id: address,
       address,
       name,
       description: description || '',
@@ -96,16 +154,9 @@ export async function POST(request: NextRequest) {
     }
 
     agents.set(address, agent)
+    return NextResponse.json({ agent }, { status: 201 })
 
-    return NextResponse.json({
-      agent,
-      message: 'Agent registered successfully'
-    }, { status: 201 })
-
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Invalid request body' },
-      { status: 400 }
-    )
+  } catch {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 }
