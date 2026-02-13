@@ -97,7 +97,7 @@ export function RatingStars({ agentId }: RatingStarsProps) {
       </div>
 
       {/* Rating Distribution */}
-      {total > 0 && (
+      {total > 0 && rating && (
         <div className="distribution">
           {[5,4,3,2,1].map(star => (
             <div key={star} className="dist-row">
@@ -117,7 +117,7 @@ export function RatingStars({ agentId }: RatingStarsProps) {
       )}
 
       {/* Recent Reviews */}
-      {rating?.recentReviews?.length > 0 && (
+      {rating && rating.recentReviews && rating.recentReviews.length > 0 && (
         <div className="reviews">
           <h4>Recent Reviews</h4>
           {rating.recentReviews.map(review => (

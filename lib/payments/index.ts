@@ -7,7 +7,7 @@
 export {
   VoicePaymentService,
   getVoicePaymentService,
-  resetVoicePaymentService,
-  CallSession,
-  PaymentAuthorization
+  resetVoicePaymentService
 } from './x402'
+
+export type { CallSession, PaymentAuthorization } from './x402'

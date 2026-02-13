@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 
   if (capability) {
     agentList = agentList.filter(a => 
-      a.capabilities.some(c => c.toLowerCase().includes(capability.toLowerCase()))
+      a.capabilities.some((c: string) => c.toLowerCase().includes(capability.toLowerCase()))
     )
   }
 

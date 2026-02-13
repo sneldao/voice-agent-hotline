@@ -59,7 +59,7 @@ export function getBrowserInfo(): BrowserInfo {
   // Check capabilities
   const supportsWebRTC = !!(
     navigator.mediaDevices && 
-    navigator.mediaDevices.getUserMedia &&
+    typeof navigator.mediaDevices.getUserMedia === 'function' &&
     window.RTCPeerConnection
   )
 

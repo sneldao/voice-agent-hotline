@@ -16,7 +16,6 @@ const agents = [
     address: '0x2345678901234567890123456789012345678901',
     name: 'Chef Mario',
     description: 'Italian cuisine expert. Can guide you through recipes, suggest wine pairings, and teach cooking techniques.',
-    voiceId: 'onwK4e9ZLuTAKqWW03F9',  // Daniel
     voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel
     capabilities: ['cooking', 'recipes', 'wine'],
     ratePerMinute: 1.00
