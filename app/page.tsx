@@ -181,7 +181,12 @@ export default function Home() {
               <Phone className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg">Voice Hotline</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-bold text-lg">Voice Hotline</h1>
+                <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-[10px] font-bold text-white">
+                  💰 REAL-WORLD PAYMENTS
+                </span>
+              </div>
               <p className="text-xs text-gray-500">AI-Powered Voice Agents</p>
             </div>
           </div>
