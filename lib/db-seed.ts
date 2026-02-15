@@ -1,4 +1,4 @@
-import { redis } from './upstash';
+import { redis } from './redis';
 
 export interface AgentSeed {
   id: string;
