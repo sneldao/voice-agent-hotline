@@ -1,8 +1,8 @@
 // ============================================
-// ElevenLabs Text-to-Speech Integration
+// ElevenLabs Integration (TTS + Conversational AI)
 // ============================================
-// High-quality voice synthesis for AI agents
-// API: https://elevenlabs.io/api
+// Enhanced: Added Conversational AI SDK for full voice agent conversations
+// API: https://elevenlabs.io/docs
 
 import { Readable } from 'stream';
 
@@ -11,6 +11,7 @@ import { Readable } from 'stream';
 // ============================================
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
 
 // ============================================
 // Types
@@ -41,21 +42,106 @@ export interface TTSResponse {
 }
 
 // ============================================
-// ElevenLabs Service
+// ENHANCED: Conversational AI Types
+// ============================================
+
+export interface ConversationalAgentConfig {
+  name: string;
+  system_prompt: string;
+  voice_id: string;
+  model?: string; // default: gpt-4
+  language?: string; // default: en
+  tools?: AgentTool[];
+  webhook_url?: string; // For tool execution callbacks
+}
+
+export interface AgentTool {
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, {
+      type: string;
+      description?: string;
+      enum?: string[];
+    }>;
+    required?: string[];
+  };
+}
+
+export interface ConversationRequest {
+  agent_id: string;
+  metadata?: Record<string, any>; // Pass session_id, user_wallet, etc.
+}
+
+export interface ConversationResponse {
+  conversation_id: string;
+  agent_id: string;
+  call_url: string; // Web-based call URL
+  phone_number?: string; // Phone number (if available)
+  status: 'active' | 'ended';
+  created_at: string;
+}
+
+// ============================================
+// ElevenLabs Service (Enhanced)
 // ============================================
 
 export class ElevenLabsService {
   private apiKey: string;
   private defaultVoiceId: string;
 
-  constructor(apiKey: string, defaultVoiceId: string = '21m00Tcm4TlvDq8ikWAM') {
-    this.apiKey = apiKey;
-    this.defaultVoiceId = defaultVoiceId;
+  constructor(apiKey?: string, defaultVoiceId?: string) {
+    this.apiKey = apiKey || ELEVENLABS_API_KEY;
+    this.defaultVoiceId = defaultVoiceId || process.env.ELEVENLABS_DEFAULT_VOICE || 'Adam';
+    
+    if (!this.apiKey) {
+      console.warn('[ElevenLabs] API key not configured');
+    }
   }
 
-  /**
-   * Get available voices
-   */
+  // ============================================
+  // TTS Methods (Existing)
+  // ============================================
+
+  async textToSpeech(request: TTSRequest): Promise<TTSResponse> {
+    const voiceId = request.voiceId || this.defaultVoiceId;
+    
+    const response = await fetch(
+      `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': this.apiKey,
+        },
+        body: JSON.stringify({
+          text: request.text,
+          model_id: request.modelId || 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: request.stability ?? 0.5,
+            similarity_boost: request.similarityBoost ?? 0.75,
+            style: request.style ?? 0,
+            use_speaker_boost: request.useSpeakerBoost ?? true,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`ElevenLabs TTS failed: ${response.statusText}`);
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    const audio = Readable.from(Buffer.from(audioBuffer));
+    
+    return {
+      audio,
+      duration: 0, // TODO: Calculate from audio
+    };
+  }
+
   async getVoices(): Promise<ElevenLabsVoice[]> {
     const response = await fetch(`${ELEVENLABS_API_URL}/voices`, {
       headers: {
@@ -64,150 +150,158 @@ export class ElevenLabsService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to get voices: ${response.statusText}`);
+      throw new Error(`Failed to fetch voices: ${response.statusText}`);
     }
 
     const data = await response.json();
-    return data.voices as ElevenLabsVoice[];
+    return data.voices;
+  }
+
+  // ============================================
+  // ENHANCED: Conversational AI Methods
+  // ============================================
+
+  /**
+   * Create a new conversational agent
+   */
+  async createAgent(config: ConversationalAgentConfig): Promise<{ agent_id: string }> {
+    const response = await fetch(`${ELEVENLABS_API_URL}/convai/agents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': this.apiKey,
+      },
+      body: JSON.stringify({
+        name: config.name,
+        conversation_config: {
+          agent: {
+            prompt: {
+              prompt: config.system_prompt,
+            },
+            first_message: `Hello! I'm ${config.name}. How can I help you today?`,
+            language: config.language || 'en',
+          },
+          asr: {
+            provider: 'elevenlabs', // Auto STT
+            quality: 'high',
+          },
+          tts: {
+            voice_id: config.voice_id,
+            model_id: 'eleven_turbo_v2_5',
+            optimize_streaming_latency: 3,
+          },
+          llm: {
+            provider: 'openai',
+            model: config.model || 'gpt-4',
+          },
+        },
+        platform_settings: {
+          widget: {
+            variant: 'full_screen',
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to create agent: ${error}`);
+    }
+
+    return await response.json();
   }
 
   /**
-   * Convert text to speech
+   * Update agent configuration (tools, prompts, etc.)
    */
-  async textToSpeech(request: TTSRequest): Promise<TTSResponse> {
-    const {
-      text,
-      voiceId = this.defaultVoiceId,
-      modelId = 'eleven_monolingual_v1',
-      stability = 0.5,
-      similarityBoost = 0.75,
-      style = 0,
-      useSpeakerBoost = true,
-    } = request;
+  async updateAgent(agentId: string, config: Partial<ConversationalAgentConfig>): Promise<void> {
+    const response = await fetch(`${ELEVENLABS_API_URL}/convai/agents/${agentId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': this.apiKey,
+      },
+      body: JSON.stringify(config),
+    });
 
+    if (!response.ok) {
+      throw new Error(`Failed to update agent: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Start a conversation with an agent
+   */
+  async startConversation(request: ConversationRequest): Promise<ConversationResponse> {
+    const response = await fetch(`${ELEVENLABS_API_URL}/convai/conversations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': this.apiKey,
+      },
+      body: JSON.stringify({
+        agent_id: request.agent_id,
+        metadata: request.metadata || {},
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to start conversation: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      conversation_id: data.conversation_id,
+      agent_id: data.agent_id,
+      call_url: data.url || `https://elevenlabs.io/app/convai/${data.conversation_id}`,
+      status: 'active',
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get conversation details
+   */
+  async getConversation(conversationId: string): Promise<any> {
     const response = await fetch(
-      `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}?optimize_streaming_latency=4`,
+      `${ELEVENLABS_API_URL}/convai/conversations/${conversationId}`,
       {
-        method: 'POST',
         headers: {
           'xi-api-key': this.apiKey,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          text,
-          model_id: modelId,
-          voice_settings: {
-            stability,
-            similarity_boost: similarityBoost,
-            style,
-            use_speaker_boost: useSpeakerBoost,
-          },
-        }),
       }
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`TTS failed: ${error}`);
+      throw new Error(`Failed to get conversation: ${response.statusText}`);
     }
 
-    // Get duration from headers
-    const duration = parseFloat(response.headers.get('x-duration') || '0');
-
-    return {
-      audio: Readable.fromWeb(response.body as any),
-      duration,
-    };
+    return await response.json();
   }
 
   /**
-   * Get voice by ID
+   * End a conversation
    */
-  async getVoice(voiceId: string): Promise<ElevenLabsVoice> {
-    const response = await fetch(`${ELEVENLABS_API_URL}/voices/${voiceId}`, {
-      headers: {
-        'xi-api-key': this.apiKey,
-      },
-    });
+  async endConversation(conversationId: string): Promise<void> {
+    const response = await fetch(
+      `${ELEVENLABS_API_URL}/convai/conversations/${conversationId}/end`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': this.apiKey,
+        },
+      }
+    );
 
     if (!response.ok) {
-      throw new Error(`Failed to get voice: ${response.statusText}`);
+      throw new Error(`Failed to end conversation: ${response.statusText}`);
     }
-
-    return response.json();
-  }
-
-  /**
-   * Get remaining character quota
-   */
-  async getQuota(): Promise<{ character_count: number; character_limit: number }> {
-    const response = await fetch(`${ELEVENLABS_API_URL}/user`, {
-      headers: {
-        'xi-api-key': this.apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get quota: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return {
-      character_count: data.subscription?.character_count || 0,
-      character_limit: data.subscription?.character_limit || 0,
-    };
   }
 }
 
 // ============================================
-// Agent Voice Profiles
+// Singleton Export (Backward Compatible)
 // ============================================
 
-export const AGENT_VOICES = {
-  maria_garcia: {
-    voiceId: '21m00Tcm4TlvDq8ikWAM',
-    name: 'Rachel',
-    description: 'Native Spanish tutor voice',
-    style: 0.3,
-  },
-  tech_support: {
-    voiceId: 'AZnzlk1XvdvUeBnqxgGO',
-    name: 'Josh',
-    description: 'Professional tech support voice',
-    style: 0.2,
-  },
-  general_advisor: {
-    voiceId: 'EXAVITQu4vr4xnSDxMaL',
-    name: 'Bella',
-    description: 'Friendly general advisor',
-    style: 0.5,
-  },
-} as const;
-
-// ============================================
-// Usage Examples
-// ============================================
-
-/*
-// Initialize service
-const elevenLabs = new ElevenLabsService(
-  process.env.ELEVENLABS_API_KEY!,
-  AGENT_VOICES.maria_garcia.voiceId
-);
-
-// Get available voices
-const voices = await elevenLabs.getVoices();
-console.log('Available voices:', voices);
-
-// Generate speech
-const { audio, duration } = await elevenLabs.textToSpeech({
-  text: 'Hola! Soy Maria, tu tutora de español.',
-  voiceId: AGENT_VOICES.maria_garcia.voiceId,
-  stability: 0.5,
-  similarityBoost: 0.75,
-});
-
-// Save to file or stream to user
-const buffer = await streamToBuffer(audio);
-await writeFile('output.mp3', buffer);
-*/
+export const elevenLabsService = new ElevenLabsService();
