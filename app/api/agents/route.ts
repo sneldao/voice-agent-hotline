@@ -1,197 +1,177 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { rateLimit, validateAgentInput, sanitizeInput } from '@/lib/security'
+import { NextRequest, NextResponse } from 'next/server';
+import { redis } from '@/lib/redis';
+import { elevenLabsService } from '@/lib/elevenlabs';
+import { composioService } from '@/lib/composio';
 
-// In-memory agent store
-const agents = new Map()
+/**
+ * Agent Management API
+ * Enhanced with ElevenLabs Conversational AI support
+ */
 
-// Seed demo agents
-const seedAgents = [
-  {
-    address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0eB1E',
-    name: 'Dr. Sarah Chen',
-    description: 'Licensed therapist specializing in anxiety and stress management. Warm, empathetic, and evidence-based approaches.',
-    voiceId: 'EXAVITQu4vr4xnSDxMaL',
-    capabilities: ['therapy', 'mental-health', 'support'],
-    ratePerMinute: 2.50,
-    rating: 4.8,
-    ratingsCount: 127,
-    callsCompleted: 543
-  },
-  {
-    address: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
-    name: 'Chef Mario',
-    description: 'Italian cuisine expert. Can guide you through recipes, suggest wine pairings, and teach cooking techniques.',
-    voiceId: '21m00Tcm4TlvDq8ikWAM',
-    capabilities: ['cooking', 'recipes', 'wine', 'culinary'],
-    ratePerMinute: 1.50,
-    rating: 4.9,
-    ratingsCount: 89,
-    callsCompleted: 234
-  },
-  {
-    address: '0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc',
-    name: 'CodeWizard',
-    description: 'Full-stack developer specializing in React, TypeScript, and Node.js. Debug, architect, and teach coding.',
-    voiceId: 'JBFqnCBsd6RMkjVDRZzb',
-    capabilities: ['coding', 'react', 'typescript', 'debugging', 'programming'],
-    ratePerMinute: 3.00,
-    rating: 4.7,
-    ratingsCount: 203,
-    callsCompleted: 891
-  },
-  {
-    address: '0x976EA74026E726554dB657fA54763abd0C3a0aa9',
-    name: 'Legal Eagle',
-    description: 'Contract law specialist. Help with agreements, terms of service, and legal document review.',
-    voiceId: 'AZnzlk1XvdvUe5bTIl8b',
-    capabilities: ['legal', 'contracts', 'compliance', 'law'],
-    ratePerMinute: 5.00,
-    rating: 4.6,
-    ratingsCount: 45,
-    callsCompleted: 112
-  },
-  {
-    address: '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955',
-    name: 'FitCoach',
-    description: 'Personal fitness coach. Workouts, nutrition advice, and motivation for your health journey.',
-    voiceId: 'MF3mGyEYrkw8f8mmU3L0',
-    capabilities: ['fitness', 'nutrition', 'wellness', 'health'],
-    ratePerMinute: 1.50,
-    rating: 4.9,
-    ratingsCount: 167,
-    callsCompleted: 456
-  },
-  {
-    address: '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8',
-    name: 'MathMentor',
-    description: 'Math tutor from algebra to calculus. Patient explanations and step-by-step problem solving.',
-    voiceId: 'onwK4e9ZLuTAKqWW03F9',
-    capabilities: ['math', 'tutoring', 'education', 'calculus', 'algebra'],
-    ratePerMinute: 1.00,
-    rating: 4.8,
-    ratingsCount: 312,
-    callsCompleted: 789
-  }
-]
-
-// Initialize seed data
-function initializeAgents() {
-  seedAgents.forEach(agent => {
-    agents.set(agent.address, {
-      ...agent,
-      id: agent.address,
-      createdAt: new Date().toISOString()
-    })
-  })
-  console.log('[Seed] Initialized', seedAgents.length, 'demo agents')
-}
-
-// Initialize on module load
-initializeAgents()
-
-// GET /api/agents - List all agents
-export async function GET(request: NextRequest) {
-  // Apply rate limiting (60 req/min for listing)
-  const { allowed, remaining } = rateLimit(`list:${request.headers.get('x-forwarded-for') || 'ip'}`, {
-    windowMs: 60000,
-    maxRequests: 60
-  })
-  
-  if (!allowed) {
-    return NextResponse.json(
-      { error: 'Rate limit exceeded' },
-      { status: 429, headers: { 'X-RateLimit-Remaining': '0' } }
-    )
-  }
-
-  const { searchParams } = new URL(request.url)
-  const capability = searchParams.get('capability')
-  const maxRate = searchParams.get('maxRate')
-  const sortBy = searchParams.get('sortBy') || 'rating'
-
-  let agentList = Array.from(agents.values())
-
-  if (capability) {
-    agentList = agentList.filter(a => 
-      a.capabilities.some((c: string) => c.toLowerCase().includes(capability.toLowerCase()))
-    )
-  }
-
-  if (maxRate) {
-    agentList = agentList.filter(a => a.ratePerMinute <= parseFloat(maxRate))
-  }
-
-  switch (sortBy) {
-    case 'rating':
-      agentList.sort((a, b) => b.rating - a.rating)
-      break
-    case 'rate':
-      agentList.sort((a, b) => a.ratePerMinute - b.ratePerMinute)
-      break
-    case 'popular':
-      agentList.sort((a, b) => b.callsCompleted - a.callsCompleted)
-      break
-  }
-
-  return NextResponse.json({ agents: agentList, total: agentList.length })
-}
-
-// POST /api/agents - Register new agent
-export async function POST(request: NextRequest) {
-  // Apply rate limiting (10 req/min for registration)
-  const ip = request.headers.get('x-forwarded-for') || 'ip'
-  const { allowed } = rateLimit(`register:${ip}`, {
-    windowMs: 60000,
-    maxRequests: 10
-  })
-  
-  if (!allowed) {
-    return NextResponse.json(
-      { error: 'Rate limit exceeded' },
-      { status: 429 }
-    )
-  }
-
+export async function GET(req: NextRequest) {
   try {
-    const body = await request.json()
+    const searchParams = req.nextUrl.searchParams;
+    const agentId = searchParams.get('id');
 
-    // Validate input
-    const validation = validateAgentInput(body)
-    if (!validation.valid) {
+    if (agentId) {
+      // Get single agent
+      const agent = await redis.hgetall(`agent:${agentId}`);
+      if (!agent || Object.keys(agent).length === 0) {
+        return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      }
+      return NextResponse.json({ agent });
+    }
+
+    // List all agents
+    const agentKeys = await redis.keys('agent:*');
+    const agents = await Promise.all(
+      agentKeys.map(key => redis.hgetall(key))
+    );
+
+    return NextResponse.json({ agents });
+  } catch (error: any) {
+    console.error('[Agents API] GET error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const {
+      name,
+      description,
+      voice_id,
+      system_prompt,
+      skills = [],
+      price_per_minute,
+      conversational_enabled = true,
+    } = body;
+
+    // Validation
+    if (!name || !voice_id || !system_prompt) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validation.errors },
+        { error: 'Missing required fields: name, voice_id, system_prompt' },
         { status: 400 }
-      )
+      );
     }
 
-    const { address, name, description, voiceId, capabilities, ratePerMinute } = body
+    // Generate agent ID
+    const agentId = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    if (agents.has(address)) {
-      return NextResponse.json({ error: 'Agent already registered' }, { status: 409 })
+    // Create ElevenLabs conversational agent (if enabled)
+    let elevenlabs_agent_id = null;
+    if (conversational_enabled && process.env.ELEVENLABS_CONVERSATIONAL_ENABLED === 'true') {
+      try {
+        // Map skills to Composio tools
+        const tools = skills.flatMap((skill: string) => 
+          composioService.getToolsForSkill(skill)
+        );
+
+        const agentConfig = {
+          name,
+          system_prompt,
+          voice_id,
+          model: 'gpt-4',
+          language: 'en',
+          webhook_url: `${process.env.NEXT_PUBLIC_WEBHOOK_URL}/api/webhooks/elevenlabs`,
+        };
+
+        const result = await elevenLabsService.createAgent(agentConfig);
+        elevenlabs_agent_id = result.agent_id;
+
+        console.log('[Agents API] Created ElevenLabs agent:', elevenlabs_agent_id);
+      } catch (error: any) {
+        console.error('[Agents API] ElevenLabs creation failed:', error);
+        // Continue without conversational AI
+      }
     }
 
-    // Sanitize inputs
-    const sanitizedName = sanitizeInput(name)
-    const sanitizedDescription = description ? sanitizeInput(description) : ''
-
+    // Store agent in Redis
     const agent = {
-      id: address,
-      address,
-      name: sanitizedName,
+      id: agentId,
+      name,
       description: description || '',
-      voiceId,
-      capabilities: Array.isArray(capabilities) ? capabilities : [capabilities],
-      ratePerMinute: parseFloat(ratePerMinute),
-      rating: 0,
-      ratingsCount: 0,
-      callsCompleted: 0,
-      createdAt: new Date().toISOString()
+      voice_id,
+      system_prompt,
+      skills: JSON.stringify(skills),
+      price_per_minute: price_per_minute || 0.1,
+      elevenlabs_agent_id: elevenlabs_agent_id || '',
+      conversational_enabled: conversational_enabled.toString(),
+      created_at: new Date().toISOString(),
+      rating: '0',
+      total_calls: '0',
+      total_revenue: '0',
+    };
+
+    await redis.hset(`agent:${agentId}`, agent);
+
+    return NextResponse.json({ agent }, { status: 201 });
+  } catch (error: any) {
+    console.error('[Agents API] POST error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Agent ID required' }, { status: 400 });
     }
 
-    agents.set(address, agent)
-    return NextResponse.json({ agent }, { status: 201 })
+    const agent = await redis.hgetall(`agent:${id}`);
+    if (!agent || Object.keys(agent).length === 0) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
 
-  } catch {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    // Update ElevenLabs agent if needed
+    if (agent.elevenlabs_agent_id && (updates.system_prompt || updates.voice_id)) {
+      try {
+        await elevenLabsService.updateAgent(agent.elevenlabs_agent_id, {
+          system_prompt: updates.system_prompt,
+          voice_id: updates.voice_id,
+        });
+      } catch (error: any) {
+        console.error('[Agents API] ElevenLabs update failed:', error);
+      }
+    }
+
+    // Serialize arrays/objects
+    if (updates.skills && Array.isArray(updates.skills)) {
+      updates.skills = JSON.stringify(updates.skills);
+    }
+
+    await redis.hset(`agent:${id}`, updates);
+
+    const updatedAgent = await redis.hgetall(`agent:${id}`);
+    return NextResponse.json({ agent: updatedAgent });
+  } catch (error: any) {
+    console.error('[Agents API] PATCH error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const searchParams = req.nextUrl.searchParams;
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Agent ID required' }, { status: 400 });
+    }
+
+    const deleted = await redis.del(`agent:${id}`);
+    
+    if (deleted === 0) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('[Agents API] DELETE error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
