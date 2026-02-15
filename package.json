@@ -18,7 +18,7 @@
     "@upstash/redis": "^1.25.1",
     "thirdweb": "^4.9.2",
     "composio-core": "^0.6.0",
-    "@11labs/client": "^0.7.0"
+    "@elevenlabs/client": "^0.7.0"
   },
   "devDependencies": {
     "typescript": "^5",
