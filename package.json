@@ -16,7 +16,7 @@
     "wagmi": "^1.4.7",
     "@tanstack/react-query": "^5.8.4",
     "@upstash/redis": "^1.25.1",
-    "thirdweb": "^4.9.2",
+    "thirdweb": "^5.118.2",
     "@elevenlabs/client": "^0.7.0"
   },
   "devDependencies": {
