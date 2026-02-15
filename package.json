@@ -1,39 +1,34 @@
 {
   "name": "voice-agent-hotline",
-  "version": "2.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "clean": "rm -rf out",
-    "audit": "npm audit --audit-level=high"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.0.0",
-    "@upstash/redis": "^1.36.2",
-    "framer-motion": "^12.34.0",
-    "lucide-react": "^0.563.0",
-    "next": "^14.2.35",
-    "next-themes": "^0.4.6",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "socket.io": "^4.7.0",
-    "socket.io-client": "^4.7.0",
-    "sonner": "^2.0.7",
-    "thirdweb": "^5.118.0",
-    "viem": "^2.21.32",
-    "wagmi": "^2.12.19",
-    "zod": "^3.22.0"
+    "next": "14.0.4",
+    "react": "^18",
+    "react-dom": "^18",
+    "viem": "^1.19.11",
+    "wagmi": "^1.4.7",
+    "@tanstack/react-query": "^5.8.4",
+    "@upstash/redis": "^1.25.1",
+    "thirdweb": "^4.9.2",
+    "composio-core": "^0.6.0",
+    "@11labs/client": "^0.7.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "autoprefixer": "^10.4.24",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18",
-    "typescript": "^5.0.0"
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4"
   }
 }
