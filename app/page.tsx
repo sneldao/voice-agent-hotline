@@ -8,8 +8,10 @@ import { ReferralSection } from '@/components/ReferralSection';
 import { useRealAgents, useCallHistory } from '@/lib/useRealAgents';
 import { useRealPayment } from '@/lib/useRealPayment';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
+import { useOnboarding } from '@/lib/useOnboarding';
 import { PaymentReceipt } from '@/components/PaymentReceipt';
 import { ActiveCall } from '@/components/ActiveCall';
+import { Onboarding } from '@/components/Onboarding';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -42,6 +44,9 @@ export default function Home() {
   const { payment, settlePayment, resetPayment } = useRealPayment();
   const { call: callState, startCall: startVoiceCall, endCall: endVoiceCall, interrupt, isMuted, toggleMute, transcripts } = useRealVoiceCall(selectedAgent?.rate);
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
+  
+  // Onboarding
+  const onboarding = useOnboarding(connected, userBalance);
 
   // Load user balance when connected
   useEffect(() => {
@@ -183,6 +188,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
       <ToastProvider />
+      
+      {/* Onboarding */}
+      <Onboarding
+        isOpen={onboarding.isOpen}
+        currentStep={onboarding.currentStep}
+        walletConnected={connected}
+        walletBalance={userBalance}
+        onClose={onboarding.closeOnboarding}
+        onNext={onboarding.nextStep}
+        onSkip={onboarding.skipOnboarding}
+      />
+      
       {/* Skip to main content for keyboard users */}
       <a
         href="#main-content"
