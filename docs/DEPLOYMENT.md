@@ -1,4 +1,4 @@
-# Vercel Deployment Guide
+# Deployment Guide
 
 ## Quick Deploy
 
@@ -10,125 +10,79 @@
 # Install Vercel CLI
 npm i -g vercel
 
-# Login
+# Login and deploy
 vercel login
-
-# Deploy to preview
-vercel
-
-# Deploy to production
 vercel --prod
 ```
 
 ## Environment Variables
 
-Configure these in Vercel Dashboard → Settings → Environment Variables:
+Set these in Vercel Dashboard → Settings → Environment Variables:
 
-### Required for Payments
+### Required
 
-| Variable | Value | Source |
-|----------|-------|--------|
-| `NEXT_PUBLIC_THIRDWEB_CLIENT_ID` | Public client ID | [thirdweb Dashboard](https://thirdweb.com/dashboard) |
-| `THIRDWEB_SECRET_KEY` | Secret key | [thirdweb Dashboard](https://thirdweb.com/dashboard) |
+| Variable | Source | Purpose |
+|----------|--------|---------|
+| `NEXT_PUBLIC_THIRDWEB_CLIENT_ID` | [thirdweb](https://thirdweb.com/dashboard) | Wallet connection |
+| `THIRDWEB_SECRET_KEY` | [thirdweb](https://thirdweb.com/dashboard) | x402 payments |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | [WalletConnect](https://cloud.walletconnect.com) | WalletConnect |
+| `UPSTASH_REDIS_REST_URL` | [Upstash](https://console.upstash.com) | Database |
+| `UPSTASH_REDIS_REST_TOKEN` | [Upstash](https://console.upstash.com) | Database auth |
 
-### Required for Wallet Connection
+### Optional (for production features)
 
-| Variable | Value | Source |
-|----------|-------|--------|
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Project ID | [WalletConnect Cloud](https://cloud.walletconnect.com) |
+| Variable | Purpose |
+|----------|---------|
+| `ELEVENLABS_API_KEY` | Real voice synthesis |
+| `COMPOSIO_API_KEY` | Agent tools (GitHub, Solana, etc.) |
+| `FACILITATOR_PRIVATE_KEY` | On-chain payment settlement |
+| `ARBITRATOR_PRIVATE_KEY` | Dispute resolution |
 
-### Required for Database
+### Feature Flags
 
-| Variable | Value | Source |
-|----------|-------|--------|
-| `UPSTASH_REDIS_REST_URL` | Redis REST URL | [Upstash Console](https://console.upstash.com) |
-| `UPSTASH_REDIS_REST_TOKEN` | Redis REST Token | [Upstash Console](https://console.upstash.com) |
-
-### Optional
-
-| Variable | Value | Description |
-|----------|-------|-------------|
-| `ELEVENLABS_API_KEY` | API key | ElevenLabs voice synthesis |
-| `NEXT_PUBLIC_DEMO_MODE` | `true` | Enable demo mode |
-
-## Domain Configuration
-
-After deployment, configure your domain:
-
-1. **Vercel**: Settings → Domains → Add Domain
-2. **DNS**: Add CNAME record
-
-## Blockchain Networks
-
-### Celo Mainnet
-```
-CELO_RPC_URL: https://forno.celo.org
-NEXT_PUBLIC_CELO_CHAIN_ID: 42220
+```bash
+NEXT_PUBLIC_DEMO_MODE=false          # Set true for demo without wallet
+NEXT_PUBLIC_PAYMENTS_ENABLED=true    # Enable real payments
+NEXT_PUBLIC_X402_ENABLED=true        # Enable x402 protocol
 ```
 
-### Base Mainnet (for x402)
-```
-NEXT_PUBLIC_BASE_URL: https://base.org
-```
+## Post-Deployment Checklist
 
-## ERC-8004 Contracts
-
-Deploy contracts or use existing addresses:
-
-```
-NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS: 0x...
-NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS: 0x...
-NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS: 0x...
-```
+- [ ] Environment variables configured
+- [ ] Redis database connected
+- [ ] Wallet connection working
+- [ ] Agents loading from API
+- [ ] Test call flow (demo mode first)
+- [ ] Enable real payments (optional)
 
 ## Troubleshooting
 
-### Build Fails
-- Check all required env vars are set
-- Run `npm run build` locally first
-
-### Redis Connection Failed
-- Verify UPSTASH_REDIS_REST_URL and TOKEN
-- Check IP whitelist in Upstash
-
-### Wallet Connection Issues
-- Verify WalletConnect Project ID
-- Check console for CORS errors
-
-### x402 Payments Not Working
-- Confirm thirdweb credentials
-- Check facilitator URL configuration
-
-## Monitoring
-
-- **Vercel Dashboard**: Deployment logs, function invocations
-- **Upstash Console**: Redis metrics, rate limits
-- **thirdweb Dashboard**: Payment analytics
-
-## CI/CD
-
-Create `.github/workflows/deploy.yml`:
-
-```yaml
-name: Deploy
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - run: npm ci
-      - run: npm run build
-      - uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.ORG_ID }}
-          vercel-project-id: ${{ secrets.PROJECT_ID }}
-          vercel-args: '--prod'
+### Build Errors
+```bash
+# Clear cache and rebuild
+rm -rf .next
+rm -rf node_modules
+npm install
+npm run build
 ```
+
+### API Errors
+- Check Redis connection
+- Verify environment variables
+- Check Vercel function logs
+
+### Payment Issues
+- Ensure `FACILITATOR_PRIVATE_KEY` has CELO for gas
+- Verify contract addresses on Celo
+- Check CeloScan for transaction status
+
+## Architecture
+
+```
+User → Vercel Edge → Next.js API → Redis/Blockchain
+```
+
+- **Frontend:** Static on Vercel CDN
+- **API:** Serverless functions
+- **Database:** Upstash Redis (global)
+- **Blockchain:** Celo (via forno.celo.org)

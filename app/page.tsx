@@ -9,6 +9,7 @@ import { useRealAgents, useCallHistory } from '@/lib/useRealAgents';
 import { useRealPayment } from '@/lib/useRealPayment';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { PaymentReceipt } from '@/components/PaymentReceipt';
+import { ActiveCall } from '@/components/ActiveCall';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -235,11 +236,18 @@ export default function Home() {
 
       {/* Main Content */}
       <main id="main-content" className="max-w-md mx-auto pb-28" role="main" aria-label="Main content">
-        {inCall ? (
-          <CallView
-            agent={selectedAgent!}
-            duration={callDuration}
-            cost={callCost}
+        {inCall && selectedAgent && callId ? (
+          <ActiveCall
+            agent={{
+              id: selectedAgent.id,
+              name: selectedAgent.name,
+              specialty: selectedAgent.specialty,
+              avatar: selectedAgent.avatar,
+              rate: selectedAgent.rate,
+              color: selectedAgent.color,
+            }}
+            callId={callId}
+            userId={address || 'anonymous'}
             onEnd={endCall}
           />
         ) : (
@@ -649,140 +657,6 @@ function AgentDetailModal({
         </p>
       </div>
     </Modal>
-  );
-}
-
-/**
- * Call View
- */
-function CallView({
-  agent,
-  duration,
-  cost,
-  onEnd,
-}: {
-  agent: typeof DEMO_AGENTS[0];
-  duration: number;
-  cost: number;
-  onEnd: () => void;
-}) {
-  const [muted, setMuted] = useState(false);
-  const minutes = Math.floor(duration / 60);
-  const seconds = duration % 60;
-  const isFree = duration <= 60;
-
-  return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900">
-      {/* Header */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        {/* Avatar with pulse */}
-        <div className="relative mb-8">
-          <div className={`w-40 h-40 rounded-full bg-gradient-to-br ${agent.color} flex items-center justify-center text-7xl shadow-2xl shadow-black/50 animate-pulse-slow`}>
-            {agent.avatar}
-          </div>
-          <span className="absolute bottom-2 right-2 w-5 h-5 bg-green-500 rounded-full border-4 border-gray-900 animate-pulse" />
-        </div>
-
-        <h2 className="text-2xl font-bold mb-2">{agent.name}</h2>
-        <p className="text-gray-400 text-sm mb-4">{agent.specialty}</p>
-
-        {/* Status */}
-        <div className="flex items-center gap-2 text-green-400 mb-8">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-sm font-medium">Connected</span>
-        </div>
-
-        {/* Timer */}
-        <div className="text-center mb-6">
-          <div className="text-5xl font-mono font-bold text-cyan-400 tracking-wider">
-            {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
-          </div>
-          <div className="flex items-center justify-center gap-3 mt-3">
-            <span className={isFree ? 'text-gray-400' : 'text-amber-400'}>
-              ${cost.toFixed(3)} incurred
-            </span>
-            {isFree && (
-              <Badge variant="success">Free</Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Waveform */}
-        <Waveform muted={muted} />
-      </div>
-
-      {/* Controls */}
-      <div className="bg-gray-950/50 backdrop-blur-xl border-t border-gray-800 p-6">
-        <div className="flex items-center justify-center gap-6">
-          <button
-            onClick={() => setMuted(!muted)}
-            className={`
-              w-14 h-14 rounded-2xl flex items-center justify-center text-xl transition-all
-              ${muted 
-                ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' 
-                : 'bg-gray-800 text-white hover:bg-gray-700'
-              }
-            `}
-          >
-            {muted ? '🔇' : '🎤'}
-          </button>
-          
-          <button
-            onClick={onEnd}
-            className="w-16 h-16 rounded-2xl bg-gradient-to-r from-red-500 to-rose-500 flex items-center justify-center text-xl shadow-xl shadow-red-500/30 hover:scale-105 transition-transform"
-          >
-            📞
-          </button>
-          
-          <button className="w-14 h-14 rounded-2xl bg-gray-800 flex items-center justify-center text-xl text-gray-400 hover:bg-gray-700 transition-colors">
-            💬
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Animated Waveform
- */
-function Waveform({ muted }: { muted: boolean }) {
-  const [heights, setHeights] = useState<number[]>(Array(50).fill(20));
-
-  useEffect(() => {
-    if (muted) {
-      setHeights(Array(50).fill(10));
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setHeights(Array(50).fill(0).map(() => 15 + Math.random() * 60));
-    }, 80);
-
-    return () => clearInterval(interval);
-  }, [muted]);
-
-  return (
-    <div className="flex items-center justify-center gap-0.5 h-20 px-12">
-      {heights.map((height, i) => (
-        <div
-          key={i}
-          className={`
-            w-1.5
-            rounded-full
-            transition-all
-            duration-75
-            bg-gradient-to-t
-            from-cyan-500 to-blue-500
-            ${muted ? 'opacity-30' : 'opacity-80'}
-          `}
-          style={{ 
-            height: `${height}%`,
-            animationDelay: `${i * 0.02}s`
-          }}
-        />
-      ))}
-    </div>
   );
 }
 
