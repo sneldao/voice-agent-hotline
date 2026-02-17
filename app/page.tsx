@@ -14,6 +14,7 @@ import { ActiveCall } from '@/components/ActiveCall';
 import { Onboarding } from '@/components/Onboarding';
 import { SmartAgentSearch } from '@/components/SmartAgentSearch';
 import { ShareModal } from '@/components/ShareModal';
+import { ExportModal } from '@/components/ExportModal';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -751,6 +752,8 @@ function CallsHistoryTab({
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const [shareCall, setShareCall] = useState<CallRecord | null>(null);
+  const [exportCall, setExportCall] = useState<CallRecord | null>(null);
+  const [showBulkExport, setShowBulkExport] = useState(false);
 
   const displayCalls = filter === 'saved' ? localHistory.getSavedCalls() : localHistory.calls;
   
@@ -772,17 +775,7 @@ function CallsHistoryTab({
   };
 
   const handleDownload = (call: CallRecord) => {
-    const exportData = localHistory.exportTranscript(call.id);
-    if (exportData) {
-      const blob = new Blob([exportData.content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = exportData.filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      showSuccess('Transcript downloaded');
-    }
+    setExportCall(call);
   };
 
   const handleShare = (call: CallRecord) => {
@@ -830,7 +823,7 @@ function CallsHistoryTab({
         />
       </div>
 
-      {/* Filter Tabs */}
+      {/* Filter Tabs & Export */}
       <div className="flex gap-2">
         <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
           All Calls
@@ -838,6 +831,15 @@ function CallsHistoryTab({
         <FilterButton active={filter === 'saved'} onClick={() => setFilter('saved')}>
           Saved ({localHistory.getSavedCalls().length})
         </FilterButton>
+        {displayCalls.length > 0 && (
+          <button
+            onClick={() => setShowBulkExport(true)}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-800 text-gray-400 hover:bg-gray-700 transition-colors"
+            title="Export all calls"
+          >
+            Export
+          </button>
+        )}
       </div>
 
       {/* Call List */}
@@ -889,6 +891,20 @@ function CallsHistoryTab({
           }}
         />
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={!!exportCall}
+        onClose={() => setExportCall(null)}
+        call={exportCall || undefined}
+      />
+
+      {/* Bulk Export Modal */}
+      <ExportModal
+        isOpen={showBulkExport}
+        onClose={() => setShowBulkExport(false)}
+        calls={displayCalls}
+      />
     </div>
   );
 }
