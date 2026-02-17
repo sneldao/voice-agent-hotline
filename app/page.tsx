@@ -1,89 +1,30 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight } from '@/components/ui';
+import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle } from '@/components/ui';
 import { announce } from '@/lib/accessibility';
 import { useWallet } from '@/lib/WalletContext';
 import { ReferralSection } from '@/components/ReferralSection';
-
-// Demo data
-const DEMO_AGENTS = [
-  {
-    id: 'maria_garcia',
-    name: 'Maria Garcia',
-    specialty: 'Spanish Tutor',
-    bio: 'Native Spanish speaker with 5 years of teaching experience. I help students practice conversational Spanish.',
-    rating: 4.9,
-    totalRatings: 347,
-    rate: 0.01,
-    avatar: '👩‍🏫',
-    color: 'from-rose-500 to-pink-500',
-    online: true,
-    tags: ['Spanish', 'Language', 'Conversation'],
-  },
-  {
-    id: 'alex_chen',
-    name: 'Alex Chen',
-    specialty: 'Coding Help',
-    bio: 'Full-stack developer and coding mentor. I help beginners understand programming concepts.',
-    rating: 4.8,
-    totalRatings: 523,
-    rate: 0.03,
-    avatar: '👨‍💻',
-    color: 'from-cyan-500 to-blue-500',
-    online: true,
-    tags: ['JavaScript', 'Python', 'Debugging'],
-  },
-  {
-    id: 'chef_mario',
-    name: 'Chef Mario',
-    specialty: 'Cooking',
-    bio: 'Professional chef with 15 years experience in Italian cuisine. I\'ll help you cook perfect pasta.',
-    rating: 4.7,
-    totalRatings: 256,
-    rate: 0.01,
-    avatar: '👨‍🍳',
-    color: 'from-amber-500 to-orange-500',
-    online: false,
-    tags: ['Italian', 'Recipes', 'Techniques'],
-  },
-  {
-    id: 'sofia_travel',
-    name: 'Sofia Williams',
-    specialty: 'Travel Guide',
-    bio: 'Travel expert visited 50+ countries. Local tips and recommendations.',
-    rating: 4.6,
-    totalRatings: 189,
-    rate: 0.02,
-    avatar: '✈️',
-    color: 'from-violet-500 to-purple-500',
-    online: true,
-    tags: ['Travel', 'Culture', 'Recommendations'],
-  },
-];
-
-const DEMO_CALL_HISTORY = [
-  { id: 'call_1', agentName: 'Maria Garcia', duration: 125, cost: 0.01, date: 'Today', rating: 5 },
-  { id: 'call_2', agentName: 'Alex Chen', duration: 340, cost: 0.07, date: 'Yesterday', rating: 5 },
-  { id: 'call_3', agentName: 'Chef Mario', duration: 45, cost: 0, date: '2 days ago', rating: 4 },
-];
+import { useRealAgents, useCallHistory } from '@/lib/useRealAgents';
+import { useRealPayment } from '@/lib/useRealPayment';
+import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
+import { PaymentReceipt } from '@/components/PaymentReceipt';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
-  { id: 'language', name: 'Language', icon: '🗣️' },
-  { id: 'coding', name: 'Coding', icon: '💻' },
-  { id: 'cooking', name: 'Cooking', icon: '🍳' },
-  { id: 'travel', name: 'Travel', icon: '✈️' },
+  { id: 'blockchain', name: 'Blockchain', icon: '🪙' },
+  { id: 'tech', name: 'Tech', icon: '💻' },
+  { id: 'gaming', name: 'Gaming', icon: '🎮' },
+  { id: 'general', name: 'General', icon: '🤖' },
 ];
 
 type Tab = 'discover' | 'calls' | 'profile';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('discover');
-  const [selectedAgent, setSelectedAgent] = useState<typeof DEMO_AGENTS[0] | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [inCall, setInCall] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [callCost, setCallCost] = useState(0);
+  const [callId, setCallId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -94,11 +35,18 @@ export default function Home() {
   // Get wallet connection state
   const { connected, address, isConnecting, connect, formatAddress } = useWallet();
 
+  // Real data hooks
+  const { agents, isLoading: isLoadingAgents, error: agentsError, refetch: refetchAgents } = useRealAgents();
+  const { history: callHistory, isLoading: isLoadingHistory, error: historyError, refetch: refetchHistory } = useCallHistory(address);
+  const { payment, settlePayment, resetPayment } = useRealPayment();
+  const { call: callState, startCall: startVoiceCall, endCall: endVoiceCall, interrupt, isMuted, toggleMute, transcripts } = useRealVoiceCall(selectedAgent?.rate);
+  const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
+
   // Load user balance when connected
   useEffect(() => {
     if (connected && address) {
       setIsLoadingBalance(true);
-      fetch(`/api/users/${address}/balance`)
+      fetch(`/api/users/${address}`)
         .then(res => res.json())
         .then(data => setUserBalance(data.balance || 0))
         .catch(() => setUserBalance(0))
@@ -139,25 +87,94 @@ export default function Home() {
     }
   }, [selectedAgent, showPaymentModal]);
 
-  const startCall = useCallback(() => {
-    if (selectedAgent) {
-      setInCall(true);
-      setCallDuration(0);
-      setCallCost(0);
+  const startCall = useCallback(async () => {
+    if (!selectedAgent) return;
+    
+    // Check WebRTC support
+    if (!isWebRTCSupported) {
+      showError('WebRTC is not supported in your browser');
+      return;
     }
-  }, [selectedAgent]);
 
-  const endCall = useCallback(() => {
+    // Check microphone permission
+    if (micPermissions.microphone === 'denied') {
+      showError('Microphone access is required for voice calls');
+      return;
+    }
+
+    if (micPermissions.microphone === 'prompt') {
+      const granted = await requestMicrophonePermission();
+      if (!granted) {
+        showError('Microphone permission is required');
+        return;
+      }
+    }
+
+    // Check wallet connection
+    if (!connected) {
+      showError('Please connect your wallet first');
+      return;
+    }
+
+    // Check balance
+    if (userBalance < selectedAgent.rate * 5) { // At least 5 minutes
+      showError('Insufficient balance. Please add funds.');
+      return;
+    }
+
+    const newCallId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setCallId(newCallId);
+    setInCall(true);
+    
+    // Start voice call
+    const success = await startVoiceCall({
+      agentId: selectedAgent.id,
+      callId: newCallId,
+      userId: address!,
+    });
+
+    if (!success) {
+      showError('Failed to start call. Please try again.');
+      setInCall(false);
+      setCallId(null);
+    }
+  }, [selectedAgent, isWebRTCSupported, micPermissions, connected, userBalance, address, startVoiceCall]);
+
+  const endCall = useCallback(async () => {
+    endVoiceCall();
     setInCall(false);
-    setSelectedAgent(null);
     setShowPaymentModal(true);
-  }, []);
+  }, [endVoiceCall]);
 
-  const filteredAgents = DEMO_AGENTS.filter(agent => {
+  const handlePay = useCallback(async () => {
+    if (!callId || !selectedAgent || !address) return;
+
+    const success = await settlePayment({
+      callId,
+      agentAddress: selectedAgent.walletAddress || address, // Fallback for demo
+      amount: BigInt(Math.floor(callState.cost * 1e18)),
+      token: 'cUSD',
+    });
+
+    if (success) {
+      showSuccess('Payment settled successfully!');
+      setUserBalance(prev => prev - callState.cost);
+      setShowPaymentModal(false);
+      setSelectedAgent(null);
+      setCallId(null);
+      resetPayment();
+      refetchHistory(); // Refresh call history
+    } else {
+      showError(payment.error || 'Payment failed');
+    }
+  }, [callId, selectedAgent, address, callState.cost, settlePayment, resetPayment, refetchHistory, payment.error]);
+
+  const filteredAgents = agents.filter(agent => {
     const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || 
+      agent.category === selectedCategory ||
       agent.tags.some(t => t.toLowerCase().includes(selectedCategory.toLowerCase()));
     return matchesSearch && matchesCategory;
   });
@@ -230,6 +247,8 @@ export default function Home() {
             {activeTab === 'discover' && (
               <DiscoverTab
                 agents={filteredAgents}
+                isLoading={isLoadingAgents}
+                error={agentsError}
                 onSelect={setSelectedAgent}
                 selectedAgent={selectedAgent}
                 searchQuery={searchQuery}
@@ -237,13 +256,23 @@ export default function Home() {
                 selectedCategory={selectedCategory}
                 onCategoryChange={setSelectedCategory}
                 onCall={startCall}
+                onRefresh={refetchAgents}
               />
             )}
             {activeTab === 'calls' && (
-              <CallsHistoryTab history={DEMO_CALL_HISTORY} />
+              <CallsHistoryTab 
+                history={callHistory}
+                isLoading={isLoadingHistory}
+                error={historyError}
+                onRefresh={refetchHistory}
+              />
             )}
             {activeTab === 'profile' && (
-              <ProfileTab balance={userBalance} />
+              <ProfileTab 
+                balance={userBalance}
+                address={address}
+                isLoading={isLoadingBalance}
+              />
             )}
           </>
         )}
@@ -265,14 +294,19 @@ export default function Home() {
       {/* Payment Modal */}
       <PaymentModal
         isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        agent={selectedAgent}
-        duration={callDuration}
-        cost={callCost}
-        onPay={() => {
-          setUserBalance(prev => prev - callCost);
+        onClose={() => {
           setShowPaymentModal(false);
+          resetPayment();
         }}
+        agent={selectedAgent}
+        duration={callState.duration}
+        cost={callState.cost}
+        isProcessing={payment.isProcessing}
+        isSettled={payment.isSettled}
+        txHash={payment.txHash}
+        explorerUrl={payment.explorerUrl}
+        error={payment.error}
+        onPay={handlePay}
       />
     </div>
   );
@@ -283,6 +317,8 @@ export default function Home() {
  */
 function DiscoverTab({
   agents,
+  isLoading,
+  error,
   onSelect,
   selectedAgent,
   searchQuery,
@@ -290,29 +326,56 @@ function DiscoverTab({
   selectedCategory,
   onCategoryChange,
   onCall,
+  onRefresh,
 }: {
-  agents: typeof DEMO_AGENTS;
-  onSelect: (a: typeof DEMO_AGENTS[0]) => void;
-  selectedAgent: typeof DEMO_AGENTS[0] | null;
+  agents: any[];
+  isLoading: boolean;
+  error: string | null;
+  onSelect: (a: any) => void;
+  selectedAgent: any | null;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedCategory: string;
   onCategoryChange: (c: string) => void;
   onCall: () => void;
+  onRefresh: () => Promise<void>;
 }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await onRefresh();
     setIsRefreshing(false);
     showSuccess('Agents refreshed');
-  }, []);
+  }, [onRefresh]);
 
   const hasSearchQuery = searchQuery.trim().length > 0;
-  const hasNoResults = agents.length === 0 && !hasSearchQuery;
-  const hasNoSearchResults = agents.length === 0 && hasSearchQuery;
+  const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
+  const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
+
+  if (isLoading) {
+    return (
+      <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500 mb-4" />
+        <p className="text-gray-400">Loading agents...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
+        <AlertCircle className="w-8 h-8 text-red-500 mb-4" />
+        <p className="text-red-400 text-center mb-4">{error}</p>
+        <button
+          onClick={handleRefresh}
+          className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-400 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -329,7 +392,7 @@ function DiscoverTab({
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
             />
           </div>
-          <RefreshButton onRefresh={handleRefresh} />
+          <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshing} />
         </div>
 
         {/* Categories */}
