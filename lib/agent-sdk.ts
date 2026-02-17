@@ -158,7 +158,7 @@ export class AgentSDK {
     if (!data || Object.keys(data).length === 0) {
       return null;
     }
-    return this.deserializeAgent(data);
+    return this.deserializeAgent(data as Record<string, string>);
   }
 
   /**
@@ -169,7 +169,7 @@ export class AgentSDK {
     if (!agentId) {
       return null;
     }
-    return this.getAgent(agentId);
+    return this.getAgent(agentId as string);
   }
 
   /**
@@ -187,7 +187,7 @@ export class AgentSDK {
       const data = await redis.hgetall(key);
       if (!data) continue;
 
-      const agent = this.deserializeAgent(data);
+      const agent = this.deserializeAgent(data as Record<string, string>);
       if (agent.status !== 'active') continue;
 
       // Apply filters
@@ -226,6 +226,9 @@ export class AgentSDK {
     });
 
     // Forward to agent's webhook
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     const response = await fetch(agent.config.webhookUrl, {
       method: 'POST',
       headers: {
@@ -234,8 +237,9 @@ export class AgentSDK {
         'X-Agent-ID': agentId,
       },
       body: JSON.stringify(request),
-      timeout: 30000, // 30 second timeout
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Agent webhook failed: ${response.status}`);

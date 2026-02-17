@@ -9,6 +9,7 @@ export interface CallState {
   duration: number;
   cost: number;
   error: string | null;
+  txHash?: string;
   metrics: {
     latency: number;
     packetLoss: number;
@@ -41,6 +42,7 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
     duration: 0,
     cost: 0,
     error: null,
+    txHash: undefined,
     metrics: {
       latency: 0,
       packetLoss: 0,
@@ -117,6 +119,7 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
 
         // Start metrics collection
         metricsIntervalRef.current = setInterval(() => {
+          if (!webRTCService) return;
           const session = webRTCService.getSession(callId);
           if (session) {
             setCall(prev => ({
@@ -180,20 +183,20 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
       metricsIntervalRef.current = null;
     }
 
-    setCall({
+    // Keep txHash for summary display
+    setCall(prev => ({
       isConnected: false,
       isConnecting: false,
-      duration: 0,
-      cost: 0,
+      duration: prev.duration,
+      cost: prev.cost,
       error: null,
+      txHash: prev.txHash,
       metrics: {
         latency: 0,
         packetLoss: 0,
         audioLevel: 0,
       },
-    });
-
-    callIdRef.current = null;
+    }));
   }, []);
 
   const interrupt = useCallback(() => {

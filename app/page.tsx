@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle, Sparkles, ArrowRight } from '@/components/ui';
+import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle, Sparkles } from '@/components/ui';
+import { ArrowRight } from 'lucide-react';
 import { announce } from '@/lib/accessibility';
 import { useWallet } from '@/lib/WalletContext';
 import { ReferralSection } from '@/components/ReferralSection';
 import { useRealAgents, useCallHistory } from '@/lib/useRealAgents';
-import { useRealPayment } from '@/lib/useRealPayment';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { useOnboarding } from '@/lib/useOnboarding';
-import { PaymentReceipt } from '@/components/PaymentReceipt';
 import { ActiveCall } from '@/components/ActiveCall';
 import { Onboarding } from '@/components/Onboarding';
 import { SmartAgentSearch } from '@/components/SmartAgentSearch';
@@ -29,7 +28,6 @@ export default function Home() {
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [inCall, setInCall] = useState(false);
   const [callId, setCallId] = useState<string | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSmartSearch, setShowSmartSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -42,9 +40,8 @@ export default function Home() {
 
   // Real data hooks
   const { agents, isLoading: isLoadingAgents, error: agentsError, refetch: refetchAgents } = useRealAgents();
-  const { history: callHistory, isLoading: isLoadingHistory, error: historyError, refetch: refetchHistory } = useCallHistory(address);
-  const { payment, settlePayment, resetPayment } = useRealPayment();
-  const { call: callState, startCall: startVoiceCall, endCall: endVoiceCall, interrupt, isMuted, toggleMute, transcripts } = useRealVoiceCall(selectedAgent?.rate);
+  const { history: callHistory, isLoading: isLoadingHistory, error: historyError, refetch: refetchHistory } = useCallHistory(address || undefined);
+  const { startCall: startVoiceCall, endCall: endVoiceCall } = useRealVoiceCall(selectedAgent?.rate);
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
   
   // Onboarding
@@ -72,11 +69,9 @@ export default function Home() {
         if (inCall) {
           endCall();
           announce('Call ended');
-        } else if (showPaymentModal) {
-          setShowPaymentModal(false);
         } else if (showSmartSearch) {
           setShowSmartSearch(false);
-          announce('Payment modal closed');
+          announce('Smart search closed');
         } else if (selectedAgent) {
           setSelectedAgent(null);
           announce('Agent details closed');
@@ -86,16 +81,16 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inCall, showPaymentModal, showSmartSearch, selectedAgent]);
+  }, [inCall, showSmartSearch, selectedAgent]);
 
   // Focus management when modals open/close
   useEffect(() => {
-    if (selectedAgent || showPaymentModal || showSmartSearch) {
+    if (selectedAgent || showSmartSearch) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [selectedAgent, showPaymentModal, showSmartSearch]);
+  }, [selectedAgent, showSmartSearch]);
 
   const startCall = useCallback(async () => {
     if (!selectedAgent) return;
@@ -153,31 +148,17 @@ export default function Home() {
   const endCall = useCallback(async () => {
     endVoiceCall();
     setInCall(false);
-    setShowPaymentModal(true);
-  }, [endVoiceCall]);
+    setSelectedAgent(null);
+    setCallId(null);
+    refetchHistory();
+  }, [endVoiceCall, refetchHistory]);
 
-  const handlePay = useCallback(async () => {
-    if (!callId || !selectedAgent || !address) return;
-
-    const success = await settlePayment({
-      callId,
-      agentAddress: selectedAgent.walletAddress || address, // Fallback for demo
-      amount: BigInt(Math.floor(callState.cost * 1e18)),
-      token: 'cUSD',
-    });
-
-    if (success) {
-      showSuccess('Payment settled successfully!');
-      setUserBalance(prev => prev - callState.cost);
-      setShowPaymentModal(false);
-      setSelectedAgent(null);
-      setCallId(null);
-      resetPayment();
-      refetchHistory(); // Refresh call history
-    } else {
-      showError(payment.error || 'Payment failed');
+  const handleSelectRelatedAgent = useCallback((agentId: string) => {
+    const agent = agents.find(a => a.id === agentId);
+    if (agent) {
+      setSelectedAgent(agent);
     }
-  }, [callId, selectedAgent, address, callState.cost, settlePayment, resetPayment, refetchHistory, payment.error]);
+  }, [agents]);
 
   const filteredAgents = agents.filter(agent => {
     const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -270,6 +251,7 @@ export default function Home() {
             callId={callId}
             userId={address || 'anonymous'}
             onEnd={endCall}
+            onSelectRelatedAgent={handleSelectRelatedAgent}
           />
         ) : (
           <>
@@ -321,24 +303,6 @@ export default function Home() {
         />
       )}
 
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => {
-          setShowPaymentModal(false);
-          resetPayment();
-        }}
-        agent={selectedAgent}
-        duration={callState.duration}
-        cost={callState.cost}
-        isProcessing={payment.isProcessing}
-        isSettled={payment.isSettled}
-        txHash={payment.txHash}
-        explorerUrl={payment.explorerUrl}
-        error={payment.error}
-        onPay={handlePay}
-      />
-      
       {/* Smart Agent Search */}
       <SmartAgentSearch
         availableAgents={agents.map(a => a.id)}
@@ -465,7 +429,7 @@ function DiscoverTab({
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
             />
           </div>
-          <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+          <RefreshButton onRefresh={handleRefresh} />
         </div>
 
         {/* Categories */}
@@ -557,7 +521,7 @@ function FeaturedCard({
   onClick,
   selected,
 }: {
-  agent: typeof DEMO_AGENTS[0];
+  agent: any;
   onClick: () => void;
   selected: boolean;
 }) {
@@ -598,7 +562,7 @@ function AgentCard({
   onClick,
   selected,
 }: {
-  agent: typeof DEMO_AGENTS[0];
+  agent: any;
   onClick: () => void;
   selected: boolean;
 }) {
@@ -651,7 +615,7 @@ function AgentDetailModal({
   onClose,
   onCall,
 }: {
-  agent: typeof DEMO_AGENTS[0] | null;
+  agent: any | null;
   onClose: () => void;
   onCall: () => void;
 }) {
@@ -702,7 +666,7 @@ function AgentDetailModal({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {agent.tags.map(tag => (
+          {agent.tags.map((tag: string) => (
             <Badge key={tag} variant="info">{tag}</Badge>
           ))}
         </div>
@@ -728,7 +692,17 @@ function AgentDetailModal({
 /**
  * Call History Tab
  */
-function CallsHistoryTab({ history }: { history: typeof DEMO_CALL_HISTORY }) {
+function CallsHistoryTab({ 
+  history, 
+  isLoading, 
+  error, 
+  onRefresh 
+}: { 
+  history: any[];
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => Promise<void>;
+}) {
   return (
     <div className="p-4 space-y-5">
       <div className="flex items-center justify-between">
@@ -790,7 +764,15 @@ function CallsHistoryTab({ history }: { history: typeof DEMO_CALL_HISTORY }) {
 /**
  * Profile Tab
  */
-function ProfileTab({ balance }: { balance: number }) {
+function ProfileTab({ 
+  balance, 
+  address, 
+  isLoading 
+}: { 
+  balance: number;
+  address?: string | null;
+  isLoading?: boolean;
+}) {
   return (
     <div className="p-4 space-y-6">
       {/* Profile Header */}
@@ -890,7 +872,7 @@ function PaymentModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  agent: typeof DEMO_AGENTS[0] | null;
+  agent: any | null;
   duration: number;
   cost: number;
   onPay: () => void;

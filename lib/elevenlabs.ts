@@ -42,6 +42,38 @@ export interface TTSResponse {
 }
 
 // ============================================
+// Agent Voice Configurations
+// ============================================
+
+export const AGENT_VOICES = {
+  general_advisor: {
+    voice_id: 'Adam',
+    name: 'Adam',
+    description: 'Professional male voice for general advice',
+  },
+  maria_garcia: {
+    voice_id: 'Bella',
+    name: 'Bella',
+    description: 'Warm female voice for customer support',
+  },
+  tech_support: {
+    voice_id: 'Antoni',
+    name: 'Antoni',
+    description: 'Clear male voice for technical support',
+  },
+  crypto_expert: {
+    voice_id: 'Josh',
+    name: 'Josh',
+    description: 'Confident male voice for crypto advice',
+  },
+  financial_advisor: {
+    voice_id: 'Rachel',
+    name: 'Rachel',
+    description: 'Professional female voice for finance',
+  },
+} as const;
+
+// ============================================
 // ENHANCED: Conversational AI Types
 // ============================================
 

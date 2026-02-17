@@ -2,6 +2,7 @@
 // Disputes API
 // ============================================
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { reputationStaking, DisputeReason } from '@/lib/reputation-staking';
 

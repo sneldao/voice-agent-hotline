@@ -83,7 +83,7 @@ export async function seedAgents() {
   console.log('🌱 Seeding agents...');
   
   for (const agent of SEED_AGENTS) {
-    await redis.hset(`agent:${agent.id}`, agent);
+    await redis.hset(`agent:${agent.id}`, agent as unknown as Record<string, string>);
     console.log(`  ✅ Seeded ${agent.name}`);
   }
   

@@ -26,10 +26,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      status: 'healthy',
+      healthy: true,
       agentId: agent.id,
       name: agent.config.name,
-      status: agent.status,
+      agentStatus: agent.status,
     });
 
   } catch (error: any) {

@@ -46,10 +46,10 @@ export function useElevenLabs(apiKey: string): UseElevenLabsReturn {
         
         const response = await serviceRef.current.textToSpeech({
           text,
-          voiceId: voiceConfig.voiceId,
+          voiceId: voiceConfig.voice_id,
           stability: 0.5,
           similarityBoost: 0.75,
-          style: voiceConfig.style,
+          style: 0.5,
         });
 
         // Convert stream to blob

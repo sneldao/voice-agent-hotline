@@ -85,5 +85,5 @@ export { BetterSearch } from './BetterSearch';
 // Payment Flow (x402)
 export { PaymentFlow, DelegationPayment } from './PaymentFlow';
 
-// Call UI
-export { CallUI } from './CallUI';
+// Call UI - consolidated into ActiveCall component
+// export { CallUI } from './CallUI';

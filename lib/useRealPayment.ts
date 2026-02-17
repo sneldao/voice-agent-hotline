@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useWallet } from './WalletContext';
+import { useWallet, signMessage } from './WalletContext';
 import { paymentSettlement, CELO_TOKENS } from './payment-settlement';
 import type { Address } from 'viem';
 
@@ -31,7 +31,7 @@ export function useRealPayment(): UseRealPaymentReturn {
     error: null,
   });
 
-  const { address, signMessage } = useWallet();
+  const { address } = useWallet();
 
   const settlePayment = useCallback(async ({
     callId,

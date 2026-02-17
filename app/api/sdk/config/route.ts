@@ -2,6 +2,8 @@
 // Agent SDK Config Update API
 // ============================================
 
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { agentSDK, AgentSDKConfig } from '@/lib/agent-sdk';
 

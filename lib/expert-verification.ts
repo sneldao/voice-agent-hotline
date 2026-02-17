@@ -506,7 +506,7 @@ export class ExpertVerificationService {
     if (!data || Object.keys(data).length === 0) {
       return null;
     }
-    return this.deserializeProfile(data);
+    return this.deserializeProfile(data as Record<string, string>);
   }
 
   /**
@@ -531,7 +531,7 @@ export class ExpertVerificationService {
       const data = await redis.hgetall(key);
       if (!data) continue;
 
-      const profile = this.deserializeProfile(data);
+      const profile = this.deserializeProfile(data as Record<string, string>);
 
       // Apply filters
       if (filters?.category && profile.category !== filters.category) continue;

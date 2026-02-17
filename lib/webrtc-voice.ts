@@ -210,7 +210,7 @@ export class WebRTCVoiceService extends EventEmitter {
         this.emit('connected', { callId: session.id });
         this.startMetricsCollection(session);
       } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-        session.state = state === 'connected' ? 'disconnected' : 'failed';
+        session.state = state === 'disconnected' ? 'disconnected' : 'failed';
         this.emit('disconnected', { callId: session.id, state });
         this.stopMetricsCollection(session);
       }

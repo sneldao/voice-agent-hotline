@@ -1,5 +1,6 @@
 // x402 Payment API - Demo with built-in data
 
+export const dynamic = 'force-dynamic';
 // In-memory storage for demo (use Redis/KV in production)
 const paymentSessions = new Map<string, {
   callId: string;

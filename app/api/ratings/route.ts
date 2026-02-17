@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit, validateRatingInput } from '@/lib/security'
 import { getRatingsService } from '@/lib/ratings'
 
+export const dynamic = 'force-dynamic';
 // GET /api/ratings?agentId=xxx - Get agent ratings
 export async function GET(request: NextRequest) {
   // Rate limit: 60 req/min

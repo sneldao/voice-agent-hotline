@@ -1,5 +1,6 @@
 // ElevenLabs Voice API - Demo
 
+export const dynamic = 'force-dynamic';
 const VOICES = {
   Rachel: { voiceId: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', gender: 'female' },
   Domi: { voiceId: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', gender: 'female' },

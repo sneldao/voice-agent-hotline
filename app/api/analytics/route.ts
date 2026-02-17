@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { analyticsService } from '@/lib/analytics'
 
+export const dynamic = 'force-dynamic';
 // Store calls in memory
 const calls: any[] = []
 

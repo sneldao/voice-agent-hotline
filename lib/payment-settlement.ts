@@ -11,9 +11,9 @@ import {
   parseEther,
   formatEther,
   Address,
-  Hash,
-  erc20Abi
+  Hash
 } from 'viem';
+import { erc20Abi } from './abis/erc20';
 import { celo, celoAlfajores } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -134,13 +134,13 @@ const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
 // Payment Settlement Service
 // ============================================
 export class PaymentSettlement {
-  private publicClient: ReturnType<typeof createPublicClient>;
-  private facilitatorWallet?: ReturnType<typeof createWalletClient>;
+  private publicClient: any;
+  private facilitatorWallet?: any;
   private receipts: Map<string, PaymentReceipt> = new Map();
 
   constructor() {
     this.publicClient = createPublicClient({
-      chain: ACTIVE_CHAIN,
+      chain: ACTIVE_CHAIN as any,
       transport: http(RPC_URL),
     });
 
@@ -150,7 +150,7 @@ export class PaymentSettlement {
       const account = privateKeyToAccount(facilitatorKey as `0x${string}`);
       this.facilitatorWallet = createWalletClient({
         account,
-        chain: ACTIVE_CHAIN,
+        chain: ACTIVE_CHAIN as any,
         transport: http(RPC_URL),
       });
     }

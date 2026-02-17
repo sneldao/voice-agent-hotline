@@ -3,6 +3,7 @@ import { redis } from '@/lib/redis';
 import { elevenLabsService } from '@/lib/elevenlabs';
 import { composioService } from '@/lib/composio';
 
+export const dynamic = 'force-dynamic';
 /**
  * Agent Management API
  * Enhanced with ElevenLabs Conversational AI support
@@ -128,9 +129,10 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Update ElevenLabs agent if needed
-    if (agent.elevenlabs_agent_id && (updates.system_prompt || updates.voice_id)) {
+    const elevenLabsAgentId = agent.elevenlabs_agent_id as string;
+    if (elevenLabsAgentId && (updates.system_prompt || updates.voice_id)) {
       try {
-        await elevenLabsService.updateAgent(agent.elevenlabs_agent_id, {
+        await elevenLabsService.updateAgent(elevenLabsAgentId, {
           system_prompt: updates.system_prompt,
           voice_id: updates.voice_id,
         });

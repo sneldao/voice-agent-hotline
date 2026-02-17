@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       const agentKey = `agent:${call.agentId}`;
       const agent = await redis.hgetall(agentKey);
       if (agent) {
-        const currentRevenue = parseFloat(agent.totalRevenue || '0');
+        const currentRevenue = parseFloat((agent.totalRevenue as string) || '0');
         const newRevenue = currentRevenue + parseFloat(result.actualAmount || '0');
         await redis.hset(agentKey, {
           ...agent,
@@ -172,8 +172,8 @@ export async function GET(req: NextRequest) {
         settled: true,
         receipt: {
           ...redisReceipt,
-          blockNumber: parseInt(redisReceipt.blockNumber),
-          timestamp: parseInt(redisReceipt.timestamp),
+          blockNumber: parseInt(redisReceipt.blockNumber as string),
+          timestamp: parseInt(redisReceipt.timestamp as string),
         },
         explorerUrl: `https://celoscan.io/tx/${redisReceipt.txHash}`,
       });

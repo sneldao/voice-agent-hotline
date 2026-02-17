@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
+import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { Mic, MicOff, Volume2, PhoneOff, Clock, Signal, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
+import { CallSummary } from './CallSummary';
 
 interface Agent {
   id: string;
@@ -18,10 +20,11 @@ interface ActiveCallProps {
   agent: Agent;
   callId: string;
   userId: string;
-  onEnd: (duration: number, cost: number) => void;
+  onEnd: () => void;
+  onSelectRelatedAgent?: (agentId: string) => void;
 }
 
-export function ActiveCall({ agent, callId, userId, onEnd }: ActiveCallProps) {
+export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent }: ActiveCallProps) {
   const { 
     call, 
     startCall, 
@@ -32,8 +35,11 @@ export function ActiveCall({ agent, callId, userId, onEnd }: ActiveCallProps) {
   } = useRealVoiceCall(agent.rate);
   
   const { isSupported, permissions } = useWebRTCSupport();
+  const { saveCall, rateCall, toggleSaveCall, exportTranscript } = useLocalCallHistory();
   const [showTranscript, setShowTranscript] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [savedCallId, setSavedCallId] = useState<string | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,8 +57,61 @@ export function ActiveCall({ agent, callId, userId, onEnd }: ActiveCallProps) {
 
   const handleEnd = useCallback(() => {
     endCall();
-    onEnd(call.duration, call.cost);
-  }, [endCall, onEnd, call.duration, call.cost]);
+    
+    // Save call to history
+    const id = saveCall({
+      agentId: agent.id,
+      agentName: agent.name,
+      agentSpecialty: agent.specialty,
+      duration: call.duration,
+      cost: call.cost,
+      transcripts,
+    });
+    setSavedCallId(id);
+    setShowSummary(true);
+  }, [endCall, saveCall, agent, call.duration, call.cost, transcripts]);
+
+  const handleCloseSummary = useCallback(() => {
+    setShowSummary(false);
+    onEnd();
+  }, [onEnd]);
+
+  const handleRate = useCallback((rating: number, feedback?: string) => {
+    if (savedCallId) {
+      rateCall(savedCallId, rating, feedback);
+    }
+  }, [savedCallId, rateCall]);
+
+  const handleSave = useCallback(() => {
+    if (savedCallId) {
+      toggleSaveCall(savedCallId);
+    }
+  }, [savedCallId, toggleSaveCall]);
+
+  const handleDownload = useCallback(() => {
+    if (savedCallId) {
+      const exportData = exportTranscript(savedCallId);
+      if (exportData) {
+        const blob = new Blob([exportData.content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = exportData.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    }
+  }, [savedCallId, exportTranscript]);
+
+  const handleShare = useCallback(() => {
+    if (savedCallId && navigator.share) {
+      navigator.share({
+        title: `Call with ${agent.name}`,
+        text: `I just had a ${Math.floor(call.duration / 60)} minute call with ${agent.name} on Voice Agent Hotline!`,
+        url: window.location.href,
+      });
+    }
+  }, [savedCallId, agent.name, call.duration]);
 
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -237,6 +296,48 @@ export function ActiveCall({ agent, callId, userId, onEnd }: ActiveCallProps) {
           {' '}{permissions.microphone === 'granted' ? '✓' : '⚠'} Mic permission
         </p>
       </div>
+
+      {/* Call Summary Modal */}
+      <CallSummary
+        isOpen={showSummary}
+        agent={{
+          id: agent.id,
+          name: agent.name,
+          specialty: agent.specialty,
+          avatar: agent.avatar,
+          color: agent.color,
+        }}
+        duration={call.duration}
+        cost={call.cost}
+        transcripts={transcripts}
+        txHash={call.txHash}
+        onClose={handleCloseSummary}
+        onRate={handleRate}
+        onSave={handleSave}
+        onShare={handleShare}
+        onDownload={handleDownload}
+        relatedAgents={[
+          // Mock related agents - in real app, fetch from matching engine
+          {
+            id: 'related_1',
+            name: 'Crypto Tax Pro',
+            specialty: 'Tax Optimization',
+            rate: 0.35,
+            reason: 'Similar to your call',
+          },
+          {
+            id: 'related_2',
+            name: 'DeFi Analyst',
+            specialty: 'Yield Strategies',
+            rate: 0.50,
+            reason: 'Popular in your area',
+          },
+        ]}
+        onSelectRelatedAgent={(id) => {
+          setShowSummary(false);
+          onSelectRelatedAgent?.(id);
+        }}
+      />
     </div>
   );
 }

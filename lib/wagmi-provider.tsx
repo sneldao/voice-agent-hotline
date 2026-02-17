@@ -1,10 +1,13 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
-import { createConfig, WagmiProvider, useAccount, useConnect, useDisconnect, useSwitchChain, http as wagmiHttp } from 'wagmi';
+import { createConfig, WagmiConfig, useAccount, useConnect, useDisconnect, useNetwork, configureChains } from 'wagmi';
+import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
 import { celo, celoAlfajores } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { injected, metaMask, walletConnect } from 'wagmi/connectors';
+import { InjectedConnector } from 'wagmi/connectors/injected';
+import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
+import { WalletConnectConnector } from 'wagmi/connectors/walletConnect';
 import { parseEther, Address, Hash, createWalletClient, custom, getAddress, http as viemHttp } from 'viem';
 
 // Types
@@ -27,35 +30,53 @@ interface WalletContextValue extends WalletState {
 const CELO_MAINNET = {
   id: 42220,
   name: 'Celo',
+  network: 'celo',
   nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
   rpcUrls: {
     default: { http: ['https://forno.celo.org'] },
+    public: { http: ['https://forno.celo.org'] },
   },
-};
+} as const;
 
 const CELO_ALFAJORES = {
   id: 44787,
   name: 'Celo Alfajores',
+  network: 'celo-alfajores',
   nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
   rpcUrls: {
     default: { http: ['https://alfajores-forno.celo-testnet.org'] },
+    public: { http: ['https://alfajores-forno.celo-testnet.org'] },
   },
-};
+} as const;
 
-const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? CELO_MAINNET : CELO_ALFAJORES;
+const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoAlfajores;
 
-// Wagmi config with Celo support
+// Wagmi config with Celo support (v1 API)
+const { chains, publicClient, webSocketPublicClient } = configureChains(
+  [celo, celoAlfajores],
+  [
+    jsonRpcProvider({
+      rpc: (chain) => {
+        if (chain.id === celo.id) return { http: 'https://forno.celo.org' };
+        if (chain.id === celoAlfajores.id) return { http: 'https://alfajores-forno.celo-testnet.org' };
+        return null;
+      },
+    }),
+  ]
+);
+
 const config = createConfig({
-  chains: [celo, celoAlfajores],
-  transports: {
-    [celo.id]: wagmiHttp('https://forno.celo.org'),
-    [celoAlfajores.id]: wagmiHttp('https://alfajores-forno.celo-testnet.org'),
-  },
+  autoConnect: true,
+  publicClient,
+  webSocketPublicClient,
   connectors: [
-    injected(),
-    metaMask(),
-    walletConnect({
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo',
+    new InjectedConnector({ chains }),
+    new MetaMaskConnector({ chains }),
+    new WalletConnectConnector({
+      chains,
+      options: {
+        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo',
+      },
     }),
   ],
 });
@@ -86,10 +107,11 @@ function getWalletClientFromProvider(): ReturnType<typeof createWalletClient> | 
 
 // Custom hook for wallet operations
 function useWalletContext() {
-  const { address, isConnected, chainId } = useAccount();
+  const { address, isConnected } = useAccount();
+  const { chain } = useNetwork();
+  const chainId = chain?.id;
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Update wallet client ref when address changes
@@ -120,9 +142,10 @@ function useWalletContext() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   }, [address]);
 
-  const switchToChain = useCallback((chainId: number) => {
-    switchChain({ chainId });
-  }, [switchChain]);
+  const switchToChain = useCallback((targetChainId: number) => {
+    // Chain switching not implemented in this version
+    console.log('Switch to chain:', targetChainId);
+  }, []);
 
   const getViemWalletClient = useCallback(() => {
     return walletClientRef;
@@ -164,13 +187,13 @@ function WalletProviderInner({ children }: { children: ReactNode }) {
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <WagmiProvider config={config}>
+    <WagmiConfig config={config}>
       <QueryClientProvider client={queryClient}>
         <WalletProviderInner>
           {children}
         </WalletProviderInner>
       </QueryClientProvider>
-    </WagmiProvider>
+    </WagmiConfig>
   );
 }
 

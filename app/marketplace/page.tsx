@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CallRoom } from '@/components/CallRoom'
+import { ActiveCall } from '@/components/ActiveCall'
 
 interface Agent {
   id: string
@@ -52,7 +52,20 @@ export default function Marketplace() {
   }
 
   if (inCall && selectedAgent) {
-    return <CallRoom agent={selectedAgent} onEnd={() => { setInCall(false); setSelectedAgent(null) }} />
+    return (
+      <ActiveCall 
+        agent={{
+          id: selectedAgent.id,
+          name: selectedAgent.name,
+          specialty: selectedAgent.description,
+          rate: selectedAgent.ratePerMinute,
+          color: 'from-cyan-500 to-blue-500',
+        }} 
+        callId={`call_${Date.now()}`}
+        userId="user"
+        onEnd={() => { setInCall(false); setSelectedAgent(null) }} 
+      />
+    )
   }
 
   const capabilities = [...new Set(agents.flatMap(a => a.capabilities))]

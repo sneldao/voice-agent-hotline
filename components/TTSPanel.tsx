@@ -45,7 +45,7 @@ export function TTSPanel({ agentId, apiKey, onVoiceReady }: TTSPanelProps) {
   const handleGenerate = async () => {
     if (!text.trim()) return;
 
-    const blob = await generateSpeech(text, selectedVoice as keyof typeof AGENT_VOICES);
+    const blob = await generateSpeech(text, selectedVoice as any);
     if (blob) {
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);

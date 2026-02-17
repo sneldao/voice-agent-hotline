@@ -4,6 +4,7 @@
 // OpenClaw-style intent parsing and execution
 // No private keys on server!
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   intentParser, 
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       warnings: validation.warnings,
       simulation: validation.simulation,
       plan: {
-        steps: plan.steps.length,
+        stepCount: plan.steps.length,
         totalEstimatedCost: plan.totalEstimatedCost.toString(),
         steps: plan.steps.map(s => ({
           id: s.id,

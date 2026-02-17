@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
 import { elevenLabsService } from '@/lib/elevenlabs';
 
+export const dynamic = 'force-dynamic';
 /**
  * Call Management API
  * Enhanced with ElevenLabs Conversational AI support
@@ -54,10 +55,11 @@ export async function POST(req: NextRequest) {
     let conversation_id = null;
     let call_url = null;
 
-    if (agent.elevenlabs_agent_id && agent.conversational_enabled === 'true') {
+    const elevenLabsAgentId = agent.elevenlabs_agent_id as string;
+    if (elevenLabsAgentId && agent.conversational_enabled === 'true') {
       try {
         const conversation = await elevenLabsService.startConversation({
-          agent_id: agent.elevenlabs_agent_id,
+          agent_id: elevenLabsAgentId,
           metadata: {
             session_id: sessionId,
             caller_address,
@@ -129,9 +131,10 @@ export async function PATCH(req: NextRequest) {
         updates.ended_at = new Date().toISOString();
 
         // End ElevenLabs conversation if exists
-        if (session.conversation_id) {
+        const conversationId = session.conversation_id as string;
+        if (conversationId) {
           try {
-            await elevenLabsService.endConversation(session.conversation_id);
+            await elevenLabsService.endConversation(conversationId);
           } catch (error: any) {
             console.error('[Calls API] ElevenLabs end failed:', error);
           }
@@ -143,7 +146,7 @@ export async function PATCH(req: NextRequest) {
       updates.duration_seconds = duration_seconds.toString();
       
       // Calculate cost
-      const pricePerMinute = parseFloat(session.price_per_minute || '0.1');
+      const pricePerMinute = parseFloat((session.price_per_minute as string) || '0.1');
       const totalCost = (duration_seconds / 60) * pricePerMinute;
       updates.total_cost = totalCost.toFixed(4);
 

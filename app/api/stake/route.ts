@@ -2,8 +2,10 @@
 // Staking API
 // ============================================
 
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { reputationStaking, parseEther } from '@/lib/reputation-staking';
+import { reputationStaking } from '@/lib/reputation-staking';
+import { parseEther } from 'viem';
 
 // GET /api/stake?agentId=xxx
 export async function GET(req: NextRequest) {

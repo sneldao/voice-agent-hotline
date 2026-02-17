@@ -101,12 +101,12 @@ export interface AgentStats {
 // Reputation & Staking Service
 // ============================================
 export class ReputationStakingService {
-  private publicClient: ReturnType<typeof createPublicClient>;
-  private arbitratorWallet?: ReturnType<typeof createWalletClient>;
+  private publicClient: any;
+  private arbitratorWallet?: any;
 
   constructor() {
     this.publicClient = createPublicClient({
-      chain: ACTIVE_CHAIN,
+      chain: ACTIVE_CHAIN as any,
       transport: http(RPC_URL),
     });
 
@@ -116,7 +116,7 @@ export class ReputationStakingService {
       const account = privateKeyToAccount(arbitratorKey as `0x${string}`);
       this.arbitratorWallet = createWalletClient({
         account,
-        chain: ACTIVE_CHAIN,
+        chain: ACTIVE_CHAIN as any,
         transport: http(RPC_URL),
       });
     }
@@ -168,7 +168,7 @@ export class ReputationStakingService {
 
       return {
         success: true,
-        txHash: '0x' + '0'.repeat(64), // Would be real tx hash
+        txHash: ('0x' + '0'.repeat(64)) as `0x${string}`, // Would be real tx hash
       };
 
     } catch (error: any) {
@@ -245,7 +245,7 @@ export class ReputationStakingService {
     if (!data || Object.keys(data).length === 0) {
       return null;
     }
-    return this.deserializeStake(data);
+    return this.deserializeStake(data as Record<string, string>);
   }
 
   /**
@@ -266,7 +266,7 @@ export class ReputationStakingService {
         return { success: false, error: 'Call not found' };
       }
 
-      const callTime = parseInt(call.timestamp || '0');
+      const callTime = parseInt((call.timestamp as string) || '0');
       const disputeWindow = DISPUTE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
       
       if (Date.now() - callTime > disputeWindow) {
@@ -349,7 +349,7 @@ export class ReputationStakingService {
       // Get call details for refund
       const call = await redis.hgetall(`call:${dispute.callId}`);
       const refundAmount = call?.amount 
-        ? BigInt(Math.floor(parseFloat(call.amount) * 1e18))
+        ? BigInt(Math.floor(parseFloat(call.amount as string) * 1e18))
         : 0n;
 
       dispute.status = 'resolved_complainant';
@@ -395,7 +395,7 @@ export class ReputationStakingService {
     if (!data || Object.keys(data).length === 0) {
       return null;
     }
-    return this.deserializeDispute(data);
+    return this.deserializeDispute(data as Record<string, string>);
   }
 
   /**
@@ -404,7 +404,7 @@ export class ReputationStakingService {
   async getDisputeByCall(callId: string): Promise<Dispute | null> {
     const disputeId = await redis.get(`dispute:call:${callId}`);
     if (!disputeId) return null;
-    return this.getDispute(disputeId);
+    return this.getDispute(disputeId as string);
   }
 
   /**
@@ -497,7 +497,7 @@ export class ReputationStakingService {
     if (!data || Object.keys(data).length === 0) {
       return null;
     }
-    return this.deserializeReputation(data);
+    return this.deserializeReputation(data as Record<string, string>);
   }
 
   /**
@@ -511,13 +511,13 @@ export class ReputationStakingService {
 
     return {
       agentId,
-      totalCalls: parseInt(agent?.totalCalls || '0'),
-      completedCalls: parseInt(agent?.completedCalls || '0'),
+      totalCalls: parseInt((agent?.totalCalls as string) || '0'),
+      completedCalls: parseInt((agent?.completedCalls as string) || '0'),
       disputedCalls: disputes.length,
-      averageRating: parseFloat(agent?.rating || '0'),
-      totalRevenue: parseEther(agent?.totalRevenue || '0'),
+      averageRating: parseFloat((agent?.rating as string) || '0'),
+      totalRevenue: parseEther((agent?.totalRevenue as string) || '0'),
       totalStaked: stake?.amount || 0n,
-      joinedAt: parseInt(agent?.createdAt || Date.now().toString()),
+      joinedAt: parseInt((agent?.createdAt as string) || Date.now().toString()),
     };
   }
 
@@ -531,7 +531,7 @@ export class ReputationStakingService {
     for (const key of keys) {
       const data = await redis.hgetall(key);
       if (data) {
-        scores.push(this.deserializeReputation(data));
+        scores.push(this.deserializeReputation(data as Record<string, string>));
       }
     }
 
