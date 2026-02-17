@@ -560,7 +560,7 @@ function FeaturedCard({
 }
 
 /**
- * Agent Card
+ * Agent Card - Enhanced with visual ratings
  */
 function AgentCard({
   agent,
@@ -571,6 +571,10 @@ function AgentCard({
   onClick: () => void;
   selected: boolean;
 }) {
+  const rating = agent.rating || 0;
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  
   return (
     <Card
       interactive
@@ -591,13 +595,41 @@ function AgentCard({
           {agent.online && (
             <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
           )}
+          {agent.verified && (
+            <Badge variant="info" size="sm">✓ Verified</Badge>
+          )}
         </div>
-        <p className="text-sm text-gray-400 truncate">{agent.bio}</p>
-        <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <span className="text-yellow-400">⭐</span> {agent.rating}
+        <p className="text-sm text-gray-400 truncate">{agent.bio || agent.specialty}</p>
+        
+        {/* Visual Star Rating */}
+        <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star 
+                key={i} 
+                className={`w-3 h-3 ${
+                  i < fullStars 
+                    ? 'text-yellow-400 fill-yellow-400' 
+                    : i === fullStars && hasHalfStar
+                    ? 'text-yellow-400 fill-yellow-400/50'
+                    : 'text-gray-600'
+                }`} 
+              />
+            ))}
+          </div>
+          <span className="text-xs text-gray-400">
+            {rating.toFixed(1)} ({agent.totalRatings || 0})
           </span>
-          <span>{agent.totalRatings} reviews</span>
+        </div>
+        
+        {/* Additional Stats */}
+        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+          {agent.totalCalls && (
+            <span>{agent.totalCalls} calls</span>
+          )}
+          {agent.category && (
+            <Badge variant="default" size="sm">{agent.category}</Badge>
+          )}
         </div>
       </div>
 
