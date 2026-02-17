@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle } from '@/components/ui';
+import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle, Sparkles, ArrowRight } from '@/components/ui';
 import { announce } from '@/lib/accessibility';
 import { useWallet } from '@/lib/WalletContext';
 import { ReferralSection } from '@/components/ReferralSection';
@@ -12,6 +12,7 @@ import { useOnboarding } from '@/lib/useOnboarding';
 import { PaymentReceipt } from '@/components/PaymentReceipt';
 import { ActiveCall } from '@/components/ActiveCall';
 import { Onboarding } from '@/components/Onboarding';
+import { SmartAgentSearch } from '@/components/SmartAgentSearch';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -29,6 +30,7 @@ export default function Home() {
   const [inCall, setInCall] = useState(false);
   const [callId, setCallId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSmartSearch, setShowSmartSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [userBalance, setUserBalance] = useState(0);
@@ -72,6 +74,8 @@ export default function Home() {
           announce('Call ended');
         } else if (showPaymentModal) {
           setShowPaymentModal(false);
+        } else if (showSmartSearch) {
+          setShowSmartSearch(false);
           announce('Payment modal closed');
         } else if (selectedAgent) {
           setSelectedAgent(null);
@@ -82,16 +86,16 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inCall, showPaymentModal, selectedAgent]);
+  }, [inCall, showPaymentModal, showSmartSearch, selectedAgent]);
 
   // Focus management when modals open/close
   useEffect(() => {
-    if (selectedAgent || showPaymentModal) {
+    if (selectedAgent || showPaymentModal || showSmartSearch) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [selectedAgent, showPaymentModal]);
+  }, [selectedAgent, showPaymentModal, showSmartSearch]);
 
   const startCall = useCallback(async () => {
     if (!selectedAgent) return;
@@ -282,6 +286,7 @@ export default function Home() {
                 onCategoryChange={setSelectedCategory}
                 onCall={startCall}
                 onRefresh={refetchAgents}
+                onOpenSmartSearch={() => setShowSmartSearch(true)}
               />
             )}
             {activeTab === 'calls' && (
@@ -333,6 +338,19 @@ export default function Home() {
         error={payment.error}
         onPay={handlePay}
       />
+      
+      {/* Smart Agent Search */}
+      <SmartAgentSearch
+        availableAgents={agents.map(a => a.id)}
+        onSelectAgent={(agentId) => {
+          const agent = agents.find(a => a.id === agentId);
+          if (agent) {
+            setSelectedAgent(agent);
+            setShowSmartSearch(false);
+          }
+        }}
+        onClose={() => setShowSmartSearch(false)}
+      />
     </div>
   );
 }
@@ -352,6 +370,7 @@ function DiscoverTab({
   onCategoryChange,
   onCall,
   onRefresh,
+  onOpenSmartSearch,
 }: {
   agents: any[];
   isLoading: boolean;
@@ -364,6 +383,7 @@ function DiscoverTab({
   onCategoryChange: (c: string) => void;
   onCall: () => void;
   onRefresh: () => Promise<void>;
+  onOpenSmartSearch: () => void;
 }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -405,6 +425,34 @@ function DiscoverTab({
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="p-4 space-y-5">
+        {/* Smart Search Button */}
+        <button
+          onClick={onOpenSmartSearch}
+          className="w-full p-4 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl text-left hover:border-cyan-500/50 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-cyan-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-white group-hover:text-cyan-400 transition-colors">
+                Describe what you need help with
+              </p>
+              <p className="text-sm text-gray-400">
+                We will match you with the best agent
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors" />
+          </div>
+        </button>
+
+        {/* Or divider */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-px bg-gray-800" />
+          <span className="text-xs text-gray-500">or browse</span>
+          <div className="flex-1 h-px bg-gray-800" />
+        </div>
+
         {/* Search with refresh */}
         <div className="flex gap-2">
           <div className="relative flex-1">
