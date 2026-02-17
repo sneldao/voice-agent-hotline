@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, FileText, FileJson, FileCode, Download, Check } from 'lucide-react';
+import { X, FileText, FileJson, FileCode, FileSpreadsheet, Download, Check } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallRecord } from '@/lib/useCallHistory';
 import { exportCall, exportMultipleCalls } from '@/lib/export-utils';
@@ -13,7 +13,7 @@ interface ExportModalProps {
   calls?: CallRecord[];
 }
 
-type ExportFormat = 'txt' | 'json' | 'pdf';
+type ExportFormat = 'txt' | 'json' | 'pdf' | 'csv';
 
 export function ExportModal({ isOpen, onClose, call, calls }: ExportModalProps) {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('txt');
@@ -74,7 +74,13 @@ export function ExportModal({ isOpen, onClose, call, calls }: ExportModalProps) 
       id: 'json',
       name: 'JSON',
       icon: <FileJson className="w-6 h-6" />,
-      description: 'Structured data format',
+      description: 'Structured data format for developers',
+    },
+    {
+      id: 'csv',
+      name: 'CSV / Excel',
+      icon: <FileSpreadsheet className="w-6 h-6" />,
+      description: 'Spreadsheet format for analysis',
     },
     {
       id: 'pdf',

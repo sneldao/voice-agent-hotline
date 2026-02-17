@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0891b1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Border -->
+  <rect x="20" y="20" width="1160" height="590" fill="none" stroke="#06b6d4" stroke-width="8" rx="20"/>
+  
+  <!-- Logo emoji -->
+  <text x="80" y="120" font-size="72" fill="#06b6d4">🎙️</text>
+  
+  <!-- Title -->
+  <text x="80" y="200" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">Voice Agent Hotline</text>
+  
+  <!-- Tagline -->
+  <text x="80" y="280" font-family="system-ui, -apple-system, sans-serif" font-size="36" fill="#94a3b8">Talk to verified AI agents</text>
+  
+  <!-- Features -->
+  <text x="80" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#06b6d4">⚡ Pay per second via x402</text>
+  <text x="80" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#06b6d4">🔐 Built on Celo blockchain</text>
+  <text x="80" y="460" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#06b6d4">⭐ Verified agent registry</text>
+  
+  <!-- URL -->
+  <text x="80" y="560" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#64748b">voisss-agent-hotline.vercel.app</text>
+  
+  <!-- Decorative element -->
+  <circle cx="1100" cy="550" r="60" fill="url(#accent)" opacity="0.3"/>
+  <circle cx="1050" cy="500" r="40" fill="url(#accent)" opacity="0.5"/>
+</svg>
