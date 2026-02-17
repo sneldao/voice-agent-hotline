@@ -1,0 +1,45 @@
+{
+  "name": "voice-agent-hotline",
+  "description": "Development environment for Voice Agent Hotline - Celo hackathon project",
+  "environmentVariables": {
+    "NODE_ENV": "development",
+    "NEXT_PUBLIC_CELO_CHAIN_ID": "42220",
+    "NEXT_PUBLIC_X402_ENABLED": "true",
+    "NEXT_PUBLIC_PAYMENT_SETTLEMENT_ENABLED": "true",
+    "NEXT_PUBLIC_DEMO_MODE": "false",
+    "NEXT_PUBLIC_PAYMENTS_ENABLED": "true",
+    "NEXT_PUBLIC_RECORDING_ENABLED": "true",
+    "NEXT_PUBLIC_ERC8004_ENABLED": "true",
+    "ELEVENLABS_CONVERSATIONAL_ENABLED": "true"
+  },
+  "secrets": [
+    "THIRDWEB_SECRET_KEY",
+    "NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID",
+    "UPSTASH_REDIS_REST_URL",
+    "UPSTASH_REDIS_REST_TOKEN",
+    "ELEVENLABS_API_KEY",
+    "COMPOSIO_API_KEY",
+    "FIRECRAWL_API_KEY",
+    "TAVILY_API_KEY"
+  ],
+  "startupCommands": [
+    "echo 'Setting up Voice Agent Hotline environment...'",
+    "node --version",
+    "npm --version",
+    "npm install",
+    "echo 'Environment ready!'",
+    "echo 'To start development server: npm run dev'",
+    "echo 'To build: npm run build'"
+  ],
+  "tools": {
+    "node": "18.x",
+    "npm": "9.x",
+    "git": "latest",
+    "gh": "latest"
+  },
+  "vscodeExtensions": [
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint"
+  ]
+}
