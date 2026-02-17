@@ -35,6 +35,8 @@ import {
   Shield,
   Zap,
   Sparkles,
+  Bookmark,
+  Download,
 } from 'lucide-react';
 
 // Toast configuration
@@ -119,4 +121,6 @@ export {
   Shield,
   Zap,
   Sparkles,
+  Bookmark,
+  Download,
 };

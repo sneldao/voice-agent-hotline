@@ -57,6 +57,8 @@ export {
   Shield,
   Zap,
   Sparkles,
+  Bookmark,
+  Download,
 } from './Toast';
 
 // Empty States

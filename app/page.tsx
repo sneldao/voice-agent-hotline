@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle, Sparkles } from '@/components/ui';
+import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle, Sparkles, Bookmark, Download, Share2, X } from '@/components/ui';
 import { ArrowRight } from 'lucide-react';
 import { announce } from '@/lib/accessibility';
 import { useWallet } from '@/lib/WalletContext';
 import { ReferralSection } from '@/components/ReferralSection';
-import { useRealAgents, useCallHistory } from '@/lib/useRealAgents';
+import { useRealAgents, useCallHistory as useServerCallHistory } from '@/lib/useRealAgents';
+import { useLocalCallHistory, CallRecord } from '@/lib/useCallHistory';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { useOnboarding } from '@/lib/useOnboarding';
 import { ActiveCall } from '@/components/ActiveCall';
@@ -40,7 +41,8 @@ export default function Home() {
 
   // Real data hooks
   const { agents, isLoading: isLoadingAgents, error: agentsError, refetch: refetchAgents } = useRealAgents();
-  const { history: callHistory, isLoading: isLoadingHistory, error: historyError, refetch: refetchHistory } = useCallHistory(address || undefined);
+  const { history: serverCallHistory, isLoading: isLoadingHistory, error: historyError, refetch: refetchHistory } = useServerCallHistory(address || undefined);
+  const localCallHistory = useLocalCallHistory();
   const { startCall: startVoiceCall, endCall: endVoiceCall } = useRealVoiceCall(selectedAgent?.rate);
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
   
@@ -273,10 +275,13 @@ export default function Home() {
             )}
             {activeTab === 'calls' && (
               <CallsHistoryTab 
-                history={callHistory}
+                localHistory={localCallHistory}
+                serverHistory={serverCallHistory}
                 isLoading={isLoadingHistory}
                 error={historyError}
                 onRefresh={refetchHistory}
+                agents={agents}
+                onSelectAgent={setSelectedAgent}
               />
             )}
             {activeTab === 'profile' && (
@@ -690,73 +695,366 @@ function AgentDetailModal({
 }
 
 /**
- * Call History Tab
+ * Call History Tab - Enhanced with local storage data
  */
 function CallsHistoryTab({ 
-  history, 
+  localHistory,
+  serverHistory,
   isLoading, 
   error, 
-  onRefresh 
+  onRefresh,
+  agents,
+  onSelectAgent,
 }: { 
-  history: any[];
+  localHistory: ReturnType<typeof useLocalCallHistory>;
+  serverHistory: any[];
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => Promise<void>;
+  agents: any[];
+  onSelectAgent: (agent: any) => void;
 }) {
+  const [filter, setFilter] = useState<'all' | 'saved'>('all');
+  const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  const displayCalls = filter === 'saved' ? localHistory.getSavedCalls() : localHistory.calls;
+  
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  };
+
+  const handleDownload = (call: CallRecord) => {
+    const exportData = localHistory.exportTranscript(call.id);
+    if (exportData) {
+      const blob = new Blob([exportData.content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = exportData.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showSuccess('Transcript downloaded');
+    }
+  };
+
+  const handleShare = (call: CallRecord) => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Call with ${call.agentName}`,
+        text: `I had a ${formatDuration(call.duration)} call with ${call.agentName} on Voice Agent Hotline!`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(`Call with ${call.agentName} - ${formatDuration(call.duration)}`);
+      showSuccess('Copied to clipboard');
+    }
+  };
+
+  const handleCallAgain = (call: CallRecord) => {
+    const agent = agents.find(a => a.id === call.agentId);
+    if (agent) {
+      onSelectAgent(agent);
+    } else {
+      showError('Agent not available');
+    }
+  };
+
   return (
     <div className="p-4 space-y-5">
+      {/* Header with Stats */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Call History</h2>
-        <RefreshButton variant="full" onRefresh={async () => {}} />
+        <div>
+          <h2 className="text-xl font-bold">Call History</h2>
+          <p className="text-sm text-gray-400">
+            {localHistory.totalCalls} calls • {formatDuration(localHistory.totalDuration)} total
+          </p>
+        </div>
+        <RefreshButton variant="full" onRefresh={onRefresh || (async () => {})} />
       </div>
-      
-      {history.length > 0 ? (
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard 
+          icon={<Phone className="w-4 h-4" />}
+          value={localHistory.totalCalls.toString()}
+          label="Calls"
+        />
+        <StatCard 
+          icon={<Clock className="w-4 h-4" />}
+          value={formatDuration(localHistory.totalDuration)}
+          label="Duration"
+        />
+        <StatCard 
+          icon={<Wallet className="w-4 h-4" />}
+          value={`$${localHistory.totalSpent.toFixed(2)}`}
+          label="Spent"
+        />
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
+          All Calls
+        </FilterButton>
+        <FilterButton active={filter === 'saved'} onClick={() => setFilter('saved')}>
+          Saved ({localHistory.getSavedCalls().length})
+        </FilterButton>
+      </div>
+
+      {/* Call List */}
+      {displayCalls.length > 0 ? (
         <div className="space-y-3">
-          {history.map(call => (
-            <Card key={call.id} variant="default" className="flex items-center gap-4 p-4">
-              <Avatar size="md">
-                {call.agentName.charAt(0)}
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{call.agentName}</div>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Clock className="w-4 h-4" />
-                  {Math.floor(call.duration / 60)}m {call.duration % 60}s • {call.date}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-bold text-cyan-400">${call.cost.toFixed(2)}</div>
-                <div className="flex items-center justify-end gap-0.5 mt-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className={`w-3 h-3 ${i < call.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
-                  ))}
-                </div>
-              </div>
-            </Card>
+          {displayCalls.map(call => (
+            <CallHistoryCard
+              key={call.id}
+              call={call}
+              isSaved={call.isSaved}
+              onToggleSave={() => localHistory.toggleSaveCall(call.id)}
+              onViewTranscript={() => { setSelectedCall(call); setShowTranscript(true); }}
+              onDownload={() => handleDownload(call)}
+              onShare={() => handleShare(call)}
+              onCallAgain={() => handleCallAgain(call)}
+              formatDate={formatDate}
+              formatDuration={formatDuration}
+            />
           ))}
         </div>
       ) : (
         <EmptyHistoryState />
       )}
 
-      {/* Monthly Stats */}
-      <Card variant="gradient" className="p-5">
-        <div className="text-sm text-gray-400 mb-4">This Month</div>
-        <div className="flex justify-between">
-          <div>
-            <div className="text-3xl font-bold text-white flex items-center gap-2">
-              <Clock className="w-6 h-6 text-cyan-400" /> 2h 34m
-            </div>
-            <div className="text-xs text-gray-500">Total time</div>
+      {/* Transcript Modal */}
+      {selectedCall && (
+        <TranscriptModal
+          call={selectedCall}
+          isOpen={showTranscript}
+          onClose={() => setShowTranscript(false)}
+          formatDate={formatDate}
+          formatDuration={formatDuration}
+        />
+      )}
+    </div>
+  );
+}
+
+function StatCard({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+  return (
+    <div className="bg-gray-900 rounded-xl p-3 text-center">
+      <div className="text-gray-400 mb-1">{icon}</div>
+      <div className="text-lg font-bold text-white">{value}</div>
+      <div className="text-xs text-gray-500">{label}</div>
+    </div>
+  );
+}
+
+function FilterButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+        active 
+          ? 'bg-cyan-500 text-white' 
+          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CallHistoryCard({
+  call,
+  isSaved,
+  onToggleSave,
+  onViewTranscript,
+  onDownload,
+  onShare,
+  onCallAgain,
+  formatDate,
+  formatDuration,
+}: {
+  call: CallRecord;
+  isSaved: boolean;
+  onToggleSave: () => void;
+  onViewTranscript: () => void;
+  onDownload: () => void;
+  onShare: () => void;
+  onCallAgain: () => void;
+  formatDate: (ts: number) => string;
+  formatDuration: (s: number) => string;
+}) {
+  const [showActions, setShowActions] = useState(false);
+
+  return (
+    <Card variant="default" className="p-4">
+      <div className="flex items-start gap-3">
+        <Avatar size="md">
+          {call.agentName.charAt(0)}
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold truncate">{call.agentName}</div>
+            <button
+              onClick={onToggleSave}
+              className={`p-1 rounded ${isSaved ? 'text-cyan-400' : 'text-gray-600 hover:text-gray-400'}`}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-cyan-400 flex items-center justify-end gap-2">
-              $1.24 <Wallet className="w-6 h-6" />
+          <div className="text-sm text-gray-400 mb-2">{call.agentSpecialty}</div>
+          
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatDuration(call.duration)}
+            </span>
+            <span>{formatDate(call.timestamp)}</span>
+            <span className="text-cyan-400">${call.cost.toFixed(2)}</span>
+          </div>
+
+          {call.rating && (
+            <div className="flex items-center gap-0.5 mt-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star 
+                  key={i} 
+                  className={`w-3 h-3 ${i < call.rating! ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} 
+                />
+              ))}
             </div>
-            <div className="text-xs text-gray-500">Total spent</div>
+          )}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-800">
+        <button
+          onClick={onViewTranscript}
+          className="flex-1 py-2 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+        >
+          View Transcript
+        </button>
+        <button
+          onClick={() => setShowActions(!showActions)}
+          className="px-3 py-2 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+        >
+          •••
+        </button>
+      </div>
+
+      {showActions && (
+        <div className="flex gap-2 mt-2">
+          <ActionIconButton onClick={onDownload} icon={<Download className="w-4 h-4" />} label="Download" />
+          <ActionIconButton onClick={onShare} icon={<Share2 className="w-4 h-4" />} label="Share" />
+          <ActionIconButton onClick={onCallAgain} icon={<Phone className="w-4 h-4" />} label="Call Again" />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ActionIconButton({ onClick, icon, label }: { onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 flex flex-col items-center gap-1 py-2 text-xs text-gray-400 hover:text-cyan-400 transition-colors"
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function TranscriptModal({
+  call,
+  isOpen,
+  onClose,
+  formatDate,
+  formatDuration,
+}: {
+  call: CallRecord;
+  isOpen: boolean;
+  onClose: () => void;
+  formatDate: (ts: number) => string;
+  formatDuration: (s: number) => string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-sm overflow-y-auto">
+      <div className="min-h-screen p-4">
+        <div className="max-w-lg mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-white">Call Transcript</h2>
+              <p className="text-sm text-gray-400">with {call.agentName}</p>
+            </div>
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Call Info */}
+          <div className="bg-gray-900 rounded-xl p-4 mb-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Date</span>
+              <span className="text-white">{formatDate(call.timestamp)}</span>
+            </div>
+            <div className="flex justify-between text-sm mt-2">
+              <span className="text-gray-400">Duration</span>
+              <span className="text-white">{formatDuration(call.duration)}</span>
+            </div>
+            <div className="flex justify-between text-sm mt-2">
+              <span className="text-gray-400">Cost</span>
+              <span className="text-cyan-400">${call.cost.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Transcript */}
+          <div className="bg-gray-900 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-gray-400 mb-4">Conversation</h3>
+            {call.transcripts.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No transcript available</p>
+            ) : (
+              <div className="space-y-4">
+                {call.transcripts.map((msg, i) => (
+                  <div 
+                    key={i} 
+                    className={`flex ${msg.speaker === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div 
+                      className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm ${
+                        msg.speaker === 'user'
+                          ? 'bg-cyan-500 text-white rounded-br-md'
+                          : 'bg-gray-800 text-gray-200 rounded-bl-md'
+                      }`}
+                    >
+                      <p>{msg.text}</p>
+                      <span className="text-xs opacity-60 mt-1 block">
+                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
