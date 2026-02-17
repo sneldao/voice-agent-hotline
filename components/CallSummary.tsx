@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { Button } from './ui/Button';
+import { ShareModal } from './ShareModal';
 
 interface CallSummaryProps {
   isOpen: boolean;
@@ -69,6 +70,7 @@ export function CallSummary({
   const [hasRated, setHasRated] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'transcript'>('overview');
   const [isSaved, setIsSaved] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -252,7 +254,7 @@ export function CallSummary({
                 <ActionButton
                   icon={<Share2 className="w-5 h-5" />}
                   label="Share"
-                  onClick={onShare}
+                  onClick={() => setShowShareModal(true)}
                 />
                 <ActionButton
                   icon={<Download className="w-5 h-5" />}
@@ -337,6 +339,21 @@ export function CallSummary({
             </Button>
           </div>
         </div>
+
+        {/* Share Modal */}
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          title={`Call with ${agent.name}`}
+          description={`I just had a ${formatDuration(duration)} voice call with ${agent.name} on Voice Agent Hotline! 🎙️`}
+          url={typeof window !== 'undefined' ? window.location.href : ''}
+          callData={{
+            agentName: agent.name,
+            duration,
+            cost,
+            rating: hasRated ? rating : undefined,
+          }}
+        />
       </div>
     </div>
   );

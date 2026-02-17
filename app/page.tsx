@@ -13,6 +13,7 @@ import { useOnboarding } from '@/lib/useOnboarding';
 import { ActiveCall } from '@/components/ActiveCall';
 import { Onboarding } from '@/components/Onboarding';
 import { SmartAgentSearch } from '@/components/SmartAgentSearch';
+import { ShareModal } from '@/components/ShareModal';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -749,6 +750,7 @@ function CallsHistoryTab({
   const [filter, setFilter] = useState<'all' | 'saved'>('all');
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [shareCall, setShareCall] = useState<CallRecord | null>(null);
 
   const displayCalls = filter === 'saved' ? localHistory.getSavedCalls() : localHistory.calls;
   
@@ -784,16 +786,7 @@ function CallsHistoryTab({
   };
 
   const handleShare = (call: CallRecord) => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Call with ${call.agentName}`,
-        text: `I had a ${formatDuration(call.duration)} call with ${call.agentName} on Voice Agent Hotline!`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(`Call with ${call.agentName} - ${formatDuration(call.duration)}`);
-      showSuccess('Copied to clipboard');
-    }
+    setShareCall(call);
   };
 
   const handleCallAgain = (call: CallRecord) => {
@@ -877,6 +870,23 @@ function CallsHistoryTab({
           onClose={() => setShowTranscript(false)}
           formatDate={formatDate}
           formatDuration={formatDuration}
+        />
+      )}
+
+      {/* Share Modal */}
+      {shareCall && (
+        <ShareModal
+          isOpen={!!shareCall}
+          onClose={() => setShareCall(null)}
+          title={`Call with ${shareCall.agentName}`}
+          description={`I had a ${formatDuration(shareCall.duration)} voice call with ${shareCall.agentName} on Voice Agent Hotline! 🎙️`}
+          url={typeof window !== 'undefined' ? window.location.href : ''}
+          callData={{
+            agentName: shareCall.agentName,
+            duration: shareCall.duration,
+            cost: shareCall.cost,
+            rating: shareCall.rating,
+          }}
         />
       )}
     </div>
