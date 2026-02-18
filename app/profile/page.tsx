@@ -336,7 +336,7 @@ export default function UserProfile() {
           <div className="grid grid-cols-3 gap-3">
             <StatCard icon={<Phone className="w-4 h-4" />} label="Calls" value={String(stats.totalCalls)} />
             <StatCard icon={<Clock className="w-4 h-4" />} label="Minutes" value={String(stats.totalMinutes)} />
-            <StatCard icon={<CreditCard className="w-4 h-4" />} label="Spent" value={`$${stats.totalSpent.toFixed(2)}`} />
+            <StatCard icon={<CreditCard className="w-4 h-4" />} label="Spent" value={`$${(stats.totalSpent || 0).toFixed(2)}`} />
           </div>
         ) : null}
 
@@ -361,7 +361,7 @@ export default function UserProfile() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-white">{formatDuration(call.duration)}</p>
-                    <p className="text-xs text-cyan-400">${call.cost.toFixed(2)}</p>
+                    <p className="text-xs text-cyan-400">${(call.cost || 0).toFixed(2)}</p>
                   </div>
                 </div>
               ))}

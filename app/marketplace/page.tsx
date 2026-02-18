@@ -52,7 +52,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
           </svg>
         ))}
       </div>
-      <span className="text-xs text-gray-400">{rating.toFixed(1)} ({count})</span>
+      <span className="text-xs text-gray-400">{(rating || 0).toFixed(1)} ({count || 0})</span>
     </div>
   );
 }
@@ -324,7 +324,7 @@ export default function Marketplace() {
                     <p className="text-xs text-gray-500 line-clamp-2">{agent.description}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-lg font-bold text-cyan-400">${agent.ratePerMinute.toFixed(2)}</div>
+                    <div className="text-lg font-bold text-cyan-400">${(agent.ratePerMinute || 0).toFixed(2)}</div>
                     <div className="text-[10px] text-gray-500">/min</div>
                   </div>
                 </div>

@@ -256,7 +256,7 @@ export default function Home() {
             {connected ? (
               <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-medium text-cyan-400">${userBalance.toFixed(2)}</span>
+                <span className="text-sm font-medium text-cyan-400">${(userBalance || 0).toFixed(2)}</span>
                 <span className="text-xs text-gray-500">{formatAddress()}</span>
               </div>
             ) : (
@@ -878,7 +878,7 @@ function CallsHistoryTab({
         />
         <StatCard 
           icon={<Wallet className="w-4 h-4" />}
-          value={`$${localHistory.totalSpent.toFixed(2)}`}
+          value={`$${(localHistory.totalSpent || 0).toFixed(2)}`}
           label="Spent"
         />
       </div>
@@ -1054,7 +1054,7 @@ function CallHistoryCard({
               {formatDuration(call.duration)}
             </span>
             <span>{formatDate(call.timestamp)}</span>
-            <span className="text-cyan-400">${call.cost.toFixed(2)}</span>
+            <span className="text-cyan-400">${(call.cost || 0).toFixed(2)}</span>
           </div>
 
           {/* Rating row — interactive when unrated */}
@@ -1166,7 +1166,7 @@ function TranscriptModal({
             </div>
             <div className="flex justify-between text-sm mt-2">
               <span className="text-gray-400">Cost</span>
-              <span className="text-cyan-400">${call.cost.toFixed(2)}</span>
+              <span className="text-cyan-400">${(call.cost || 0).toFixed(2)}</span>
             </div>
           </div>
 
@@ -1250,7 +1250,7 @@ function ProfileTab({
             <div className="flex items-center gap-2 text-sm text-white/70 mb-1">
               <Wallet className="w-4 h-4" /> Balance
             </div>
-            <div className="text-4xl font-bold text-white mb-4">${balance.toFixed(2)}</div>
+            <div className="text-4xl font-bold text-white mb-4">${(balance || 0).toFixed(2)}</div>
             <div className="flex gap-3">
               <Button variant="secondary" size="sm" className="flex-1 bg-white/10 border-white/20 hover:bg-white/20">
                 Add Funds
@@ -1359,7 +1359,7 @@ function PaymentModal({
         </div>
         <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-700">
           <span>Total</span>
-          <span className="text-cyan-400">${cost.toFixed(3)}</span>
+          <span className="text-cyan-400">${(cost || 0).toFixed(3)}</span>
         </div>
       </div>
 
