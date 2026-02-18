@@ -16,6 +16,8 @@ import { Onboarding } from '@/components/Onboarding';
 import { SmartAgentFinder } from '@/components/SmartAgentFinder';
 import { ShareModal } from '@/components/ShareModal';
 import { ExportModal } from '@/components/ExportModal';
+import { DelegationPanel } from '@/components/DelegationPanel';
+import { useMiniPay } from '@/lib/minipay';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -200,10 +202,19 @@ export default function Home() {
     });
   }, [agents, searchQuery, selectedCategory]);
 
+  const { isMiniPayEnv, address: miniPayAddress } = useMiniPay();
+
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
       <ToastProvider />
-      
+
+      {/* MiniPay environment banner */}
+      {isMiniPayEnv && (
+        <div className="sticky top-0 z-[60] bg-gradient-to-r from-green-600 to-emerald-600 text-white text-center text-xs py-2 px-4 animate-slideDown">
+          🌍 Running in <strong>Celo MiniPay</strong> — paying with cUSD, no gas required
+        </div>
+      )}
+
       {/* Onboarding — onConnect lets the WalletConnectStep trigger connect inline */}
       <Onboarding
         isOpen={onboarding.isOpen}
@@ -1252,25 +1263,8 @@ function ProfileTab({
         </div>
       </Card>
 
-      {/* ERC-8004 Reputation */}
-      <Card variant="default" className="p-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
-            <Star className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="font-semibold">ERC-8004 Reputation</div>
-            <div className="text-xs text-gray-400">Trustless Agent Identity</div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">Reputation Score</span>
-          <span className="font-bold text-violet-400">847</span>
-        </div>
-        <div className="mt-3 h-2 bg-gray-800 rounded-full overflow-hidden">
-          <div className="h-full w-[84%] bg-gradient-to-r from-violet-500 to-purple-500 rounded-full" />
-        </div>
-      </Card>
+      {/* ERC-8004 Delegation Panel */}
+      <DelegationPanel />
 
       {/* Settings */}
       <div className="space-y-2">

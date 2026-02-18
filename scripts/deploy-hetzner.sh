@@ -11,17 +11,28 @@
 #   - Node.js 18+ installed on server
 #
 # Usage:
-#   ./scripts/deploy-hetzner.sh [server-ip] [user]
+#   ./scripts/deploy-hetzner.sh [ssh-alias-or-ip] [user]
 #
-# Example:
-#   ./scripts/deploy-hetzner.sh 157.90.123.45 root
+# Examples:
+#   ./scripts/deploy-hetzner.sh snel-bot root       # Using SSH alias
+#   ./scripts/deploy-hetzner.sh 157.90.123.45 root  # Using IP
 # ================================================
 
 set -e  # Exit on error
 
 # Configuration
-SERVER_IP=${1:-""}
+SERVER_INPUT=${1:-""}
 SERVER_USER=${2:-"root"}
+
+# Determine if input is SSH alias or IP
+if [[ "$SERVER_INPUT" == *"."* ]] || [[ "$SERVER_INPUT" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    # It's an IP address
+    SERVER_SSH="$SERVER_USER@$SERVER_INPUT"
+else
+    # It's an SSH alias (use as-is, user typically configured in ~/.ssh/config)
+    SERVER_SSH="$SERVER_INPUT"
+fi
+
 APP_NAME="voice-hotline-celo"
 REMOTE_DIR="/opt/$APP_NAME"
 LOCAL_BUILD_DIR=".next/standalone"
@@ -49,10 +60,12 @@ log_error() {
 check_prerequisites() {
     log_info "Checking prerequisites..."
     
-    if [ -z "$SERVER_IP" ]; then
-        log_error "Server IP is required"
-        echo "Usage: $0 [server-ip] [user]"
-        echo "Example: $0 157.90.123.45 root"
+    if [ -z "$SERVER_INPUT" ]; then
+        log_error "Server SSH alias or IP is required"
+        echo "Usage: $0 [ssh-alias-or-ip] [user]"
+        echo "Examples:"
+        echo "  $0 snel-bot root"
+        echo "  $0 157.90.123.45 root"
         exit 1
     fi
     
@@ -66,6 +79,13 @@ check_prerequisites() {
         exit 1
     fi
     
+    # Test SSH connection
+    log_info "Testing SSH connection to $SERVER_SSH..."
+    if ! ssh "$SERVER_SSH" "echo 'SSH connection successful'" &> /dev/null; then
+        log_error "Cannot connect to $SERVER_SSH via SSH"
+        exit 1
+    fi
+    
     log_info "Prerequisites check passed"
 }
 
@@ -76,47 +96,59 @@ build_application() {
     # Install dependencies
     npm install
     
-    # Build Next.js with standalone output
-    npm run build
-    
-    log_info "Build completed successfully"
-}
-
-# Create deployment package
-create_package() {
+    # Create deployment package WITHOUT building
+    # (Server will build with proper env vars)
     log_info "Creating deployment package..."
     
-    # Create deployment tarball
-    tar -czf deploy.tar.gz \
-        .next/standalone \
-        .next/static \
-        public \
+    tar --exclude='node_modules' --exclude='.next' --exclude='deploy.tar.gz' -czf deploy.tar.gz \
+        app/ \
+        lib/ \
+        components/ \
+        public/ \
+        scripts/ \
+        docs/ \
+        contracts/ \
         package.json \
         package-lock.json \
         ecosystem.config.js \
         next.config.js \
-        --exclude='node_modules'
+        tsconfig.json \
+        tailwind.config.js \
+        postcss.config.js \
+        .env.hetzner.example
     
     log_info "Deployment package created: deploy.tar.gz"
+    log_info "Server will build with proper environment variables"
+    
+    # Skip local build, server will build
+    return 0
+}
+
+# Create deployment package (already done in build_application)
+create_package() {
+    log_info "Deployment package already created"
 }
 
 # Deploy to server
 deploy_to_server() {
-    log_info "Deploying to $SERVER_USER@$SERVER_IP:$REMOTE_DIR..."
+    log_info "Deploying to $SERVER_SSH:$REMOTE_DIR..."
     
     # Create remote directory if it doesn't exist
-    ssh $SERVER_USER@$SERVER_IP "mkdir -p $REMOTE_DIR"
+    ssh "$SERVER_SSH" "mkdir -p $REMOTE_DIR"
     
     # Copy deployment package
-    scp deploy.tar.gz $SERVER_USER@$SERVER_IP:/tmp/deploy.tar.gz
+    scp deploy.tar.gz "$SERVER_SSH:/tmp/deploy.tar.gz"
     
     # Extract and setup on server
-    ssh $SERVER_USER@$SERVER_IP << 'ENDSSH'
+    ssh "$SERVER_SSH" << 'ENDSSH'
         set -e
         cd $REMOTE_DIR
         
+        # Create current directory if it doesn't exist
+        mkdir -p current
+        
         # Backup current deployment
-        if [ -d "current" ]; then
+        if [ -d "current" ] && [ "$(ls -A current)" ]; then
             cp -r current backup-$(date +%Y%m%d-%H%M%S)
         fi
         
@@ -132,8 +164,12 @@ deploy_to_server() {
         # Setup environment file
         if [ ! -f .env.hetzner ]; then
             cp .env.hetzner.example .env.hetzner
-            echo "Please configure .env.hetzner manually"
+            echo "⚠️  Please configure .env.hetzner manually"
         fi
+        
+        # Build on server (with proper env vars)
+        echo "Building on server..."
+        npm run build
         
         # Restart application with PM2
         pm2 restart $APP_NAME || pm2 start ecosystem.config.js
@@ -158,13 +194,13 @@ setup_nginx() {
     log_info "Setting up Nginx reverse proxy..."
     
     # Check if Nginx is installed
-    if ! ssh $SERVER_USER@$SERVER_IP "command -v nginx &> /dev/null"; then
+    if ! ssh "$SERVER_SSH" "command -v nginx &> /dev/null"; then
         log_warn "Nginx not installed. Installing..."
-        ssh $SERVER_USER@$SERVER_IP "apt update && apt install -y nginx"
+        ssh "$SERVER_SSH" "apt update && apt install -y nginx"
     fi
     
     # Copy Nginx config
-    ssh $SERVER_USER@$SERVER_IP << 'ENDSSH'
+    ssh "$SERVER_SSH" << 'ENDSSH'
         # Copy config if it doesn't exist
         if [ ! -f /etc/nginx/sites-available/voice-hotline ]; then
             cp /opt/voice-hotline-celo/scripts/nginx-voice-hotline.conf /etc/nginx/sites-available/voice-hotline
@@ -184,14 +220,14 @@ ENDSSH
     
     # SSL setup prompt
     log_info "Setup SSL with Let's Encrypt?"
-    log_info "Run: ssh $SERVER_USER@$SERVER_IP 'certbot --nginx -d your-domain.com'"
+    log_info "Run: ssh $SERVER_SSH 'certbot --nginx -d voisss.celo.famile.xyz'"
 }
 
 # Verify deployment
 verify_deployment() {
     log_info "Verifying deployment..."
     
-    ssh $SERVER_USER@$SERVER_IP << 'ENDSSH'
+    ssh "$SERVER_SSH" << 'ENDSSH'
         pm2 status $APP_NAME
         pm2 logs $APP_NAME --lines 10 --nostream
 ENDSSH
@@ -209,7 +245,7 @@ cleanup() {
 # Main deployment process
 main() {
     log_info "Starting deployment to Hetzner VPS..."
-    echo "Server: $SERVER_USER@$SERVER_IP"
+    echo "Server: $SERVER_SSH"
     echo "App: $APP_NAME"
     echo "Remote: $REMOTE_DIR"
     echo ""
@@ -224,10 +260,12 @@ main() {
     log_info "✅ Deployment completed successfully!"
     echo ""
     echo "Next steps:"
-    echo "  1. SSH into server: ssh $SERVER_USER@$SERVER_IP"
+    echo "  1. SSH into server: ssh $SERVER_SSH"
     echo "  2. Check logs: pm2 logs $APP_NAME"
     echo "  3. Monitor: pm2 monit"
-    echo "  4. View app: http://$SERVER_IP:3000"
+    echo "  4. Configure .env.hetzner on server"
+    echo "  5. Rebuild: cd /opt/voice-hotline-celo && npm run build && pm2 restart"
+    echo "  6. View app: http://157.180.36.156:3000"
 }
 
 # Run main function

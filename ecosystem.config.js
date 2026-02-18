@@ -24,14 +24,14 @@ module.exports = {
       script: 'npm',
       args: 'start',
       
-      // Cluster mode for multi-core utilization (PERFORMANT)
-      instances: 2,
-      exec_mode: 'cluster',
+      // Use fork mode (Next.js handles its own clustering internally)
+      instances: 1,
+      exec_mode: 'fork',
       
       // Environment variables
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: 3042,
         HOSTNAME: '0.0.0.0',
       },
       
