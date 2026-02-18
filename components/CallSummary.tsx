@@ -174,7 +174,7 @@ export function CallSummary({
                 <StatCard
                   icon={<DollarSign className="w-5 h-5" />}
                   label="Total Cost"
-                  value={`$${cost.toFixed(2)}`}
+                  value={`$${(cost || 0).toFixed(2)}`}
                   color="green"
                 />
                 <StatCard

@@ -94,11 +94,11 @@ export function CallHistory({ agentId, userAddress }: CallHistoryProps) {
                 </div>
                 <div className="detail-row">
                   <span className="label">Rate:</span>
-                  <span className="value">${call.ratePerMinute.toFixed(2)}/min</span>
+                  <span className="value">${(call.ratePerMinute || 0).toFixed(2)}/min</span>
                 </div>
                 <div className="detail-row">
                   <span className="label">Cost:</span>
-                  <span className="value cost">${call.totalCost.toFixed(4)}</span>
+                  <span className="value cost">${(call.totalCost || 0).toFixed(4)}</span>
                 </div>
                 {agentId && (
                   <div className="detail-row">

@@ -207,7 +207,7 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
           </span>
           {/* Animated cost ticker */}
           <div className="px-3 py-1.5 bg-gray-800 rounded-full min-w-[70px] text-right">
-            <span className="text-sm font-bold text-cyan-400 tabular-nums">${call.cost.toFixed(4)}</span>
+            <span className="text-sm font-bold text-cyan-400 tabular-nums">${(call.cost || 0).toFixed(4)}</span>
           </div>
         </div>
       </div>
@@ -309,7 +309,7 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
             <span>{isMuted ? '🔇 Muted' : '🎤 Mic active'}</span>
-            <span className="tabular-nums">${call.cost.toFixed(4)} spent</span>
+            <span className="tabular-nums">${(call.cost || 0).toFixed(4)} spent</span>
           </div>
           <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
             <div

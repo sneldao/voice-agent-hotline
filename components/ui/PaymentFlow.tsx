@@ -160,7 +160,7 @@ export function PaymentFlow({
               <Wallet className="w-4 h-4 text-green-400" />
               <span className="text-sm text-gray-300">Current Balance</span>
             </div>
-            <span className="text-lg font-bold text-white">${state.balance.toFixed(2)}</span>
+            <span className="text-lg font-bold text-white">${(state.balance || 0).toFixed(2)}</span>
           </div>
 
           {/* Insufficient balance warning */}
