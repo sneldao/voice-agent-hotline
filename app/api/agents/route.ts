@@ -36,6 +36,71 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const NATIVE_TOOLS = {
+  book: {
+    name: 'book_appointment',
+    description: 'Book an appointment, reservation, or service',
+    parameters: {
+      type: 'object',
+      properties: {
+        businessName: { type: 'string', description: 'Name of the business or provider' },
+        serviceType: { type: 'string', enum: ['restaurant', 'appointment', 'travel', 'event', 'other'] },
+        dateTime: { type: 'string', description: 'ISO 8601 date time string' },
+        partySize: { type: 'integer' },
+        notes: { type: 'string' }
+      },
+      required: ['businessName', 'serviceType', 'dateTime']
+    }
+  },
+  order: {
+    name: 'create_order',
+    description: 'Place an order for food, goods, or services',
+    parameters: {
+      type: 'object',
+      properties: {
+        vendor: { type: 'string', description: 'Name of the vendor or restaurant' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              quantity: { type: 'integer' },
+              price: { type: 'number', description: 'Price in cents' }
+            }
+          }
+        },
+        deliveryAddress: { type: 'string' }
+      },
+      required: ['vendor', 'items']
+    }
+  },
+  schedule: {
+    name: 'set_reminder',
+    description: 'Schedule a reminder or notification',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        dateTime: { type: 'string', description: 'ISO 8601 date time string' },
+        description: { type: 'string' }
+      },
+      required: ['title', 'dateTime']
+    }
+  },
+  research: {
+    name: 'search_web',
+    description: 'Search the web for information',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string' }
+      },
+      required: ['query']
+    }
+  }
+};
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -47,6 +112,8 @@ export async function POST(req: NextRequest) {
       skills = [],
       price_per_minute,
       conversational_enabled = true,
+      wallet_address = '',
+      erc8004_id = '',
     } = body;
 
     // Validation
@@ -64,10 +131,28 @@ export async function POST(req: NextRequest) {
     let elevenlabs_agent_id = null;
     if (conversational_enabled && process.env.ELEVENLABS_CONVERSATIONAL_ENABLED === 'true') {
       try {
-        // Map skills to Composio tools
-        const tools = skills.flatMap((skill: string) => 
+        // Map skills to tools
+        const tools: any[] = [];
+
+        // Add Native Tools
+        skills.forEach((skill: string) => {
+          if (NATIVE_TOOLS[skill as keyof typeof NATIVE_TOOLS]) {
+            tools.push(NATIVE_TOOLS[skill as keyof typeof NATIVE_TOOLS]);
+          }
+        });
+
+        // Add Composio Tools (as descriptions for LLM to know it can call them)
+        const composioTools = skills.flatMap((skill: string) =>
           composioService.getToolsForSkill(skill)
         );
+
+        composioTools.forEach((slug: string) => {
+          tools.push({
+            name: slug.toLowerCase(),
+            description: `Execute ${slug} action`,
+            parameters: { type: 'object', properties: { query: { type: 'string' } } }
+          });
+        });
 
         const agentConfig = {
           name,
@@ -75,16 +160,16 @@ export async function POST(req: NextRequest) {
           voice_id,
           model: 'gpt-4',
           language: 'en',
+          tools: tools,
           webhook_url: `${process.env.NEXT_PUBLIC_WEBHOOK_URL}/api/webhooks/elevenlabs`,
         };
 
         const result = await elevenLabsService.createAgent(agentConfig);
         elevenlabs_agent_id = result.agent_id;
 
-        console.log('[Agents API] Created ElevenLabs agent:', elevenlabs_agent_id);
+        console.log('[Agents API] Created ElevenLabs agent with tools:', elevenlabs_agent_id, tools.map(t => t.name));
       } catch (error: any) {
         console.error('[Agents API] ElevenLabs creation failed:', error);
-        // Continue without conversational AI
       }
     }
 
@@ -98,6 +183,8 @@ export async function POST(req: NextRequest) {
       skills: JSON.stringify(skills),
       price_per_minute: price_per_minute || 0.1,
       elevenlabs_agent_id: elevenlabs_agent_id || '',
+      wallet_address,
+      erc8004_id,
       conversational_enabled: conversational_enabled.toString(),
       created_at: new Date().toISOString(),
       rating: '0',
@@ -166,7 +253,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const deleted = await redis.del(`agent:${id}`);
-    
+
     if (deleted === 0) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }

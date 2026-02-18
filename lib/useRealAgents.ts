@@ -80,36 +80,36 @@ const FALLBACK_AGENTS: Agent[] = [
     category: 'tech',
   },
   {
-    id: 'agent_6701khgsyb70fdebb2ce36dfjs2m',
-    name: 'Tournament Master',
-    specialty: 'Esports Analyst',
-    bio: 'Enthusiastic esports analyst for gaming statistics, tournament information, player profiles, and match history.',
-    rating: 4.6,
-    totalRatings: 89,
-    rate: 0.08,
-    avatar: '🎮',
-    color: 'from-green-500 to-emerald-500',
+    id: 'agent_diversifi_prod_001',
+    name: 'Diversifi',
+    specialty: 'Stablecoin Advisor',
+    bio: 'Professional advisor specializing in stablecoins (cUSD, USDC, USDT) and wealth diversification strategies on Celo and Base.',
+    rating: 5.0,
+    totalRatings: 0,
+    rate: 0.12,
+    avatar: '🛡️',
+    color: 'from-blue-600 to-cyan-500',
     online: true,
-    tags: ['Gaming', 'Esports', 'Tournaments'],
-    voiceId: 'IKne3meq5aSn9XLyUdCD',
-    elevenlabsAgentId: 'agent_6701khgsyb70fdebb2ce36dfjs2m',
-    category: 'gaming',
+    tags: ['Finance', 'Stablecoins', 'Diversification'],
+    voiceId: '21m00Tcm4TlvDq8ikWAM',
+    elevenlabsAgentId: '', // Set after seeding
+    category: 'finance',
   },
   {
-    id: 'agent_2101khgsyd02fnvshvr7rzb50qj6',
-    name: 'General Helper',
-    specialty: 'AI Assistant',
-    bio: 'Versatile AI assistant for web research, fact-checking, calculations, weather info, and general queries.',
-    rating: 4.7,
-    totalRatings: 412,
-    rate: 0.05,
-    avatar: '🤖',
-    color: 'from-amber-500 to-orange-500',
+    id: 'agent_clawdy_prod_001',
+    name: 'Clawdy',
+    specialty: 'Infrastructure Expert',
+    bio: 'Specialist in agentic infrastructure, including OpenClaw, Kilocode Cloud Agents, ERC-8004, and decentralized inference providers.',
+    rating: 4.9,
+    totalRatings: 12,
+    rate: 0.15,
+    avatar: '🏗️',
+    color: 'from-gray-700 to-slate-900',
     online: true,
-    tags: ['General', 'Research', 'Help'],
-    voiceId: 'SAz9YHcvj6GT2YYXdXww',
-    elevenlabsAgentId: 'agent_2101khgsyd02fnvshvr7rzb50qj6',
-    category: 'general',
+    tags: ['Infrastructure', 'DevOps', 'Cloud'],
+    voiceId: 'pNInz6obpgnuMvscWqt5',
+    elevenlabsAgentId: '', // Set after seeding
+    category: 'tech',
   },
 ];
 
@@ -125,16 +125,16 @@ export function useRealAgents(): UseRealAgentsReturn {
     try {
       // Try to fetch from API
       const response = await fetch('/api/agents');
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       // Handle different API response formats
       const agentsData = data.agents || data.data?.agents || [];
-      
+
       if (agentsData.length > 0) {
         // Transform API data to Agent format
         const transformedAgents: Agent[] = agentsData.map((agent: any) => ({
@@ -153,7 +153,7 @@ export function useRealAgents(): UseRealAgentsReturn {
           elevenlabsAgentId: agent.elevenlabsAgentId || agent.elevenlabs_agent_id,
           category: agent.category,
         }));
-        
+
         setAgents(transformedAgents);
       } else {
         // Use fallback if API returns empty
@@ -192,14 +192,14 @@ export function useCallHistory(address?: string): UseCallHistoryReturn {
 
     try {
       const response = await fetch(`/api/users/${address}/calls`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch history: ${response.status}`);
       }
 
       const data = await response.json();
       const callsData = data.calls || data.history || [];
-      
+
       setHistory(callsData.map((call: any) => ({
         id: call.id || call.callId,
         agentName: call.agentName || call.agent?.name || 'Unknown Agent',

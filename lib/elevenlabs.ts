@@ -126,7 +126,7 @@ export class ElevenLabsService {
   constructor(apiKey?: string, defaultVoiceId?: string) {
     this.apiKey = apiKey || ELEVENLABS_API_KEY;
     this.defaultVoiceId = defaultVoiceId || process.env.ELEVENLABS_DEFAULT_VOICE || 'Adam';
-    
+
     if (!this.apiKey) {
       console.warn('[ElevenLabs] API key not configured');
     }
@@ -138,7 +138,7 @@ export class ElevenLabsService {
 
   async textToSpeech(request: TTSRequest): Promise<TTSResponse> {
     const voiceId = request.voiceId || this.defaultVoiceId;
-    
+
     const response = await fetch(
       `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`,
       {
@@ -167,7 +167,7 @@ export class ElevenLabsService {
 
     const audioBuffer = await response.arrayBuffer();
     const audio = Readable.from(Buffer.from(audioBuffer));
-    
+
     return {
       audio,
       duration: 0, // TODO: Calculate from audio
@@ -212,6 +212,7 @@ export class ElevenLabsService {
             },
             first_message: `Hello! I'm ${config.name}. How can I help you today?`,
             language: config.language || 'en',
+            tools: config.tools || [], // Add tools here
           },
           asr: {
             provider: 'elevenlabs', // Auto STT
@@ -225,6 +226,9 @@ export class ElevenLabsService {
           llm: {
             provider: 'openai',
             model: config.model || 'gpt-4',
+            tool_call_config: config.tools && config.tools.length > 0 ? {
+              tool_webhook_url: config.webhook_url,
+            } : undefined,
           },
         },
         platform_settings: {
@@ -282,7 +286,7 @@ export class ElevenLabsService {
     }
 
     const data = await response.json();
-    
+
     return {
       conversation_id: data.conversation_id,
       agent_id: data.agent_id,
