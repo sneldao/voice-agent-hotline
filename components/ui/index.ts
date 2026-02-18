@@ -89,3 +89,8 @@ export { PaymentFlow, DelegationPayment } from './PaymentFlow';
 
 // Call UI - consolidated into ActiveCall component
 // export { CallUI } from './CallUI';
+
+// Additional Modals
+export { TranscriptModal } from '../TranscriptModal';
+export { ShareModal } from '../ShareModal';
+export { ExportModal } from '../ExportModal';
