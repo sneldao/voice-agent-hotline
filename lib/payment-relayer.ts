@@ -242,6 +242,13 @@ export class GelatoRelaySettlement {
         };
       }
 
+      if (!relayResponse.taskId) {
+        return {
+          success: false,
+          error: 'No task ID returned from Gelato',
+        };
+      }
+
       console.log('[Gelato] Relay task created:', relayResponse.taskId);
 
       // Wait for execution (optional - can return immediately)
