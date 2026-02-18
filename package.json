@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "tsx scripts/run-seed.ts"
   },
   "dependencies": {
     "@elevenlabs/client": "^0.7.0",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^18",
     "eslint": "^8",
     "eslint-config-next": "14.0.4",
+    "tsx": "^4.7.0",
     "typescript": "^5"
   }
 }

@@ -6,6 +6,8 @@
 |----------|---------|
 | [Architecture](./AGENTIC_ARCHITECTURE.md) | Intent-based, no-server-keys architecture |
 | [Deployment](./DEPLOYMENT.md) | Vercel deployment guide |
+| [Performance](./PERFORMANCE.md) | Performance optimizations & monitoring |
+| [Superfluid](./SUPERFLUID_INTEGRATION.md) | Streaming payments with viem |
 | [API Reference](../lib/intent-architecture.ts) | Intent parsing and execution |
 
 ## Project Overview
@@ -76,20 +78,45 @@
 
 ```
 voice-agent-hotline/
-├── app/                    # Next.js app router
-│   ├── api/               # API routes
-│   ├── demo/              # Demo page
-│   └── page.tsx           # Main app
-├── components/            # React components
-├── contracts/             # Solidity smart contracts
-├── lib/                   # Core services
-│   ├── useRealAgents.ts   # Real agent data hook
-│   ├── useRealPayment.ts  # On-chain payment hook
-│   ├── useRealVoiceCall.ts # WebRTC voice hook
-│   ├── intent-architecture.ts # Intent system
-│   └── payment-settlement.ts  # x402 settlement
-├── docs/                  # Documentation
-└── .kilocode/            # KILOCODE cloud agent config
+├── app/                        # Next.js app router
+│   ├── api/                   # API routes
+│   │   ├── agents/            # Agent management
+│   │   ├── calls/             # Call handling
+│   │   ├── payments/          # Payment settlement
+│   │   ├── ratings/           # Agent ratings
+│   │   ├── reputation/        # ERC-8004 reputation
+│   │   ├── sdk/               # Agent SDK endpoints
+│   │   └── webhooks/          # ElevenLabs webhooks
+│   ├── demo/                  # Demo page
+│   └── profile/               # User profile
+├── components/                # React components
+│   ├── ui/                    # Reusable UI components
+│   ├── ActiveCall.tsx         # Active call UI
+│   ├── SmartAgentFinder.tsx   # AI-powered agent matching
+│   └── CallSummary.tsx        # Post-call summary
+├── contracts/                 # Solidity smart contracts
+│   └── AgentSmartWallet.sol   # ERC-4337 wallet
+├── lib/                       # Core services
+│   ├── payments/              # Payment services
+│   │   ├── x402.ts            # x402 protocol
+│   │   └── settlement.ts      # Payment settlement
+│   ├── voice/                 # Voice services
+│   │   ├── webrtc-voice.ts    # WebRTC implementation
+│   │   └── elevenlabs.ts      # ElevenLabs integration
+│   ├── agentMatching.ts       # AI agent matching engine
+│   ├── db.ts                  # Redis operations
+│   ├── erc8004.ts             # Delegation & reputation
+│   ├── superfluid-streaming.ts # Streaming payments (viem)
+│   ├── payment-settlement.ts  # EIP-3009 settlement
+│   ├── intent-architecture.ts # Intent parsing
+│   └── useCallHistory.ts      # Call history hook
+├── docs/                      # Documentation
+│   ├── README.md              # This file
+│   ├── AGENTIC_ARCHITECTURE.md # Architecture overview
+│   ├── DEPLOYMENT.md          # Deployment guide
+│   ├── PERFORMANCE.md         # Performance optimizations
+│   └── SUPERFLUID_INTEGRATION.md # Superfluid docs
+└── .kilocode/                # KILOCODE cloud agent config
 ```
 
 ## Environment Variables

@@ -24,12 +24,11 @@
   ],
   "startupCommands": [
     "echo 'Setting up Voice Agent Hotline environment...'",
-    "node --version",
-    "npm --version",
     "npm install",
-    "echo 'Environment ready!'",
-    "echo 'To start development server: npm run dev'",
-    "echo 'To build: npm run build'"
+    "npm run build",
+    "npm run seed",
+    "echo 'Environment ready! Agents synchronized with ElevenLabs V1 Toolbox.'",
+    "echo 'IMPORTANT: Do not create a manual .env.local; use dashboard Secrets.'"
   ],
   "tools": {
     "node": "18.x",

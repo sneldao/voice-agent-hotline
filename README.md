@@ -173,12 +173,12 @@ ws.onmessage = (e) => {
 ### x402 Payments
 
 ```typescript
-import { X402PaymentService } from '@/lib/payment-service';
+import { VoicePaymentService } from '@/lib/payments/x402';
+import { paymentSettlement } from '@/lib/payment-settlement';
 
-const payment = new X402PaymentService();
-const auth = await payment.authorizePayment(
-  payer, payee, amountCents, durationSeconds
-);
+const payment = new VoicePaymentService();
+// End-to-end billing: meter → settle → on-chain tx
+await payment.endCall({ callId, amount, authorization });
 ```
 
 ### Superfluid Streaming
@@ -186,8 +186,10 @@ const auth = await payment.authorizePayment(
 ```typescript
 import { SuperfluidStreamingService } from '@/lib/superfluid-streaming';
 
-const stream = new SuperfluidStreamingService(address, wallet);
-await stream.startStream({ recipient, monthlyAmount, account });
+const stream = new SuperfluidStreamingService();
+// Auto-detects create vs update flow
+await stream.startStream({ recipient, monthlyAmount });
+await stream.stopStream(recipient);
 ```
 
 ### ElevenLabs TTS
@@ -207,30 +209,47 @@ import { ERC8004Service } from '@/lib/erc8004';
 const erc8004 = new ERC8004Service();
 await erc8004.registerAgent(agentURI, ratePerMinuteWei, specialties);
 await erc8004.createDelegation(walletClient, delegate, scope);
+await erc8004.submitFeedback(callId, rating, facilitatorAddress);
 ```
 
 ## Project Structure
 
 ```
 voice-agent-hotline/
-├── app/                    # Next.js app router
-│   ├── api/               # API routes
-│   ├── demo/              # Demo page
-│   └── profile/           # User profile
-├── components/            # React components
-├── lib/                   # Core services
-│   ├── agent-voice.ts    # Voice responses
-│   ├── db.ts             # Redis operations
-│   ├── erc8004.ts        # Delegation protocol
-│   ├── elevenlabs.ts      # TTS service
-│   ├── payment-service.ts # x402 + streaming
-│   ├── superfluid-streaming.ts
-│   ├── utility-flows.ts   # Agent skills
-│   └── voice-service.ts   # WebRTC
-├── docs/                  # Documentation
-│   ├── DEPLOYMENT.md
-│   └── SUPERFLUID_INTEGRATION.md
-└── vercel.json           # Vercel config
+├── app/                        # Next.js app router
+│   ├── api/                   # API routes
+│   │   ├── agents/            # Agent management
+│   │   ├── calls/             # Call handling
+│   │   ├── payments/          # Payment settlement
+│   │   ├── ratings/           # Agent ratings
+│   │   ├── reputation/        # ERC-8004 reputation
+│   │   ├── sdk/               # Agent SDK endpoints
+│   │   └── webhooks/          # ElevenLabs webhooks
+│   ├── demo/                  # Demo page
+│   └── profile/               # User profile
+├── components/                # React components
+│   ├── ui/                    # Reusable UI components
+│   ├── ActiveCall.tsx         # Active call UI
+│   ├── SmartAgentFinder.tsx   # AI-powered agent matching
+│   └── CallSummary.tsx        # Post-call summary
+├── contracts/                 # Solidity smart contracts
+│   └── AgentSmartWallet.sol   # ERC-4337 wallet
+├── lib/                       # Core services
+│   ├── payments/              # Payment services
+│   │   ├── x402.ts            # x402 protocol
+│   │   └── settlement.ts      # Payment settlement
+│   ├── voice/                 # Voice services
+│   │   ├── webrtc-voice.ts    # WebRTC implementation
+│   │   └── elevenlabs.ts      # ElevenLabs integration
+│   ├── agentMatching.ts       # AI agent matching engine
+│   ├── db.ts                  # Redis operations
+│   ├── erc8004.ts             # Delegation & reputation
+│   ├── superfluid-streaming.ts # Streaming payments (viem)
+│   ├── payment-settlement.ts  # EIP-3009 settlement
+│   ├── intent-architecture.ts # Intent parsing
+│   └── useCallHistory.ts      # Call history hook
+├── docs/                      # Documentation
+└── .kilocode/                # KILOCODE cloud agent config
 ```
 
 ## Contributing
