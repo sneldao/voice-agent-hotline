@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import React from 'react';
 import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle, Sparkles, Bookmark, Download, Share2, X } from '@/components/ui';
 import { ArrowRight } from 'lucide-react';
 import { announce } from '@/lib/accessibility';
@@ -51,18 +52,43 @@ export default function Home() {
   // Onboarding
   const onboarding = useOnboarding(connected, userBalance);
 
-  // Load user balance when connected
+  // Load user balance when connected - with cleanup to prevent memory leaks
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     if (connected && address) {
       setIsLoadingBalance(true);
-      fetch(`/api/users/${address}`)
-        .then(res => res.json())
-        .then(data => setUserBalance(data.balance || 0))
-        .catch(() => setUserBalance(0))
-        .finally(() => setIsLoadingBalance(false));
+      
+      // Debounce balance fetch to prevent rapid requests
+      timeoutId = setTimeout(() => {
+        fetch(`/api/users/${address}`)
+          .then(res => res.json())
+          .then(data => {
+            if (isMounted) {
+              setUserBalance(data.balance || 0);
+            }
+          })
+          .catch(() => {
+            if (isMounted) {
+              setUserBalance(0);
+            }
+          })
+          .finally(() => {
+            if (isMounted) {
+              setIsLoadingBalance(false);
+            }
+          });
+      }, 300); // 300ms debounce
     } else {
       setUserBalance(0);
+      setIsLoadingBalance(false);
     }
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [connected, address]);
 
   // Keyboard navigation for accessibility
@@ -161,15 +187,18 @@ export default function Home() {
     }
   }, [agents]);
 
-  const filteredAgents = agents.filter(agent => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selectedCategory === 'all' || 
-      agent.category === selectedCategory ||
-      agent.tags.some(t => t.toLowerCase().includes(selectedCategory.toLowerCase()));
-    return matchesSearch && matchesCategory;
-  });
+  // Memoize filtered agents to prevent unnecessary recalculations
+  const filteredAgents = useMemo(() => {
+    return agents.filter(agent => {
+      const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesCategory = selectedCategory === 'all' ||
+        agent.category === selectedCategory ||
+        agent.tags.some(t => t.toLowerCase().includes(selectedCategory.toLowerCase()));
+      return matchesSearch && matchesCategory;
+    });
+  }, [agents, searchQuery, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white font-sans">
@@ -512,9 +541,9 @@ function DiscoverTab({
 }
 
 /**
- * Featured Card
+ * Featured Card - Memoized for performance
  */
-function FeaturedCard({
+const FeaturedCard = React.memo(function FeaturedCard({
   agent,
   onClick,
   selected,
@@ -550,12 +579,12 @@ function FeaturedCard({
       </div>
     </button>
   );
-}
+});
 
 /**
- * Agent Card - Enhanced with visual ratings
+ * Agent Card - Enhanced with visual ratings, Memoized for performance
  */
-function AgentCard({
+const AgentCard = React.memo(function AgentCard({
   agent,
   onClick,
   selected,
@@ -567,7 +596,7 @@ function AgentCard({
   const rating = agent.rating || 0;
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 >= 0.5;
-  
+
   return (
     <Card
       interactive
@@ -581,7 +610,7 @@ function AgentCard({
       <Avatar size="lg" online={agent.online}>
         {agent.avatar}
       </Avatar>
-      
+
       <div className="flex-1 text-left min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-semibold truncate">{agent.name}</span>
@@ -593,20 +622,20 @@ function AgentCard({
           )}
         </div>
         <p className="text-sm text-gray-400 truncate">{agent.bio || agent.specialty}</p>
-        
+
         {/* Visual Star Rating */}
         <div className="flex items-center gap-2 mt-2">
           <div className="flex items-center gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Star 
-                key={i} 
+              <Star
+                key={i}
                 className={`w-3 h-3 ${
-                  i < fullStars 
-                    ? 'text-yellow-400 fill-yellow-400' 
+                  i < fullStars
+                    ? 'text-yellow-400 fill-yellow-400'
                     : i === fullStars && hasHalfStar
                     ? 'text-yellow-400 fill-yellow-400/50'
                     : 'text-gray-600'
-                }`} 
+                }`}
               />
             ))}
           </div>
@@ -614,7 +643,7 @@ function AgentCard({
             {rating.toFixed(1)} ({agent.totalRatings || 0})
           </span>
         </div>
-        
+
         {/* Additional Stats */}
         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
           {agent.totalCalls && (
@@ -635,7 +664,7 @@ function AgentCard({
       </div>
     </Card>
   );
-}
+});
 
 /**
  * Agent Detail Modal

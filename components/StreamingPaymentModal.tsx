@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import { formatFlowRate, calculatePerSecondCost } from '@/lib/superfluid-streaming';
 
@@ -42,6 +42,22 @@ export function StreamingPaymentModal({
   const monthlyRate = ratePerMinute * 60 * 24 * 30; // rate per minute * minutes per day * days per month
   const perSecondCost = calculatePerSecondCost(monthlyRate);
 
+  // Timer effect with proper cleanup
+  useEffect(() => {
+    let timerId: NodeJS.Timeout | null = null;
+    
+    if (isStreaming) {
+      const startTime = Date.now();
+      timerId = setInterval(() => {
+        setDuration(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerId) clearInterval(timerId);
+    };
+  }, [isStreaming]);
+
   const handleStartCall = async () => {
     // Grant permissions first (one-time)
     const facilitatorAddress = '0xFacilitatorAddress'; // Would come from config
@@ -52,11 +68,6 @@ export function StreamingPaymentModal({
     if (success) {
       setIsStreaming(true);
       onPaymentStart();
-      // Start timer
-      const startTime = Date.now();
-      setInterval(() => {
-        setDuration(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
     }
   };
 
