@@ -32,7 +32,7 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
   const steps = [
     { icon: '👤', label: 'User initiates call', description: 'Requesting agent connection' },
     { icon: '📡', label: 'Verifying payment', description: 'Checking x402 authorization' },
-    { icon: '💰', label: 'Locking funds', description: `${(pricePerMinute / 60 * 5).toFixed(3)} for 1 min` },
+    { icon: '💰', label: 'Locking funds', description: `${((pricePerMinute || 0) / 60 * 5).toFixed(3)} for 1 min` },
     { icon: '🔓', label: 'Agent connected', description: 'Streaming payment active' },
     { icon: '✅', label: 'Call complete', description: 'Settling final amount' },
   ];
@@ -79,11 +79,11 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
       <div className="flow-summary">
         <div className="summary-item">
           <span className="summary-label">x402 Payment</span>
-          <span className="summary-value">${(pricePerMinute / 60 * 5).toFixed(3)}/min</span>
+          <span className="summary-value">${((pricePerMinute || 0) / 60 * 5).toFixed(3)}/min</span>
         </div>
         <div className="summary-item">
           <span className="summary-label">Superfluid</span>
-          <span className="summary-value">${(pricePerMinute / 3600).toFixed(4)}/sec</span>
+          <span className="summary-value">${((pricePerMinute || 0) / 3600).toFixed(4)}/sec</span>
         </div>
       </div>
 

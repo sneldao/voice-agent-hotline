@@ -371,9 +371,9 @@ export function formatFlowRate(flowRate: string): string {
   if (rateWei === 0n) return '0 USDC/s';
   const ratePerSecond = Number(formatUnits(rateWei, 18));
   if (ratePerSecond < 0.000001) {
-    return `${(ratePerSecond * 1e6).toFixed(2)} µUSDC/s`;
+    return `${((ratePerSecond || 0) * 1e6).toFixed(2)} µUSDC/s`;
   }
-  return `${ratePerSecond.toFixed(6)} USDC/s`;
+  return `${(ratePerSecond || 0).toFixed(6)} USDC/s`;
 }
 
 /**

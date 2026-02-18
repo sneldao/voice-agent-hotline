@@ -62,7 +62,7 @@ function exportAsTXT(call: CallRecord, timestamp: string): { filename: string; c
     `Date: ${new Date(call.timestamp).toLocaleDateString()}`,
     `Time: ${new Date(call.timestamp).toLocaleTimeString()}`,
     `Duration: ${formatDuration(call.duration)}`,
-    `Cost: $${call.cost.toFixed(2)}`,
+    `Cost: $${(call.cost || 0).toFixed(2)}`,
   ];
 
   if (call.rating) {
@@ -393,7 +393,7 @@ function exportAsPDF(call: CallRecord, timestamp: string): { filename: string; c
         </div>
         <div class="meta-item">
           <span class="meta-label">Cost</span>
-          <span class="meta-value highlight">$${call.cost.toFixed(2)}</span>
+          <span class="meta-value highlight">$${(call.cost || 0).toFixed(2)}</span>
         </div>
         ${call.rating ? `
         <div class="meta-item">
@@ -633,7 +633,7 @@ export function exportMultipleCalls(calls: CallRecord[], format: 'txt' | 'json' 
     lines.push(`Agent: ${call.agentName}`);
     lines.push(`Date: ${new Date(call.timestamp).toLocaleDateString()}`);
     lines.push(`Duration: ${formatDuration(call.duration)}`);
-    lines.push(`Cost: $${call.cost.toFixed(2)}`);
+    lines.push(`Cost: $${(call.cost || 0).toFixed(2)}`);
     if (call.rating) {
       lines.push(`Rating: ${'⭐'.repeat(call.rating)}`);
     }

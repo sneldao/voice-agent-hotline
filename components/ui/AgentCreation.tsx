@@ -278,7 +278,7 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
                   />
                   <div className="flex items-center gap-1 bg-gray-800/50 px-3 py-2 rounded-lg">
                     <CreditCard className="w-4 h-4 text-cyan-400" />
-                    <span className="font-bold text-cyan-400">${(formData.rate / 100).toFixed(2)}</span>
+                    <span className="font-bold text-cyan-400">${((formData.rate || 0) / 100).toFixed(2)}</span>
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">
@@ -303,7 +303,7 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
                         {formData.type === 'ai' ? '🤖 AI' : '👤 Human'}
                       </Badge>
                       <Badge variant="default">
-                        ${(formData.rate / 100).toFixed(2)}/min
+                        ${((formData.rate || 0) / 100).toFixed(2)}/min
                       </Badge>
                     </div>
                   </div>

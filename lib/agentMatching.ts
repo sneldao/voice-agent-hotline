@@ -210,7 +210,7 @@ export class AgentMatchingEngine {
           agentId,
           score: Math.min(score, 100),
           reason: reasons[0] || 'General purpose agent',
-          estimatedCost: `$${estimatedCost.toFixed(2)}`,
+          estimatedCost: `$${(estimatedCost || 0).toFixed(2)}`,
           estimatedDuration: `${estimatedMinutes} min`,
         });
       }
