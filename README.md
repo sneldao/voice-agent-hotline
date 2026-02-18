@@ -307,3 +307,4 @@ MIT
 
 Built with ❤️ for the Celo AI Partner Catalyst Hackathon
 # Redis config verified
+# Fix Redis credentials
