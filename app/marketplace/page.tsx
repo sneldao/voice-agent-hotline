@@ -52,7 +52,7 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
           </svg>
         ))}
       </div>
-      <span className="text-xs text-gray-400">{(rating || 0).toFixed(1)} ({count || 0})</span>
+      <span className="text-xs text-gray-400">{(Number(rating) || 0).toFixed(1)} ({count || 0})</span>
     </div>
   );
 }

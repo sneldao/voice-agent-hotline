@@ -717,7 +717,7 @@ function AgentDetailModal({
         <div className="flex items-center justify-center gap-6 mt-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 font-bold text-white">
-              <span>⭐</span> {agent.rating?.toFixed(1) ?? '—'}
+              <span>⭐</span> {(agent.rating ?? 0).toFixed(1)}
             </div>
             <div className="text-xs text-white/60">{agent.totalRatings ?? 0} reviews</div>
           </div>

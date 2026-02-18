@@ -78,7 +78,7 @@ export function RatingStars({ agentId }: RatingStarsProps) {
     return <div className="loading">Loading ratings...</div>
   }
 
-  const avg = rating?.averageRating ?? 0
+  const avg = typeof rating?.averageRating === 'number' ? rating.averageRating : 0
   const total = rating?.totalRatings ?? 0
 
   return (

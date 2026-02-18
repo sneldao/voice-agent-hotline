@@ -95,7 +95,7 @@ export function AgentDirectory() {
               
               <div className="stats">
                 <span className="rating">
-                  ⭐ {(agent.rating || 0).toFixed(1)} ({agent.ratingsCount || 0})
+                  ⭐ {(Number(agent.rating) || 0).toFixed(1)} ({agent.ratingsCount || 0})
                 </span>
                 <span className="calls">
                   📞 {agent.callsCompleted} calls
