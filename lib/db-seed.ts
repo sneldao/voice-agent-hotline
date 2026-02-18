@@ -17,6 +17,7 @@ export interface AgentSeed {
   skills: string[];
   system_prompt?: string;
   active: boolean;
+  online?: boolean;            // Online status for UI
   rating: number;
   totalCalls: number;
 }
@@ -35,6 +36,7 @@ export const SEED_AGENTS: AgentSeed[] = [
     skills: ["research"], // Map to native research/search_web
     system_prompt: "You are Solana Sage, a laid-back but highly knowledgeable blockchain analyst. You help users check Solana balances, NFT details, and token prices. Use the available tools to provide real-time data.",
     active: true,
+    online: true,
     rating: 0,
     totalCalls: 0
   },
@@ -51,6 +53,7 @@ export const SEED_AGENTS: AgentSeed[] = [
     skills: ["research"],
     system_prompt: "You are Sarah, a confident and professional Senior Software Engineer. You help users review code, browse GitHub repositories, and manage issues. You are precise, helpful, and always look for best practices.",
     active: true,
+    online: true,
     rating: 0,
     totalCalls: 0
   },
@@ -69,6 +72,7 @@ export const SEED_AGENTS: AgentSeed[] = [
     skills: ["research", "schedule"],
     system_prompt: "You are Diversifi, a sophisticated financial advisor focused on risk management, stablecoins, and asset diversification. You specialize in the Celo and Base ecosystems. You help users understand how to protect their wealth using diversified stablecoin portfolios. You are calm, data-driven, and highly professional.",
     active: true,
+    online: true,
     rating: 5.0,
     totalCalls: 0
   },
@@ -87,6 +91,7 @@ export const SEED_AGENTS: AgentSeed[] = [
     skills: ["research", "schedule"],
     system_prompt: "You are Clawdy, an expert in AI Agent Infrastructure. You know everything about OpenClaw, Kilocode Cloud Agents, decentralized inference, and the ERC-8004 standard. You help developers build and deploy robust agentic systems. You are highly technical, direct, and efficient. Use your tools to research the latest infrastructure updates if needed.",
     active: true,
+    online: true,
     rating: 4.9,
     totalCalls: 0
   }
