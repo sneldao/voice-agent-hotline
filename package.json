@@ -10,11 +10,11 @@
     "seed": "tsx scripts/run-seed.ts"
   },
   "dependencies": {
-    "@elevenlabs/client": "^0.7.0",
+    "@elevenlabs/client": "^0.14.0",
     "@tanstack/react-query": "^5.8.4",
     "@upstash/redis": "^1.25.1",
     "autoprefixer": "^10.4.24",
-    "composio-core": "^0.3.0",
+    "dotenv": "^17.3.1",
     "lucide-react": "^0.263.1",
     "next": "14.0.4",
     "next-themes": "^0.2.1",
@@ -23,9 +23,8 @@
     "react-dom": "^18",
     "sonner": "^1.4.0",
     "tailwindcss": "^3.4.19",
-    "thirdweb": "^5.118.2",
     "viem": "^1.19.11",
-    "wagmi": "^1.4.7"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20",

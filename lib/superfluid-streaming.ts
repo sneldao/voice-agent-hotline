@@ -156,16 +156,20 @@ export class SuperfluidStreamingService {
       transport: http(RPC_URL),
     });
 
-    // Initialise facilitator wallet if a server-side private key is provided.
+    // Initialise facilitator wallet if a valid server-side private key is provided.
     // This key pays gas for flow management on behalf of callers.
     const facilitatorKey = process.env.FACILITATOR_PRIVATE_KEY;
-    if (facilitatorKey) {
-      const account = privateKeyToAccount(facilitatorKey as `0x${string}`);
-      this.walletClient = createWalletClient({
-        account,
-        chain: ACTIVE_CHAIN,
-        transport: http(RPC_URL),
-      });
+    if (facilitatorKey && facilitatorKey.startsWith('0x') && facilitatorKey.length === 66) {
+      try {
+        const account = privateKeyToAccount(facilitatorKey as `0x${string}`);
+        this.walletClient = createWalletClient({
+          account,
+          chain: ACTIVE_CHAIN,
+          transport: http(RPC_URL),
+        });
+      } catch (e) {
+        console.warn('[Superfluid] Invalid FACILITATOR_PRIVATE_KEY, streaming disabled');
+      }
     }
   }
 

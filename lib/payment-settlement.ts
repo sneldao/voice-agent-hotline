@@ -144,15 +144,19 @@ export class PaymentSettlement {
       transport: http(RPC_URL),
     });
 
-    // Initialize facilitator wallet if private key provided
+    // Initialize facilitator wallet lazily — only when a valid key is provided
     const facilitatorKey = process.env.FACILITATOR_PRIVATE_KEY;
-    if (facilitatorKey) {
-      const account = privateKeyToAccount(facilitatorKey as `0x${string}`);
-      this.facilitatorWallet = createWalletClient({
-        account,
-        chain: ACTIVE_CHAIN as any,
-        transport: http(RPC_URL),
-      });
+    if (facilitatorKey && facilitatorKey.startsWith('0x') && facilitatorKey.length === 66) {
+      try {
+        const account = privateKeyToAccount(facilitatorKey as `0x${string}`);
+        this.facilitatorWallet = createWalletClient({
+          account,
+          chain: ACTIVE_CHAIN as any,
+          transport: http(RPC_URL),
+        });
+      } catch (e) {
+        console.warn('[Settlement] Invalid FACILITATOR_PRIVATE_KEY, settlement disabled');
+      }
     }
   }
 

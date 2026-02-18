@@ -110,15 +110,19 @@ export class ReputationStakingService {
       transport: http(RPC_URL),
     });
 
-    // Initialize arbitrator wallet
+    // Initialize arbitrator wallet — only when a valid key is provided
     const arbitratorKey = process.env.ARBITRATOR_PRIVATE_KEY;
-    if (arbitratorKey) {
-      const account = privateKeyToAccount(arbitratorKey as `0x${string}`);
-      this.arbitratorWallet = createWalletClient({
-        account,
-        chain: ACTIVE_CHAIN as any,
-        transport: http(RPC_URL),
-      });
+    if (arbitratorKey && arbitratorKey.startsWith('0x') && arbitratorKey.length === 66) {
+      try {
+        const account = privateKeyToAccount(arbitratorKey as `0x${string}`);
+        this.arbitratorWallet = createWalletClient({
+          account,
+          chain: ACTIVE_CHAIN as any,
+          transport: http(RPC_URL),
+        });
+      } catch (e) {
+        console.warn('[Reputation] Invalid ARBITRATOR_PRIVATE_KEY, arbitration disabled');
+      }
     }
   }
 
