@@ -1,224 +1,244 @@
 /**
- * x402 Payment Service - Voice Call Billing
- * 
- * Per-second micropayments for voice agent calls
- * Extends the existing X402PaymentService for voice call billing
+ * x402 Voice Call Payment Service
+ *
+ * Per-second micropayment billing for voice agent calls.
+ * On-chain settlement via EIP-3009 transferWithAuthorization
+ * through lib/payment-settlement.ts (single source of truth).
+ *
+ * Flow:
+ *  1. Client obtains a SignedAuthorization (user signs EIP-712 in their wallet).
+ *  2. Client calls authorizeCall() passing the SignedAuthorization.
+ *  3. startBilling() begins per-second cost accrual.
+ *  4. endCall() submits the signed authorization on-chain for the actual amount.
  */
 
-import { X402PaymentService, paymentService as x402PaymentService } from '../payment-service'
+import {
+  paymentSettlement,
+  SignedAuthorization,
+  CELO_TOKENS,
+  calculateCallCost,
+  SettlementResult,
+} from '../payment-settlement';
+import { Address } from 'viem';
+
+// ============================================
+// Types
+// ============================================
 
 export interface PaymentConfig {
-  platformFeePercent: number  // Platform takes X%
-  settlementWindowMs: number  // How often to settle
+  /** Percentage taken by the platform (default 10). */
+  platformFeePercent: number;
+  /** How often (ms) the billing tick runs (default 1 000 = every second). */
+  billingIntervalMs: number;
+  /** Which ERC-20 token to settle in ('cUSD' | 'USDC'). */
+  settlementToken: 'cUSD' | 'USDC';
 }
 
 export interface CallSession {
-  id: string
-  agentId: string
-  userAddress: string
-  ratePerMinute: number
-  maxAuthorized: number
-  startTime: Date
-  secondsBilled: number
-  totalCost: number
-  status: 'pending' | 'active' | 'settled' | 'failed'
+  id: string;
+  agentId: string;
+  userAddress: Address;
+  ratePerMinute: number;        // human-readable cents per minute
+  maxAuthorized: number;        // max cents authorized by user
+  authorization: SignedAuthorization;
+  startTime: Date;
+  secondsBilled: number;
+  /** Accumulated cost in the same unit as ratePerMinute (cents). */
+  totalCost: number;
+  status: 'pending' | 'active' | 'settled' | 'failed';
+  settlementResult?: SettlementResult;
 }
 
 export interface PaymentAuthorization {
-  sessionId: string
-  authorizedAmount: number
-  expiresAt: Date
+  sessionId: string;
+  authorizedAmount: number;     // cents
+  expiresAt: Date;
 }
 
-/**
- * Voice Call Payment Service
- * Uses the existing X402PaymentService for core payment logic
- * Adds voice-specific billing features
- */
+// ============================================
+// Voice Call Payment Service
+// ============================================
+
 export class VoicePaymentService {
-  private config: PaymentConfig
-  private sessions: Map<string, CallSession> = new Map()
-  private billingIntervals: Map<string, NodeJS.Timeout> = new Map()
-  private x402Service: X402PaymentService
+  private config: PaymentConfig;
+  private sessions: Map<string, CallSession> = new Map();
+  private billingIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(config?: Partial<PaymentConfig>) {
     this.config = {
       platformFeePercent: config?.platformFeePercent ?? 10,
-      settlementWindowMs: config?.settlementWindowMs ?? 60000
-    }
-    this.x402Service = x402PaymentService
+      billingIntervalMs: config?.billingIntervalMs ?? 1_000,
+      settlementToken: config?.settlementToken ?? 'cUSD',
+    };
   }
 
+  // --------------------------------------------------
+  // Authorise
+  // --------------------------------------------------
+
   /**
-   * Pre-authorize a call with max cost
+   * Pre-register a call session.
+   * The SignedAuthorization must already be signed by the user's wallet.
+   * maxMinutes determines how long the authorization covers.
    */
   async authorizeCall(
     agentId: string,
-    userAddress: string,
-    ratePerMinute: number,
-    estimatedMinutes: number = 10,
-    maxMinutes: number = 60
+    userAddress: Address,
+    ratePerMinute: number,        // cents/min
+    maxMinutes: number,
+    authorization: SignedAuthorization
   ): Promise<PaymentAuthorization> {
-    const maxAuthorized = ratePerMinute * maxMinutes
-    
+    const maxAuthorized = ratePerMinute * maxMinutes;
+
     const session: CallSession = {
-      id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `call_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       agentId,
       userAddress,
       ratePerMinute,
       maxAuthorized,
+      authorization,
       startTime: new Date(),
       secondsBilled: 0,
       totalCost: 0,
-      status: 'pending'
-    }
+      status: 'pending',
+    };
 
-    this.sessions.set(session.id, session)
-
-    console.log(`[Payment] Authorized call ${session.id}: $${maxAuthorized.toFixed(2)} max`)
+    this.sessions.set(session.id, session);
+    console.log(`[x402] Call authorized: ${session.id} | max $${(maxAuthorized / 100).toFixed(2)}`);
 
     return {
       sessionId: session.id,
       authorizedAmount: maxAuthorized,
-      expiresAt: new Date(Date.now() + maxMinutes * 60 * 1000)
-    }
+      expiresAt: new Date(Date.now() + maxMinutes * 60_000),
+    };
   }
 
-  /**
-   * Start billing for an active call
-   */
+  // --------------------------------------------------
+  // Billing lifecycle
+  // --------------------------------------------------
+
+  /** Begin per-second cost accrual for an already-authorised session. */
   async startBilling(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId)
-    if (!session) {
-      throw new Error(`Session ${sessionId} not found`)
-    }
-
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error(`Session not found: ${sessionId}`);
     if (session.status !== 'pending') {
-      console.warn(`[Payment] Session ${sessionId} already active`)
-      return
+      console.warn(`[x402] Session ${sessionId} already ${session.status}`);
+      return;
     }
 
-    session.status = 'active'
+    session.status = 'active';
+    const costPerSecondCents = session.ratePerMinute / 60;
 
-    // Authorize with core X402 service
-    const amountCents = session.maxAuthorized * 100
-    await this.x402Service.authorizePayment(
-      session.userAddress,
-      session.agentId,
-      amountCents,
-      3600 // 1 hour max
-    )
+    console.log(`[x402] Billing started: ${sessionId} @ $${costPerSecondCents.toFixed(4)}/s`);
 
-    const costPerSecond = session.ratePerMinute / 60
-
-    console.log(`[Payment] Started billing for ${sessionId}: $${costPerSecond.toFixed(4)}/sec`)
-
-    // Bill every second
     const interval = setInterval(() => {
-      this.billSecond(sessionId)
-    }, 1000)
+      this._billSecond(sessionId, costPerSecondCents);
+    }, this.config.billingIntervalMs);
 
-    this.billingIntervals.set(sessionId, interval)
+    this.billingIntervals.set(sessionId, interval);
   }
 
-  /**
-   * Bill for one second of call time
-   */
-  private async billSecond(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId)
+  private _billSecond(sessionId: string, costPerSecondCents: number): void {
+    const session = this.sessions.get(sessionId);
     if (!session || session.status !== 'active') {
-      this.stopBilling(sessionId)
-      return
+      this._stopInterval(sessionId);
+      return;
     }
 
-    const costPerSecond = session.ratePerMinute / 60
-    session.secondsBilled++
-    session.totalCost += costPerSecond
-
-    // Record with X402 service
-    await this.x402Service.recordTime(1)
+    session.secondsBilled++;
+    session.totalCost += costPerSecondCents;
 
     if (session.totalCost >= session.maxAuthorized) {
-      console.log(`[Payment] Max authorized reached for ${sessionId}`)
-      this.endCall(sessionId)
+      console.log(`[x402] Max authorized reached for ${sessionId} – ending call`);
+      this.endCall(sessionId);
     }
   }
 
-  /**
-   * Stop billing for a call
-   */
-  stopBilling(sessionId: string): void {
-    const interval = this.billingIntervals.get(sessionId)
+  private _stopInterval(sessionId: string): void {
+    const interval = this.billingIntervals.get(sessionId);
     if (interval) {
-      clearInterval(interval)
-      this.billingIntervals.delete(sessionId)
+      clearInterval(interval);
+      this.billingIntervals.delete(sessionId);
     }
   }
 
+  // --------------------------------------------------
+  // Settlement
+  // --------------------------------------------------
+
   /**
-   * End a call and settle payment
+   * End a call and settle the exact amount on-chain via EIP-3009.
+   * Returns the completed CallSession.
    */
   async endCall(sessionId: string): Promise<CallSession> {
-    this.stopBilling(sessionId)
+    this._stopInterval(sessionId);
 
-    const session = this.sessions.get(sessionId)
-    if (!session) {
-      throw new Error(`Session ${sessionId} not found`)
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error(`Session not found: ${sessionId}`);
+    if (session.status !== 'active' && session.status !== 'pending') return session;
+
+    const tokenAddress =
+      this.config.settlementToken === 'USDC' ? CELO_TOKENS.USDC : CELO_TOKENS.cUSD;
+
+    // Build a partial authorization for the actual amount billed
+    // (we don't modify the signature – just adjust the value before settlement).
+    const actualCostWei = calculateCallCost(session.secondsBilled, session.ratePerMinute);
+    const adjustedAuth: SignedAuthorization = {
+      ...session.authorization,
+      value: actualCostWei,
+    };
+
+    console.log(`[x402] Settling ${sessionId}: ${session.secondsBilled}s → $${(session.totalCost / 100).toFixed(4)}`);
+
+    const result = await paymentSettlement.settlePayment(adjustedAuth, tokenAddress, sessionId);
+
+    session.status = result.success ? 'settled' : 'failed';
+    session.settlementResult = result;
+
+    if (result.success) {
+      const platformFee = session.totalCost * (this.config.platformFeePercent / 100);
+      const agentPayout = session.totalCost - platformFee;
+      console.log(
+        `[x402] Settled ${sessionId} | tx: ${result.txHash} | agent: $${(agentPayout / 100).toFixed(4)}`
+      );
+    } else {
+      console.error(`[x402] Settlement failed for ${sessionId}:`, result.error);
     }
 
-    if (session.status === 'active') {
-      // Settle with X402 service
-      const result = await this.x402Service.endSession()
-
-      // Calculate platform fee
-      const platformFee = session.totalCost * (this.config.platformFeePercent / 100)
-      const agentPayout = session.totalCost - platformFee
-
-      session.status = 'settled'
-
-      console.log(`[Payment] Call ended: ${sessionId}`)
-      console.log(`  Total: $${session.totalCost.toFixed(4)}`)
-      console.log(`  Platform fee (${this.config.platformFeePercent}%): $${platformFee.toFixed(4)}`)
-      console.log(`  Agent payout: $${agentPayout.toFixed(4)}`)
-    }
-
-    return session
+    return session;
   }
 
-  /**
-   * Get current billing status
-   */
-  getBillingStatus(sessionId: string): CallSession | null {
-    return this.sessions.get(sessionId) || null
+  // --------------------------------------------------
+  // Accessors
+  // --------------------------------------------------
+
+  getSession(sessionId: string): CallSession | null {
+    return this.sessions.get(sessionId) ?? null;
   }
 
-  /**
-   * Get call history for an agent
-   */
   getAgentHistory(agentId: string): CallSession[] {
-    return Array.from(this.sessions.values())
-      .filter(s => s.agentId === agentId && s.status === 'settled')
+    return Array.from(this.sessions.values()).filter(
+      s => s.agentId === agentId && s.status === 'settled'
+    );
   }
 
-  /**
-   * Get call history for a user
-   */
-  getUserHistory(userAddress: string): CallSession[] {
-    return Array.from(this.sessions.values())
-      .filter(s => s.userAddress === userAddress && s.status === 'settled')
+  getUserHistory(userAddress: Address): CallSession[] {
+    return Array.from(this.sessions.values()).filter(
+      s => s.userAddress.toLowerCase() === userAddress.toLowerCase() && s.status === 'settled'
+    );
   }
 }
 
-// Singleton instance
-let paymentService: VoicePaymentService | null = null
+// ============================================
+// Singleton
+// ============================================
+let _instance: VoicePaymentService | null = null;
 
 export function getVoicePaymentService(config?: Partial<PaymentConfig>): VoicePaymentService {
-  if (!paymentService) {
-    paymentService = new VoicePaymentService(config)
-  }
-  return paymentService
+  if (!_instance) _instance = new VoicePaymentService(config);
+  return _instance;
 }
 
 export function resetVoicePaymentService(): void {
-  paymentService = null
+  _instance = null;
 }

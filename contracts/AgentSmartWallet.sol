@@ -21,8 +21,8 @@ contract AgentSmartWallet is BaseAccount, EIP712 {
     // ============================================
     // State
     // ============================================
-    IEntryPoint public immutable entryPoint;
-    
+    IEntryPoint private immutable _entryPoint;
+
     address public owner;
     mapping(address => SessionKey) public sessionKeys;
     mapping(bytes32 => bool) public usedNonces;
@@ -99,10 +99,10 @@ contract AgentSmartWallet is BaseAccount, EIP712 {
     // ============================================
     // Constructor
     // ============================================
-    constructor(IEntryPoint _entryPoint, address _owner) 
-        EIP712("AgentSmartWallet", "1") 
+    constructor(IEntryPoint entryPoint_, address _owner)
+        EIP712("AgentSmartWallet", "1")
     {
-        entryPoint = _entryPoint;
+        _entryPoint = entryPoint_;
         owner = _owner;
     }
 
@@ -110,7 +110,7 @@ contract AgentSmartWallet is BaseAccount, EIP712 {
     // ERC-4337 Required Functions
     // ============================================
     function entryPoint() public view override returns (IEntryPoint) {
-        return entryPoint;
+        return _entryPoint;
     }
 
     function _validateSignature(
@@ -359,16 +359,16 @@ contract AgentSmartWallet is BaseAccount, EIP712 {
 contract AgentSmartWalletFactory {
     IEntryPoint public immutable entryPoint;
     mapping(address => address) public walletOf;
-    
+
     event WalletCreated(address indexed owner, address indexed wallet);
 
-    constructor(IEntryPoint _entryPoint) {
-        entryPoint = _entryPoint;
+    constructor(IEntryPoint entryPoint_) {
+        entryPoint = entryPoint_;
     }
 
     function createWallet(address owner) external returns (address wallet) {
         require(walletOf[owner] == address(0), "Wallet exists");
-        
+
         wallet = address(new AgentSmartWallet(entryPoint, owner));
         walletOf[owner] = wallet;
         

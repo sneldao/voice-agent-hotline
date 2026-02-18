@@ -434,15 +434,18 @@ export class ERC8004Service {
   }
 
   /**
-   * Verify if a delegation is valid for a specific action
+   * Verify if a delegation is valid for a specific action.
+   *
+   * Fix: the on-chain `verifyDelegation(bytes32, string)→bool` is the fast path.
+   * We only call `getDelegation` when we need scope details (expiry check, scope return).
    */
   async verifyDelegation(
     delegationId: Hash,
     action: 'book' | 'order' | 'schedule' | 'research'
   ): Promise<{ valid: boolean; scope?: DelegationScope; error?: string }> {
-    // 🛡️ DEMO MODE / MOCK LOGIC
+    // Demo / unconfigured mode – auto-authorize all actions
     if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !this.isConfigured) {
-      console.log(`[ERC-8004 Mock] Auto-authorizing ${action} for delegation ${delegationId}`);
+      console.log(`[ERC-8004 Demo] Auto-authorizing '${action}' for ${delegationId}`);
       return {
         valid: true,
         scope: {
@@ -450,24 +453,32 @@ export class ERC8004Service {
           canOrder: true,
           canSchedule: true,
           canResearch: true,
-          maxSpend: BigInt(1000 * 1e18), // $1000 fake limit
-          expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400)
-        }
+          maxSpend: BigInt(1000) * BigInt(1e18),
+          expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400),
+        },
       };
     }
 
     try {
-      const [isValid, delegator, delegate, scopeData, createdAt, revokedAt] =
-        await this.publicClient.readContract({
-          address: this.delegationAddress,
-          abi: ERC8004_DELEGATION_ABI,
-          functionName: 'getDelegation',
-          args: [delegationId] as any[],
-        });
+      // Step 1 – fast boolean check via the contract's own verifyDelegation function
+      const isPermitted = await this.publicClient.readContract({
+        address: this.delegationAddress,
+        abi: ERC8004_DELEGATION_ABI,
+        functionName: 'verifyDelegation',
+        args: [delegationId, action] as any[],
+      }) as boolean;
 
-      if (!isValid) {
-        return { valid: false };
+      if (!isPermitted) {
+        return { valid: false, error: `Action '${action}' not permitted by delegation` };
       }
+
+      // Step 2 – fetch full scope to return to caller and check expiry
+      const [, , scopeData] = await this.publicClient.readContract({
+        address: this.delegationAddress,
+        abi: ERC8004_DELEGATION_ABI,
+        functionName: 'getDelegation',
+        args: [delegationId] as any[],
+      }) as [Address, Address, DelegationScope, bigint, bigint];
 
       const scope: DelegationScope = {
         canBook: scopeData.canBook,
@@ -478,19 +489,6 @@ export class ERC8004Service {
         expiresAt: scopeData.expiresAt,
       };
 
-      // Check if action is allowed
-      const actionAllowed = {
-        book: scope.canBook,
-        order: scope.canOrder,
-        schedule: scope.canSchedule,
-        research: scope.canResearch,
-      }[action];
-
-      if (!actionAllowed) {
-        return { valid: false, scope, error: `Action '${action}' not permitted by delegation` };
-      }
-
-      // Check expiration
       if (scope.expiresAt < BigInt(Math.floor(Date.now() / 1000))) {
         return { valid: false, scope, error: 'Delegation has expired' };
       }
@@ -499,7 +497,7 @@ export class ERC8004Service {
     } catch (error) {
       return {
         valid: false,
-        error: error instanceof Error ? error.message : 'Verification failed'
+        error: error instanceof Error ? error.message : 'Verification failed',
       };
     }
   }

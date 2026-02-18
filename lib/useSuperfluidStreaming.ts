@@ -1,104 +1,192 @@
 // ============================================
 // useSuperfluidStreaming Hook
 // ============================================
+// Client-side hook for Superfluid stream management.
+//
+// Read operations (checkStream, getNetFlowRate) are executed directly via
+// the public Celo RPC – no server key required.
+//
+// Write operations (start / update / stop stream) are routed through server
+// API endpoints so that the FACILITATOR_PRIVATE_KEY never reaches the client.
+// ============================================
 
 'use client';
 
 import { useState, useCallback } from 'react';
-import { SuperfluidStreamingService, StreamingPaymentState, StreamingPaymentRequest } from './superfluid-streaming';
+import {
+  SuperfluidStreamingService,
+  StreamingPaymentState,
+  StreamInfo,
+  monthlyUsdcToTokenUnits,
+} from './superfluid-streaming';
 import { useWallet } from './WalletContext';
+
+// Shared read-only instance (public RPC, no wallet needed).
+const readService = new SuperfluidStreamingService();
 
 interface UseSuperfluidStreamingReturn extends StreamingPaymentState {
   connect: () => Promise<void>;
   startStream: (recipient: string, monthlyUSDC: number) => Promise<boolean>;
   updateStream: (recipient: string, monthlyUSDC: number) => Promise<boolean>;
   stopStream: (recipient: string) => Promise<boolean>;
+  checkStream: (recipient: string) => Promise<StreamInfo>;
+  getNetFlowRate: () => Promise<string>;
+  /** One-time ACL grant so the facilitator can manage streams on behalf of this user. */
   grantPermissions: (facilitatorAddress: string) => Promise<boolean>;
-  getBalance: () => Promise<string>;
 }
 
 export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
-  const { address, isConnecting, connect } = useWallet();
-  const [state, setState] = useState<StreamingPaymentState>({
-    status: 'idle',
-  });
+  const { address, connect } = useWallet();
+  const [state, setState] = useState<StreamingPaymentState>({ status: 'idle' });
 
-  const service = address
-    ? new SuperfluidStreamingService(address as `0x${string}`, {
-        account: { address: address as `0x${string}` },
-        writeContract: async () => '0x' as `0x${string}`,
-      })
-    : null;
+  // --------------------------------------------------
+  // Write operations – delegated to server API
+  // The server uses FACILITATOR_PRIVATE_KEY to pay gas.
+  // --------------------------------------------------
 
   const startStream = useCallback(
     async (recipient: string, monthlyUSDC: number): Promise<boolean> => {
-      if (!service || !address) {
+      if (!address) {
         setState({ status: 'error', error: 'Wallet not connected' });
         return false;
       }
 
       setState({ status: 'pending' });
 
-      const result = await service.startStream({
-        recipient: recipient as `0x${string}`,
-        monthlyAmount: (monthlyUSDC * 1e18).toString(),
-        account: address as `0x${string}`,
-      });
+      try {
+        const res = await fetch('/api/streaming/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: address,
+            recipient,
+            monthlyAmount: monthlyUsdcToTokenUnits(monthlyUSDC),
+          }),
+        });
 
-      setState(result);
-      return result.status === 'streaming';
+        const data = await res.json();
+        if (!res.ok) {
+          setState({ status: 'error', error: data.error || 'Stream start failed' });
+          return false;
+        }
+
+        setState({
+          status: 'streaming',
+          streamId: data.streamId,
+          flowRate: data.flowRate,
+          startedAt: new Date(),
+        });
+        return true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Stream start failed';
+        setState({ status: 'error', error: msg });
+        return false;
+      }
     },
-    [service, address]
+    [address]
   );
 
   const updateStream = useCallback(
     async (recipient: string, monthlyUSDC: number): Promise<boolean> => {
-      if (!service) {
-        setState({ status: 'error', error: 'Service not initialized' });
+      if (!address) {
+        setState({ status: 'error', error: 'Wallet not connected' });
         return false;
       }
 
-      const result = await service.updateStream(
-        recipient as `0x${string}`,
-        (monthlyUSDC * 1e18).toString()
-      );
+      try {
+        const res = await fetch('/api/streaming/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: address,
+            recipient,
+            monthlyAmount: monthlyUsdcToTokenUnits(monthlyUSDC),
+          }),
+        });
 
-      setState(result);
-      return result.status === 'streaming';
+        const data = await res.json();
+        if (!res.ok) {
+          setState(prev => ({ ...prev, status: 'error', error: data.error }));
+          return false;
+        }
+
+        setState(prev => ({ ...prev, status: 'streaming', flowRate: data.flowRate }));
+        return true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Stream update failed';
+        setState(prev => ({ ...prev, status: 'error', error: msg }));
+        return false;
+      }
     },
-    [service]
+    [address]
   );
 
   const stopStream = useCallback(
     async (recipient: string): Promise<boolean> => {
-      if (!service) {
-        setState({ status: 'error', error: 'Service not initialized' });
+      if (!address) {
+        setState({ status: 'error', error: 'Wallet not connected' });
         return false;
       }
 
-      const result = await service.stopStream(recipient as `0x${string}`);
-      setState(result);
-      return result.status === 'stopped';
+      try {
+        const res = await fetch('/api/streaming/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender: address, recipient }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setState(prev => ({ ...prev, status: 'error', error: data.error }));
+          return false;
+        }
+
+        setState({ status: 'stopped', stoppedAt: new Date() });
+        return true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Stream stop failed';
+        setState(prev => ({ ...prev, status: 'error', error: msg }));
+        return false;
+      }
     },
-    [service]
+    [address]
   );
+
+  // --------------------------------------------------
+  // Read operations – public RPC, no server call needed
+  // --------------------------------------------------
+
+  const checkStream = useCallback(
+    async (recipient: string): Promise<StreamInfo> => {
+      if (!address) {
+        return { exists: false, currentFlowRate: '0', deposit: '0', owedDeposit: '0' };
+      }
+      return readService.checkStream(address as `0x${string}`, recipient as `0x${string}`);
+    },
+    [address]
+  );
+
+  const getNetFlowRate = useCallback(async (): Promise<string> => {
+    if (!address) return '0';
+    return readService.getNetFlowRate(address as `0x${string}`);
+  }, [address]);
 
   const grantPermissions = useCallback(
     async (facilitatorAddress: string): Promise<boolean> => {
-      if (!service) {
+      if (!address) return false;
+      try {
+        const res = await fetch('/api/streaming/grant-permissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender: address, facilitator: facilitatorAddress }),
+        });
+        return res.ok;
+      } catch {
         return false;
       }
-
-      const result = await service.grantPermissions(facilitatorAddress as `0x${string}`);
-      return result.success;
     },
-    [service]
+    [address]
   );
-
-  const getBalance = useCallback(async (): Promise<string> => {
-    if (!service) return '0';
-    return service.getBalance();
-  }, [service]);
 
   return {
     ...state,
@@ -106,7 +194,8 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
     startStream,
     updateStream,
     stopStream,
+    checkStream,
+    getNetFlowRate,
     grantPermissions,
-    getBalance,
   };
 }

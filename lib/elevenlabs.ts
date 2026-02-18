@@ -44,30 +44,33 @@ export interface TTSResponse {
 // ============================================
 // Agent Voice Configurations
 // ============================================
+// Voice IDs are the canonical ElevenLabs premade-voice identifiers.
+// Override any entry with a custom cloned-voice ID via environment variables
+// (e.g. ELEVENLABS_VOICE_GENERAL_ADVISOR) or through the ElevenLabs dashboard.
 
 export const AGENT_VOICES = {
   general_advisor: {
-    voice_id: 'Adam',
+    voice_id: process.env.ELEVENLABS_VOICE_GENERAL_ADVISOR || 'pNInz6obpgDQGcFmaJgB', // Adam
     name: 'Adam',
     description: 'Professional male voice for general advice',
   },
   maria_garcia: {
-    voice_id: 'Bella',
+    voice_id: process.env.ELEVENLABS_VOICE_MARIA_GARCIA || 'EXAVITQu4vr4xnSDxMaL', // Bella
     name: 'Bella',
     description: 'Warm female voice for customer support',
   },
   tech_support: {
-    voice_id: 'Antoni',
+    voice_id: process.env.ELEVENLABS_VOICE_TECH_SUPPORT || 'ErXwobaYiN019PkySvjV', // Antoni
     name: 'Antoni',
     description: 'Clear male voice for technical support',
   },
   crypto_expert: {
-    voice_id: 'Josh',
+    voice_id: process.env.ELEVENLABS_VOICE_CRYPTO_EXPERT || 'TxGEqnHWrfWFTfGW9XjX', // Josh
     name: 'Josh',
     description: 'Confident male voice for crypto advice',
   },
   financial_advisor: {
-    voice_id: 'Rachel',
+    voice_id: process.env.ELEVENLABS_VOICE_FINANCIAL_ADVISOR || '21m00Tcm4TlvDq8ikWAM', // Rachel
     name: 'Rachel',
     description: 'Professional female voice for finance',
   },
