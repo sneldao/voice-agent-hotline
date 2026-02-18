@@ -151,7 +151,7 @@ export default function VoiceAgentDemo() {
             <h3>{personality.name}</h3>
             <p className="specialty">{personality.specialty}</p>
             <div className="agent-meta">
-              <span className="rating">⭐ {personality.rating.toFixed(2)}</span>
+              <span className="rating">⭐ {(personality.rating || 0).toFixed(2)}</span>
               <span className="price">${personality.pricePerMinute}/min</span>
             </div>
             <p className="style">{personality.speakingStyle}</p>
@@ -229,7 +229,7 @@ export default function VoiceAgentDemo() {
               <div className="response-content">
                 <p><strong>Response:</strong> {currentResponse?.text}</p>
                 <div className="response-meta">
-                  <span>⏱️ {currentResponse?.duration.toFixed(2)}s</span>
+                  <span>⏱️ {(currentResponse?.duration || 0).toFixed(2)}s</span>
                   <span>🔊 {isSpeaking ? 'Playing' : 'Stopped'}</span>
                 </div>
               </div>

@@ -50,7 +50,7 @@ export function AgentComparison({ agents }: AgentComparisonProps) {
             
             <div className="metrics">
               <div className="metric">
-                <span className="value">⭐ {agent.rating.toFixed(2)}</span>
+                <span className="value">⭐ {(agent.rating || 0).toFixed(2)}</span>
                 <span className="label">Rating</span>
               </div>
               <div className="metric">
