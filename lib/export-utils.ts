@@ -524,7 +524,7 @@ function exportAsCSV(call: CallRecord, timestamp: string): { filename: string; c
     escapeCSV(new Date(call.timestamp).toLocaleTimeString()),
     call.duration,
     formatDuration(call.duration),
-    call.cost.toFixed(2),
+    (call.cost || 0).toFixed(2),
     call.rating || '',
     call.txHash || '',
     escapeCSV(transcriptText),
@@ -601,7 +601,7 @@ export function exportMultipleCalls(calls: CallRecord[], format: 'txt' | 'json' 
       escapeCSV(new Date(call.timestamp).toLocaleTimeString()),
       call.duration,
       formatDuration(call.duration),
-      call.cost.toFixed(2),
+      (call.cost || 0).toFixed(2),
       call.rating || '',
       call.txHash || '',
     ]);
@@ -622,7 +622,7 @@ export function exportMultipleCalls(calls: CallRecord[], format: 'txt' | 'json' 
     '',
     `Export Date: ${new Date().toLocaleString()}`,
     `Total Calls: ${calls.length}`,
-    `Total Cost: $${calls.reduce((sum, call) => sum + call.cost, 0).toFixed(2)}`,
+    `Total Cost: $${calls.reduce((sum, call) => sum + (call.cost || 0), 0).toFixed(2)}`,
     `Total Duration: ${formatDuration(calls.reduce((sum, call) => sum + call.duration, 0))}`,
     '',
   ];

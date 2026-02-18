@@ -144,11 +144,11 @@ export async function PATCH(req: NextRequest) {
 
     if (duration_seconds !== undefined) {
       updates.duration_seconds = duration_seconds.toString();
-      
+
       // Calculate cost
       const pricePerMinute = parseFloat((session.price_per_minute as string) || '0.1');
       const totalCost = (duration_seconds / 60) * pricePerMinute;
-      updates.total_cost = totalCost.toFixed(4);
+      updates.total_cost = (totalCost || 0).toFixed(4);
 
       // Update agent revenue
       await redis.hincrbyfloat(

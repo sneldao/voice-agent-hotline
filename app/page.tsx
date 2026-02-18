@@ -652,7 +652,7 @@ const AgentCard = React.memo(function AgentCard({
             ))}
           </div>
           <span className="text-xs text-gray-400">
-            {rating.toFixed(1)} ({agent.totalRatings || 0})
+            {(rating || 0).toFixed(1)} ({agent.totalRatings || 0})
           </span>
         </div>
 

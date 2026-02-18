@@ -202,7 +202,7 @@ function handleStatus(callId: string): Response {
       ratePerMinute: session.ratePerMinute,
       freeMinutesRemaining,
       minutesUsed,
-      totalCost: totalCost.toFixed(4),
+      totalCost: (totalCost || 0).toFixed(4),
       currency: 'cUSD',
     },
   });

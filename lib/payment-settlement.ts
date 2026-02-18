@@ -418,9 +418,9 @@ export class PaymentSettlement {
   } {
     const receipts = Array.from(this.receipts.values());
     const settled = receipts.filter(r => r.settled);
-    
+
     const totalVolume = settled.reduce(
-      (sum, r) => sum + parseFloat(r.amount),
+      (sum, r) => sum + (parseFloat(r.amount) || 0),
       0
     );
 

@@ -41,7 +41,7 @@ async function basicExample() {
   // Get cost
   const sessions = pipeline.getActiveSessions()
   const cost = tracker.calculateCost(sessions[0])
-  console.log(`Session cost: $${cost.totalCost.toFixed(4)}`)
+  console.log(`Session cost: $${(cost.totalCost || 0).toFixed(4)}`)
 
   // Play response to user (Web Audio API in browser)
   // playAudio(responseAudio.data)
@@ -79,7 +79,7 @@ async function textChatExample() {
   )
 
   console.log('Response:', result.response)
-  console.log('Cost:', `$${result.cost.toFixed(6)}`)
+  console.log('Cost:', `$${(result.cost || 0).toFixed(6)}`)
 }
 
 // ============================================================================

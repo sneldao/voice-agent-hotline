@@ -127,7 +127,7 @@ export class VoicePaymentService {
     }
 
     session.status = 'active';
-    const costPerSecondCents = session.ratePerMinute / 60;
+    const costPerSecondCents = (session.ratePerMinute || 0) / 60;
 
     console.log(`[x402] Billing started: ${sessionId} @ $${costPerSecondCents.toFixed(4)}/s`);
 

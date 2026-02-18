@@ -111,7 +111,7 @@ export async function DELETE(
     !!call.userAddress // Verified if we have a wallet address
   )
 
-  console.log(`[Call] Ended: ${params.id}, cost: $${session.totalCost.toFixed(4)}`)
+  console.log(`[Call] Ended: ${params.id}, cost: $${(session.totalCost || 0).toFixed(4)}`)
 
   return NextResponse.json({ call })
 }
