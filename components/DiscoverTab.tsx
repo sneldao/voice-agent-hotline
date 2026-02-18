@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, memo } from 'react';
+import { useState, useCallback, useMemo, memo, useEffect } from 'react';
 import { ArrowRight, Search, Sparkles, Star } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
@@ -73,7 +73,7 @@ export function DiscoverTab({
   }, [agents, searchQuery, selectedCategory]);
 
   // Reset pagination when filters change
-  useMemo(() => {
+  useEffect(() => {
     setVisibleCount(20);
   }, [searchQuery, selectedCategory]);
 
@@ -176,14 +176,14 @@ export function DiscoverTab({
         </div>
 
         {/* Categories */}
-        <div className="relative w-full overflow-hidden">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full" style={{ maxWidth: '100vw' }}>
+        <div className="w-full">
+          <div className="flex flex-wrap gap-2">
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => onCategoryChange(cat.id)}
                 className={`
-                  flex-shrink-0 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 border whitespace-nowrap
+                  flex-shrink-0 px-3 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 border whitespace-nowrap
                   ${selectedCategory === cat.id
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-transparent shadow-lg shadow-cyan-500/25'
                     : 'bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-gray-600'
@@ -191,7 +191,7 @@ export function DiscoverTab({
                 `}
               >
                 <span className="mr-1">{cat.icon}</span>
-                <span className="hidden sm:inline">{cat.name}</span>
+                <span>{cat.name}</span>
               </button>
             ))}
           </div>
