@@ -142,10 +142,49 @@ deploy_to_server() {
         # Cleanup
         rm /tmp/deploy.tar.gz
         
-        echo "Deployment completed successfully"
+        echo "✅ Application deployed successfully"
 ENDSSH
     
+    log_info "Application deployed. Now setting up Nginx..."
+    
+    # Setup Nginx (if not already configured)
+    setup_nginx || log_warn "Nginx setup skipped. Run manually later."
+    
     log_info "Deployment completed"
+}
+
+# Setup Nginx reverse proxy
+setup_nginx() {
+    log_info "Setting up Nginx reverse proxy..."
+    
+    # Check if Nginx is installed
+    if ! ssh $SERVER_USER@$SERVER_IP "command -v nginx &> /dev/null"; then
+        log_warn "Nginx not installed. Installing..."
+        ssh $SERVER_USER@$SERVER_IP "apt update && apt install -y nginx"
+    fi
+    
+    # Copy Nginx config
+    ssh $SERVER_USER@$SERVER_IP << 'ENDSSH'
+        # Copy config if it doesn't exist
+        if [ ! -f /etc/nginx/sites-available/voice-hotline ]; then
+            cp /opt/voice-hotline-celo/scripts/nginx-voice-hotline.conf /etc/nginx/sites-available/voice-hotline
+            echo "Nginx config copied. Edit /etc/nginx/sites-available/voice-hotline to set your domain."
+        fi
+        
+        # Enable site if not already enabled
+        if [ ! -f /etc/nginx/sites-enabled/voice-hotline ]; then
+            ln -s /etc/nginx/sites-available/voice-hotline /etc/nginx/sites-enabled/
+        fi
+        
+        # Test and reload
+        nginx -t && systemctl reload nginx
+        
+        echo "✅ Nginx configured"
+ENDSSH
+    
+    # SSL setup prompt
+    log_info "Setup SSL with Let's Encrypt?"
+    log_info "Run: ssh $SERVER_USER@$SERVER_IP 'certbot --nginx -d your-domain.com'"
 }
 
 # Verify deployment
