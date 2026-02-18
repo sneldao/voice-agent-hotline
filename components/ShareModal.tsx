@@ -101,7 +101,7 @@ export function ShareModal({
     const minutes = Math.floor(callData.duration / 60);
     const seconds = callData.duration % 60;
     ctx.fillText(`⏱️ ${minutes}:${seconds.toString().padStart(2, '0')}`, 80, 350);
-    ctx.fillText(`💰 $${callData.cost.toFixed(2)}`, 400, 350);
+    ctx.fillText(`💰 $${(callData.cost || 0).toFixed(2)}`, 400, 350);
 
     // Rating stars
     if (callData.rating) {

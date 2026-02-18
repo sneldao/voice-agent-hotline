@@ -91,7 +91,7 @@ export function ReferralSection() {
             <span className="stat-label">Referrals</span>
           </div>
           <div className="stat-card">
-            <span className="stat-value">${stats.earned.toFixed(3)}</span>
+            <span className="stat-value">${(stats.earned || 0).toFixed(3)}</span>
             <span className="stat-label">Earned</span>
           </div>
         </div>

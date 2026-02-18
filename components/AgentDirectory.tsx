@@ -82,7 +82,7 @@ export function AgentDirectory() {
             >
               <div className="agent-header">
                 <h3>{agent.name}</h3>
-                <span className="rate">${agent.ratePerMinute.toFixed(2)}/min</span>
+                <span className="rate">${(agent.ratePerMinute || 0).toFixed(2)}/min</span>
               </div>
               
               <p className="description">{agent.description}</p>

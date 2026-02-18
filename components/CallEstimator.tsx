@@ -40,17 +40,17 @@ export function CallEstimator({ pricePerMinute }: CallEstimatorProps) {
 
       <div className="cost-display">
         <div className="cost-main">
-          <span className="cost-value">${estimatedCost.toFixed(3)}</span>
+          <span className="cost-value">${(estimatedCost || 0).toFixed(3)}</span>
           <span className="cost-label">Estimated</span>
         </div>
         <div className="cost-breakdown">
           <div className="breakdown-item">
             <span>{duration} min call</span>
-            <span>${(pricePerMinute * duration).toFixed(2)}</span>
+            <span>${((pricePerMinute || 0) * duration).toFixed(2)}</span>
           </div>
           <div className="breakdown-item">
             <span>Platform fee (1%)</span>
-            <span>${(pricePerMinute * duration * 0.01).toFixed(4)}</span>
+            <span>${((pricePerMinute || 0) * duration * 0.01).toFixed(4)}</span>
           </div>
         </div>
       </div>

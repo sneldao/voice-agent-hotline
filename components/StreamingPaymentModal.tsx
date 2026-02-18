@@ -139,11 +139,11 @@ export function StreamingPaymentModal({
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Rate</span>
-            <span className="text-white">${ratePerMinute.toFixed(2)}/min</span>
+            <span className="text-white">${(ratePerMinute || 0).toFixed(2)}/min</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Per second</span>
-            <span className="text-cyan-400 font-mono">${perSecondCost.toFixed(6)}</span>
+            <span className="text-cyan-400 font-mono">${(perSecondCost || 0).toFixed(6)}</span>
           </div>
           {flowRate && flowRate !== '0' && (
             <div className="flex justify-between text-sm">
@@ -166,7 +166,7 @@ export function StreamingPaymentModal({
                 <span className="text-sm text-red-400 font-semibold">Streaming live</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Total: <span className="text-cyan-400 font-mono">${totalCost.toFixed(4)}</span>
+                Total: <span className="text-cyan-400 font-mono">${(totalCost || 0).toFixed(4)}</span>
               </p>
             </div>
 
