@@ -74,7 +74,7 @@ build_application() {
     log_info "Building application..."
     
     # Install dependencies
-    npm ci --only=production
+    npm install
     
     # Build Next.js with standalone output
     npm run build
