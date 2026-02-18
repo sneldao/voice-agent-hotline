@@ -126,18 +126,50 @@ Visit http://localhost:3000/demo
 
 ## Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for:
-
-- Vercel deployment
-- Environment configuration
-- Domain setup
-- CI/CD pipeline
-
-### Quick Deploy
+### Option 1: Vercel (Quick Deploy)
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsneldao%2Fvoice-agent-hotline)
 
-## Demo Mode
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed Vercel setup.
+
+**Best for:** Quick demos, hackathons, low-traffic apps
+
+### Option 2: Hetzner VPS (Production)
+
+Deploy to Hetzner VPS for **zero cold starts**, **unlimited timeouts**, and **full WebSocket support**.
+
+**Quick Start:**
+```bash
+# Automated deployment
+./scripts/deploy-hetzner.sh your-server-ip root
+
+# Manual setup (SSH)
+ssh root@your-server-ip
+cd /opt/voice-hotline-celo
+git pull origin main
+npm install --production
+npm run build
+pm2 restart voice-hotline-celo
+```
+
+See [docs/HETZNER_DEPLOYMENT.md](docs/HETZNER_DEPLOYMENT.md) for complete guide.
+
+**Best for:** Production, voice calls, high-traffic apps
+
+### Comparison
+
+| Feature | Vercel | Hetzner VPS |
+|---------|--------|-------------|
+| Setup Time | 5 minutes | 30 minutes |
+| Cold Starts | 2-5 seconds | None |
+| Timeout Limit | 10-300s | Unlimited |
+| WebSocket | Limited | Full support |
+| Cost | $20/month | ~€5/month |
+| Control | Limited | Full root access |
+
+---
+
+## Contributing
 
 Set `NEXT_PUBLIC_DEMO_MODE=true` to test without real wallet:
 
@@ -249,6 +281,14 @@ voice-agent-hotline/
 │   ├── intent-architecture.ts # Intent parsing
 │   └── useCallHistory.ts      # Call history hook
 ├── docs/                      # Documentation
+│   ├── README.md              # Documentation index
+│   ├── AGENTIC_ARCHITECTURE.md # Architecture overview
+│   ├── DEPLOYMENT.md          # Vercel deployment
+│   ├── HETZNER_DEPLOYMENT.md  # Hetzner VPS deployment
+│   ├── PERFORMANCE.md         # Performance optimizations
+│   └── SUPERFLUID_INTEGRATION.md # Superfluid docs
+├── scripts/                   # Deployment & utility scripts
+│   └── deploy-hetzner.sh      # Automated Hetzner deployment
 └── .kilocode/                # KILOCODE cloud agent config
 ```
 

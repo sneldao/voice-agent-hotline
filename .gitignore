@@ -9,6 +9,7 @@ out/
 .env
 .env.local
 .env.production
+.env.hetzner
 
 # OS files
 .DS_Store
@@ -24,7 +25,20 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
+
+# Deployment
 .vercel
+deploy.tar.gz
+
+# PM2
+.pm2
+
+# Redis (local)
+dump.rdb
+
+# Backups
+/backups/
 
 .junie
 .kilocode

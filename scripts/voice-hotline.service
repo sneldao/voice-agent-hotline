@@ -1,0 +1,43 @@
+[Unit]
+Description=Voice Agent Hotline - Celo Blockchain
+Documentation=https://github.com/sneldao/voice-agent-hotline
+After=network.target redis.service
+Wants=redis.service
+
+[Service]
+Type=forking
+User=www-data
+Group=www-data
+
+# Working directory
+WorkingDirectory=/opt/voice-hotline-celo
+
+# Environment
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=0.0.0.0
+
+# Start with PM2
+ExecStart=/usr/bin/pm2 start ecosystem.config.js
+ExecReload=/usr/bin/pm2 reload voice-hotline-celo
+ExecStop=/usr/bin/pm2 stop voice-hotline-celo
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Resource limits (PERFORMANT)
+LimitNOFILE=65535
+LimitNPROC=65535
+
+# Security hardening (CLEAN)
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=voice-hotline-celo
+
+[Install]
+WantedBy=multi-user.target
