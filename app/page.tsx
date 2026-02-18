@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import React from 'react';
 import { Button, Card, Badge, Avatar, Modal, Tabs, EmptySearchState, EmptyHistoryState, PullToRefresh, RefreshButton, ToastProvider, showSuccess, showError, showWarning, Wallet, Search, Phone, User, Star, Clock, Settings, Bell, ChevronRight, Loader2, AlertCircle, Sparkles, Bookmark, Download, Share2, X } from '@/components/ui';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Info } from 'lucide-react';
 import { announce } from '@/lib/accessibility';
 import { useWallet } from '@/lib/WalletContext';
 import { ReferralSection } from '@/components/ReferralSection';
@@ -18,6 +18,9 @@ import { ShareModal } from '@/components/ShareModal';
 import { ExportModal } from '@/components/ExportModal';
 import { DelegationPanel } from '@/components/DelegationPanel';
 import { useMiniPay } from '@/lib/minipay';
+import { WalletConnectGate } from '@/components/WalletConnectGate';
+import { LowBalanceWarning } from '@/components/LowBalanceWarning';
+import { Tooltip } from '@/components/Tooltip';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -29,6 +32,8 @@ const CATEGORIES = [
 
 type Tab = 'discover' | 'calls' | 'profile';
 
+const MIN_BALANCE_FOR_CALL = 0.50; // Minimum balance required to start a call
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('discover');
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
@@ -39,6 +44,9 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [userBalance, setUserBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [showWalletGate, setShowWalletGate] = useState(false);
+  const [showLowBalance, setShowLowBalance] = useState(false);
+  const [requiredBalance, setRequiredBalance] = useState(0);
   const mainContentRef = useRef<HTMLElement>(null);
 
   // Get wallet connection state
@@ -123,7 +131,7 @@ export default function Home() {
 
   const startCall = useCallback(async () => {
     if (!selectedAgent) return;
-    
+
     // Check WebRTC support
     if (!isWebRTCSupported) {
       showError('WebRTC is not supported in your browser');
@@ -144,22 +152,24 @@ export default function Home() {
       }
     }
 
-    // Check wallet connection
+    // Check wallet connection - show gate modal if not connected
     if (!connected) {
-      showError('Please connect your wallet first');
+      setShowWalletGate(true);
       return;
     }
 
-    // Check balance
-    if (userBalance < selectedAgent.rate * 5) { // At least 5 minutes
-      showError('Insufficient balance. Please add funds.');
+    // Check balance - show low balance modal if insufficient
+    const estimatedCost = selectedAgent.rate * 5; // At least 5 minutes
+    if (userBalance < estimatedCost) {
+      setRequiredBalance(estimatedCost);
+      setShowLowBalance(true);
       return;
     }
 
     const newCallId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     setCallId(newCallId);
     setInCall(true);
-    
+
     // Start voice call
     const success = await startVoiceCall({
       agentId: selectedAgent.id,
@@ -226,7 +236,34 @@ export default function Home() {
         onSkip={onboarding.skipOnboarding}
         onConnect={connect}
       />
-      
+
+      {/* Wallet Connection Gate - shown when user tries to call without wallet */}
+      <WalletConnectGate
+        isOpen={showWalletGate}
+        onConnect={() => {
+          connect();
+          setShowWalletGate(false);
+        }}
+        onClose={() => setShowWalletGate(false)}
+        isConnecting={isConnecting}
+      />
+
+      {/* Low Balance Warning - shown when user has insufficient funds */}
+      <LowBalanceWarning
+        isOpen={showLowBalance}
+        balance={userBalance}
+        requiredAmount={requiredBalance}
+        onAddFunds={() => {
+          setShowLowBalance(false);
+          setActiveTab('profile');
+        }}
+        onClose={() => setShowLowBalance(false)}
+        onGoHome={() => {
+          setShowLowBalance(false);
+          setSelectedAgent(null);
+        }}
+      />
+
       {/* Skip to main content for keyboard users */}
       <a
         href="#main-content"
@@ -254,11 +291,13 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2" role="group" aria-label="User wallet and notifications">
             {connected ? (
-              <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-medium text-cyan-400">${(userBalance || 0).toFixed(2)}</span>
-                <span className="text-xs text-gray-500">{formatAddress()}</span>
-              </div>
+              <Tooltip content={`Balance: $${(userBalance || 0).toFixed(2)} • First minute free on all calls`} position="bottom">
+                <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2 cursor-help">
+                  <Wallet className="w-4 h-4 text-cyan-400" />
+                  <span className="text-sm font-medium text-cyan-400">${(userBalance || 0).toFixed(2)}</span>
+                  <span className="text-xs text-gray-500">{formatAddress()}</span>
+                </div>
+              </Tooltip>
             ) : (
               <button
                 onClick={connect}
@@ -268,12 +307,14 @@ export default function Home() {
                 {isConnecting ? 'Connecting...' : 'Connect Wallet'}
               </button>
             )}
-            <button
-              className="w-10 h-10 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center hover:bg-gray-800 transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5 text-gray-400" />
-            </button>
+            <Tooltip content="Notifications" position="bottom">
+              <button
+                className="w-10 h-10 rounded-xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center hover:bg-gray-800 transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell className="w-5 h-5 text-gray-400" />
+              </button>
+            </Tooltip>
           </div>
         </div>
       </header>
