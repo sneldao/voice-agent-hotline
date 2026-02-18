@@ -667,7 +667,7 @@ const AgentCard = React.memo(function AgentCard({
 });
 
 /**
- * Agent Detail Modal
+ * Agent Detail Modal — with live cost estimator
  */
 function AgentDetailModal({
   agent,
@@ -679,22 +679,21 @@ function AgentDetailModal({
   onCall: () => void;
 }) {
   const [calling, setCalling] = useState(false);
+  const [estimatedMins, setEstimatedMins] = useState(5);
 
   if (!agent) return null;
+
+  const estimatedCost = (agent.rate * estimatedMins).toFixed(2);
 
   const handleCall = () => {
     setCalling(true);
     setTimeout(() => {
       onCall();
-    }, 1500);
+    }, 1200);
   };
 
   return (
-    <Modal
-      isOpen={!!agent}
-      onClose={onClose}
-      size="md"
-    >
+    <Modal isOpen={!!agent} onClose={onClose} size="md">
       {/* Header gradient */}
       <div className={`-mx-6 -mt-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-br ${agent.color} text-center`}>
         <Avatar size="xl" online={agent.online} className="mx-auto mb-4 border-4 border-white/20">
@@ -702,18 +701,24 @@ function AgentDetailModal({
         </Avatar>
         <h2 className="text-xl font-bold text-white">{agent.name}</h2>
         <p className="text-white/70 text-sm">{agent.specialty}</p>
-        
+
         <div className="flex items-center justify-center gap-6 mt-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 font-bold text-white">
-              <span>⭐</span> {agent.rating}
+              <span>⭐</span> {agent.rating?.toFixed(1) ?? '—'}
             </div>
-            <div className="text-xs text-white/60">{agent.totalRatings} reviews</div>
+            <div className="text-xs text-white/60">{agent.totalRatings ?? 0} reviews</div>
           </div>
           <div className="text-center">
             <div className="font-bold text-white">${agent.rate}</div>
             <div className="text-xs text-white/60">/minute</div>
           </div>
+          {agent.totalCalls && (
+            <div className="text-center">
+              <div className="font-bold text-white">{agent.totalCalls}</div>
+              <div className="text-xs text-white/60">calls</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -725,9 +730,32 @@ function AgentDetailModal({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {agent.tags.map((tag: string) => (
+          {(agent.tags ?? []).map((tag: string) => (
             <Badge key={tag} variant="info">{tag}</Badge>
           ))}
+        </div>
+
+        {/* Cost Estimator */}
+        <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-gray-400">Estimated cost</span>
+            <span className="text-lg font-bold text-cyan-400">${estimatedCost}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500 w-6">{estimatedMins}m</span>
+            <input
+              type="range"
+              min={1}
+              max={30}
+              value={estimatedMins}
+              onChange={e => setEstimatedMins(Number(e.target.value))}
+              className="flex-1 h-1.5 rounded-full accent-cyan-500 cursor-pointer"
+            />
+            <span className="text-xs text-gray-500 w-8">30m</span>
+          </div>
+          <p className="text-xs text-gray-600 mt-2 text-center">
+            Drag to estimate • Pay only for actual seconds used
+          </p>
         </div>
 
         <Button
@@ -737,11 +765,11 @@ function AgentDetailModal({
           className="w-full"
           size="lg"
         >
-          {calling ? 'Connecting...' : agent.online ? '🎙️ Call Now' : 'Offline'}
+          {calling ? 'Connecting…' : agent.online ? '🎙️ Start Call' : '⛔ Agent Offline'}
         </Button>
 
         <p className="text-xs text-center text-gray-500">
-          First minute free • x402 micropayments on Celo
+          Billed per second via x402 on Celo • Cancel anytime
         </p>
       </div>
     </Modal>
@@ -1149,16 +1177,28 @@ function ProfileTab({
   address?: string | null;
   isLoading?: boolean;
 }) {
+  const displayAddress = address
+    ? `${address.slice(0, 6)}…${address.slice(-4)}`
+    : 'Not connected';
+
   return (
     <div className="p-4 space-y-6">
       {/* Profile Header */}
       <div className="flex items-center gap-4">
-        <Avatar size="xl" online className="bg-gradient-to-br from-cyan-500 to-blue-500">
+        <Avatar size="xl" online={!!address} className="bg-gradient-to-br from-cyan-500 to-blue-500">
           <User className="w-8 h-8" />
         </Avatar>
         <div>
-          <h2 className="text-xl font-bold">Demo User</h2>
-          <div className="text-sm text-gray-400 font-mono">0x1234...5678</div>
+          <h2 className="text-xl font-bold font-mono">{displayAddress}</h2>
+          {address && (
+            <button
+              onClick={() => navigator.clipboard?.writeText(address)}
+              className="text-xs text-gray-400 hover:text-cyan-400 transition-colors"
+              title="Copy address"
+            >
+              Copy full address
+            </button>
+          )}
         </div>
       </div>
 
@@ -1228,11 +1268,11 @@ function ProfileTab({
           </Card>
         ))}
       </div>
+
+      {/* Referral Section — rendered inside the component tree */}
+      <ReferralSection />
     </div>
   );
-
-      {/* Referral Section */}
-      <ReferralSection />
 }
 
 /**
