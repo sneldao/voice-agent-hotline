@@ -231,7 +231,7 @@ export class ElevenLabsService {
           },
           tts: {
             voice_id: config.voice_id,
-            model_id: 'eleven_turbo_v2_5',
+            model_id: 'eleven_turbo_v2',
             optimize_streaming_latency: 3,
           },
           llm: {
