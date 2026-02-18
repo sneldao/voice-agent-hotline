@@ -204,7 +204,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-950 text-white font-sans">
       <ToastProvider />
       
-      {/* Onboarding */}
+      {/* Onboarding — onConnect lets the WalletConnectStep trigger connect inline */}
       <Onboarding
         isOpen={onboarding.isOpen}
         currentStep={onboarding.currentStep}
@@ -213,6 +213,7 @@ export default function Home() {
         onClose={onboarding.closeOnboarding}
         onNext={onboarding.nextStep}
         onSkip={onboarding.skipOnboarding}
+        onConnect={connect}
       />
       
       {/* Skip to main content for keyboard users */}
@@ -903,6 +904,7 @@ function CallsHistoryTab({
               onDownload={() => handleDownload(call)}
               onShare={() => handleShare(call)}
               onCallAgain={() => handleCallAgain(call)}
+              onRate={(r) => localHistory.rateCall(call.id, r)}
               formatDate={formatDate}
               formatDuration={formatDuration}
             />
@@ -990,6 +992,7 @@ function CallHistoryCard({
   onDownload,
   onShare,
   onCallAgain,
+  onRate,
   formatDate,
   formatDuration,
 }: {
@@ -1000,13 +1003,24 @@ function CallHistoryCard({
   onDownload: () => void;
   onShare: () => void;
   onCallAgain: () => void;
+  onRate: (rating: number) => void;
   formatDate: (ts: number) => string;
   formatDuration: (s: number) => string;
 }) {
   const [showActions, setShowActions] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [pendingRating, setPendingRating] = useState<number | null>(null);
+
+  const handleRate = (r: number) => {
+    setPendingRating(r);
+    onRate(r);
+  };
+
+  const displayRating = pendingRating ?? call.rating ?? 0;
+  const isRated = displayRating > 0;
 
   return (
-    <Card variant="default" className="p-4">
+    <Card variant="default" className="p-4 animate-fadeIn">
       <div className="flex items-start gap-3">
         <Avatar size="md">
           {call.agentName.charAt(0)}
@@ -1032,16 +1046,31 @@ function CallHistoryCard({
             <span className="text-cyan-400">${call.cost.toFixed(2)}</span>
           </div>
 
-          {call.rating && (
-            <div className="flex items-center gap-0.5 mt-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star 
-                  key={i} 
-                  className={`w-3 h-3 ${i < call.rating! ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} 
+          {/* Rating row — interactive when unrated */}
+          <div className="flex items-center gap-1 mt-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <button
+                key={i}
+                disabled={isRated}
+                onMouseEnter={() => !isRated && setHoverRating(i + 1)}
+                onMouseLeave={() => setHoverRating(0)}
+                onClick={() => !isRated && handleRate(i + 1)}
+                className={`transition-transform ${!isRated ? 'hover:scale-125 cursor-pointer' : 'cursor-default'}`}
+                title={isRated ? `Rated ${displayRating}/5` : `Rate ${i + 1}/5`}
+              >
+                <Star
+                  className={`w-3.5 h-3.5 transition-colors ${
+                    i < (hoverRating || displayRating)
+                      ? 'text-yellow-400 fill-yellow-400'
+                      : 'text-gray-600'
+                  }`}
                 />
-              ))}
-            </div>
-          )}
+              </button>
+            ))}
+            {!isRated && (
+              <span className="text-xs text-gray-600 ml-1">Tap to rate</span>
+            )}
+          </div>
         </div>
       </div>
 

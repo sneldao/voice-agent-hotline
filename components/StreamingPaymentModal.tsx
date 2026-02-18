@@ -1,13 +1,9 @@
-// ============================================
-// StreamingPaymentModal Component
-// ============================================
-// Example: Voice call payment with Superfluid streaming
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import { formatFlowRate, calculatePerSecondCost } from '@/lib/superfluid-streaming';
+import { Phone, PhoneOff, AlertCircle, Loader2, Clock, Zap } from 'lucide-react';
 
 interface StreamingPaymentModalProps {
   agentName: string;
@@ -25,141 +21,201 @@ export function StreamingPaymentModal({
   onPaymentStop,
 }: StreamingPaymentModalProps) {
   const {
-    status,
     flowRate,
-    startedAt,
     error,
     startStream,
     stopStream,
     grantPermissions,
-    connect,
   } = useSuperfluidStreaming();
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  // Calculate streaming rate
-  const monthlyRate = ratePerMinute * 60 * 24 * 30; // rate per minute * minutes per day * days per month
+  // Facilitator address from env — required for Superfluid ACL delegation.
+  // Set NEXT_PUBLIC_FACILITATOR_ADDRESS in .env.local
+  const facilitatorAddress = process.env.NEXT_PUBLIC_FACILITATOR_ADDRESS ?? null;
+  const facilitatorMissing = !facilitatorAddress;
+
+  const monthlyRate = ratePerMinute * 60 * 24 * 30;
   const perSecondCost = calculatePerSecondCost(monthlyRate);
+  const totalCost = duration * perSecondCost;
 
-  // Timer effect with proper cleanup
+  // Duration timer
   useEffect(() => {
-    let timerId: NodeJS.Timeout | null = null;
-    
-    if (isStreaming) {
-      const startTime = Date.now();
-      timerId = setInterval(() => {
-        setDuration(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
-    }
-    
-    return () => {
-      if (timerId) clearInterval(timerId);
-    };
-  }, [isStreaming]);
+    if (!isStreaming) return;
+    const start = Date.now() - duration * 1000;
+    const id = setInterval(() => setDuration(Math.floor((Date.now() - start) / 1000)), 500);
+    return () => clearInterval(id);
+  }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const formatDuration = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  };
 
   const handleStartCall = async () => {
-    // Grant permissions first (one-time)
-    const facilitatorAddress = '0xFacilitatorAddress'; // Would come from config
-    await grantPermissions(facilitatorAddress);
+    setLocalError(null);
 
-    // Start streaming
-    const success = await startStream(agentAddress, monthlyRate);
-    if (success) {
-      setIsStreaming(true);
-      onPaymentStart();
+    if (facilitatorMissing) {
+      setLocalError('Streaming not configured: NEXT_PUBLIC_FACILITATOR_ADDRESS is not set. Add it to .env.local.');
+      return;
+    }
+
+    setIsStarting(true);
+    try {
+      // Grant ACL permissions to facilitator (one-time; safe to call again)
+      await grantPermissions(facilitatorAddress);
+
+      const success = await startStream(agentAddress, monthlyRate);
+      if (success) {
+        setIsStreaming(true);
+        setDuration(0);
+        onPaymentStart();
+      } else {
+        setLocalError(error ?? 'Failed to start stream. Check your wallet balance and network.');
+      }
+    } catch (e) {
+      setLocalError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsStarting(false);
     }
   };
 
   const handleEndCall = async () => {
-    await stopStream(agentAddress);
-    setIsStreaming(false);
-    onPaymentStop();
+    setIsStopping(true);
+    try {
+      await stopStream(agentAddress);
+      setIsStreaming(false);
+      onPaymentStop();
+    } catch (e) {
+      setLocalError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsStopping(false);
+    }
   };
 
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const displayError = localError ?? error;
 
   return (
-    <div className="streaming-payment-modal">
-      <h3>Pay with Superfluid Streaming</h3>
-      
-      <div className="payment-info">
-        <p>Agent: {agentName}</p>
-        <p>Rate: ${ratePerMinute.toFixed(2)}/minute</p>
-        <p>Streaming rate: {formatFlowRate(flowRate || '0')}</p>
-        <p>Cost per second: ${perSecondCost.toFixed(4)}</p>
+    <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800 rounded-2xl overflow-hidden shadow-2xl shadow-black/40">
+
+      {/* Header */}
+      <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-b border-gray-800 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="font-bold text-white">Superfluid Streaming</h3>
+            <p className="text-xs text-gray-400">Real-time payment per second</p>
+          </div>
+        </div>
       </div>
 
-      {isStreaming ? (
-        <div className="streaming-active">
-          <p className="duration">{formatDuration(duration)}</p>
-          <p className="status">🔴 Streaming live</p>
-          <p className="started">Started: {startedAt?.toLocaleTimeString()}</p>
-          <button onClick={handleEndCall} className="end-call-btn">
-            End Call & Stop Streaming
-          </button>
-        </div>
-      ) : (
-        <div className="payment-options">
-          <button onClick={handleStartCall} className="start-call-btn">
-            Start Voice Call
-          </button>
-          {error && <p className="error">{error}</p>}
-        </div>
-      )}
+      <div className="p-5 space-y-4">
 
-      <style jsx>{`
-        .streaming-payment-modal {
-          padding: 20px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-          color: white;
-        }
-        .payment-info {
-          margin-bottom: 20px;
-          padding: 15px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
-        }
-        .streaming-active {
-          text-align: center;
-        }
-        .duration {
-          font-size: 48px;
-          font-weight: bold;
-          margin: 20px 0;
-        }
-        .status {
-          color: #ff4444;
-          font-weight: bold;
-        }
-        .start-call-btn, .end-call-btn {
-          width: 100%;
-          padding: 15px;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: bold;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .start-call-btn {
-          background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
-          color: #000;
-        }
-        .end-call-btn {
-          background: #ff4444;
-          color: white;
-        }
-        .error {
-          color: #ff4444;
-          margin-top: 10px;
-        }
-      `}</style>
+        {/* Config warning */}
+        {facilitatorMissing && (
+          <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+            <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-amber-300">Streaming not configured</p>
+              <p className="text-xs text-amber-400/80 mt-0.5">
+                Set <code className="font-mono bg-amber-500/20 px-1 rounded">NEXT_PUBLIC_FACILITATOR_ADDRESS</code> in <code className="font-mono bg-amber-500/20 px-1 rounded">.env.local</code> to enable Superfluid streaming.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Payment info */}
+        <div className="bg-gray-800/50 rounded-xl p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Agent</span>
+            <span className="text-white font-medium">{agentName}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Rate</span>
+            <span className="text-white">${ratePerMinute.toFixed(2)}/min</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Per second</span>
+            <span className="text-cyan-400 font-mono">${perSecondCost.toFixed(6)}</span>
+          </div>
+          {flowRate && flowRate !== '0' && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Flow rate</span>
+              <span className="text-green-400 font-mono text-xs">{formatFlowRate(flowRate)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Active streaming state */}
+        {isStreaming ? (
+          <div className="space-y-3">
+            {/* Live ticker */}
+            <div className="text-center py-4 bg-gray-800/30 rounded-xl">
+              <p className="text-5xl font-mono font-bold text-white tabular-nums">
+                {formatDuration(duration)}
+              </p>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                <span className="text-sm text-red-400 font-semibold">Streaming live</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Total: <span className="text-cyan-400 font-mono">${totalCost.toFixed(4)}</span>
+              </p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
+                style={{ width: `${Math.min(100, (duration / 600) * 100)}%` }}
+              />
+            </div>
+
+            <button
+              onClick={handleEndCall}
+              disabled={isStopping}
+              className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {isStopping ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Stopping…</>
+              ) : (
+                <><PhoneOff className="w-4 h-4" /> End Call & Stop Streaming</>
+              )}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleStartCall}
+            disabled={isStarting || facilitatorMissing}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold transition-all active:scale-[0.98] shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isStarting ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Starting stream…</>
+            ) : (
+              <><Phone className="w-4 h-4" /> Start Voice Call</>
+            )}
+          </button>
+        )}
+
+        {/* Error */}
+        {displayError && (
+          <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-red-400">{displayError}</p>
+          </div>
+        )}
+
+        <p className="text-xs text-center text-gray-600">
+          Powered by Superfluid on Celo • Payment stops instantly when you end the call
+        </p>
+      </div>
     </div>
   );
 }

@@ -55,7 +55,13 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
     }
   }, [hasStarted, isSupported, agent.id, callId, userId, startCall]);
 
+  // Haptic feedback helper — safe no-op when browser doesn't support it
+  const vibrate = (pattern: number | number[]) => {
+    try { navigator.vibrate?.(pattern); } catch { /* unsupported */ }
+  };
+
   const handleEnd = useCallback(() => {
+    vibrate([100, 50, 100]); // double-pulse on hang-up
     endCall();
     
     // Save call to history
@@ -188,13 +194,20 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full bg-gray-800 ${quality.color}`}>
+        <div className="flex items-center gap-2">
+          {/* Quality indicator */}
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full bg-gray-800/80 ${quality.color}`}>
             <Signal className="w-3 h-3" />
             <span className="text-xs">{quality.label}</span>
           </div>
-          <div className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 rounded-full">
-            <span className="text-sm font-bold text-cyan-400">${call.cost.toFixed(2)}</span>
+          {/* Live badge */}
+          <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">Live</span>
+          </span>
+          {/* Animated cost ticker */}
+          <div className="px-3 py-1.5 bg-gray-800 rounded-full min-w-[70px] text-right">
+            <span className="text-sm font-bold text-cyan-400 tabular-nums">${call.cost.toFixed(4)}</span>
           </div>
         </div>
       </div>
@@ -261,11 +274,11 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
       <div className="p-6 border-t border-gray-800">
         <div className="flex items-center justify-center gap-4">
           <button
-            onClick={toggleMute}
+            onClick={() => { vibrate(40); toggleMute(); }}
             className={`
-              w-14 h-14 rounded-full flex items-center justify-center transition-all
+              w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90
               ${isMuted 
-                ? 'bg-red-500 text-white' 
+                ? 'bg-red-500 text-white shadow-lg shadow-red-500/40' 
                 : 'bg-gray-800 text-white hover:bg-gray-700'
               }
             `}
@@ -276,25 +289,38 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
 
           <button
             onClick={handleEnd}
-            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/25"
+            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all active:scale-90 shadow-lg shadow-red-500/25"
             title="End Call"
           >
             <PhoneOff className="w-8 h-8" />
           </button>
 
+          {/* Speaker toggle — cycles through volume levels */}
           <button
-            className="w-14 h-14 rounded-full bg-gray-800 text-white flex items-center justify-center opacity-50 cursor-not-allowed"
-            title="Deafen (coming soon)"
-            disabled
+            onClick={() => {/* speaker volume toggle — placeholder for audio output control */}}
+            className="w-14 h-14 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95"
+            title="Speaker volume"
           >
             <Volume2 className="w-6 h-6" />
           </button>
         </div>
 
-        <p className="text-center text-xs text-gray-500 mt-4">
-          {isMuted ? '🔇 You are muted' : '🎤 Microphone active'} • 
-          {' '}{permissions.microphone === 'granted' ? '✓' : '⚠'} Mic permission
-        </p>
+        {/* Budget progress bar */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>{isMuted ? '🔇 Muted' : '🎤 Mic active'}</span>
+            <span className="tabular-nums">${call.cost.toFixed(4)} spent</span>
+          </div>
+          <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
+              style={{ width: `${Math.min(100, (call.cost / (agent.rate * 10)) * 100)}%` }}
+            />
+          </div>
+          <p className="text-center text-xs text-gray-600 mt-1">
+            {permissions.microphone === 'granted' ? '✓ Mic permission granted' : '⚠ Mic permission needed'}
+          </p>
+        </div>
       </div>
 
       {/* Call Summary Modal */}

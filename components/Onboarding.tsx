@@ -13,6 +13,8 @@ interface OnboardingProps {
   onClose: () => void;
   onNext: () => void;
   onSkip: () => void;
+  /** Pass the wallet connect function so the onboarding step can trigger it inline. */
+  onConnect?: () => void;
 }
 
 export function Onboarding({
@@ -23,6 +25,7 @@ export function Onboarding({
   onClose,
   onNext,
   onSkip,
+  onConnect,
 }: OnboardingProps) {
   if (!isOpen) return null;
 
@@ -36,7 +39,8 @@ export function Onboarding({
         return <WalletConnectStep 
           isConnected={walletConnected} 
           onNext={onNext} 
-          onSkip={onSkip} 
+          onSkip={onSkip}
+          onConnect={onConnect}
         />;
       case 'fund-wallet':
         return <FundWalletStep 
@@ -189,12 +193,26 @@ function WalletIntroStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
 function WalletConnectStep({ 
   isConnected, 
   onNext, 
-  onSkip 
+  onSkip,
+  onConnect,
 }: { 
   isConnected: boolean; 
   onNext: () => void; 
   onSkip: () => void;
+  onConnect?: () => void;
 }) {
+  const [connecting, setConnecting] = useState(false);
+
+  const handleConnect = async () => {
+    if (!onConnect) return;
+    setConnecting(true);
+    try {
+      await onConnect();
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   return (
     <div className="text-center">
       {isConnected ? (
@@ -202,7 +220,7 @@ function WalletConnectStep({
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500 flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Wallet Connected!</h2>
+          <h2 className="text-xl font-bold text-white mb-2">Wallet Connected! 🎉</h2>
           <p className="text-gray-400 mb-6">You're all set to make calls.</p>
           <Button onClick={onNext} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500">
             Continue
@@ -211,16 +229,35 @@ function WalletConnectStep({
         </>
       ) : (
         <>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center animate-pulse">
-            <Wallet className="w-8 h-8 text-cyan-400" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
+            <Wallet className={`w-8 h-8 text-cyan-400 ${connecting ? 'animate-pulse' : ''}`} />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Waiting for Connection</h2>
+          <h2 className="text-xl font-bold text-white mb-2">Connect Your Wallet</h2>
           <p className="text-gray-400 mb-6">
-            Click the "Connect Wallet" button in the top right to continue.
+            A crypto wallet is your identity on Voice Agent Hotline — no username or password needed.
           </p>
-          <div className="flex gap-3">
-            <Button onClick={onSkip} variant="ghost" className="flex-1">
-              I'll do this later
+
+          {/* Wallet logos */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            {['🦊 MetaMask', '🌈 Rainbow', '💎 Coinbase'].map(w => (
+              <span key={w} className="text-xs text-gray-500 bg-gray-800 px-2.5 py-1.5 rounded-lg">{w}</span>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {onConnect ? (
+              <Button
+                onClick={handleConnect}
+                disabled={connecting}
+                isLoading={connecting}
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500"
+              >
+                {connecting ? 'Connecting…' : 'Connect Wallet'}
+                {!connecting && <Wallet className="w-4 h-4 ml-2" />}
+              </Button>
+            ) : null}
+            <Button onClick={onSkip} variant="ghost" className="w-full text-gray-500">
+              Skip for now — I'll do this later
             </Button>
           </div>
         </>

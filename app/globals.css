@@ -425,3 +425,31 @@ body,
 .tab-bar {
   padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom, 0px));
 }
+
+/* ─── Tailwind-compatible animation utilities ─────────────────────────────── */
+@layer utilities {
+  .animate-fadeIn {
+    animation: fade-in 0.25s ease-out both;
+  }
+  .animate-slideUp {
+    animation: slide-up 0.3s ease-out both;
+  }
+  .animate-slideDown {
+    animation: slide-down 0.25s ease-out both;
+  }
+  .animate-scaleIn {
+    animation: scale-in 0.2s ease-out both;
+  }
+  /* staggered children */
+  .stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger > *:nth-child(6) { animation-delay: 300ms; }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
