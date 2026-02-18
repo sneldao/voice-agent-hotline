@@ -241,7 +241,7 @@ export class ElevenLabsService {
         },
         platform_settings: {
           widget: {
-            variant: 'full_screen',
+            variant: 'full',
           },
         },
       }),

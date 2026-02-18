@@ -130,9 +130,9 @@ export async function seedAgents() {
             parameters: {
               type: 'object' as const,
               properties: {
-                businessName: { type: 'string' },
-                dateTime: { type: 'string' },
-                serviceType: { type: 'string', enum: ['restaurant', 'appointment', 'other'] }
+                businessName: { type: 'string', description: 'Name of the business or provider' },
+                dateTime: { type: 'string', description: 'ISO 8601 date time string' },
+                serviceType: { type: 'string', enum: ['restaurant', 'appointment', 'other'], description: 'Type of service to book' }
               },
               required: ['businessName', 'dateTime', 'serviceType']
             }
