@@ -77,6 +77,25 @@ export const AGENT_VOICES = {
 // ENHANCED: Conversational AI Types
 // ============================================
 
+export interface AgentTool {
+  name: string;
+  description: string;
+  type?: 'webhook' | 'client' | 'api_integration_webhook';
+  configuration?: {
+    url: string;
+    method: 'POST' | 'GET';
+    parameters?: {
+      type: 'object';
+      properties: Record<string, {
+        type: string;
+        description?: string;
+        enum?: string[];
+      }>;
+      required?: string[];
+    };
+  };
+}
+
 export interface ConversationalAgentConfig {
   name: string;
   system_prompt: string;
@@ -84,21 +103,8 @@ export interface ConversationalAgentConfig {
   model?: string; // default: gpt-4
   language?: string; // default: en
   tools?: AgentTool[];
+  tool_ids?: string[]; // Recommended: Link to registered tools
   webhook_url?: string; // For tool execution callbacks
-}
-
-export interface AgentTool {
-  name: string;
-  description: string;
-  parameters: {
-    type: 'object';
-    properties: Record<string, {
-      type: string;
-      description?: string;
-      enum?: string[];
-    }>;
-    required?: string[];
-  };
 }
 
 export interface ConversationRequest {
@@ -194,7 +200,7 @@ export class ElevenLabsService {
   // ============================================
 
   /**
-   * Create a new conversational agent
+   * Create a new conversational agent (Enhanced V1 Registry Pattern)
    */
   async createAgent(config: ConversationalAgentConfig): Promise<{ agent_id: string }> {
     const response = await fetch(`${ELEVENLABS_API_URL}/convai/agents`, {
@@ -212,10 +218,11 @@ export class ElevenLabsService {
             },
             first_message: `Hello! I'm ${config.name}. How can I help you today?`,
             language: config.language || 'en',
-            tools: config.tools || [], // Add tools here
+            // Updated to use the new reference pattern
+            tool_ids: config.tool_ids || [],
           },
           asr: {
-            provider: 'elevenlabs', // Auto STT
+            provider: 'elevenlabs',
             quality: 'high',
           },
           tts: {
@@ -226,9 +233,6 @@ export class ElevenLabsService {
           llm: {
             provider: 'openai',
             model: config.model || 'gpt-4',
-            tool_call_config: config.tools && config.tools.length > 0 ? {
-              tool_webhook_url: config.webhook_url,
-            } : undefined,
           },
         },
         platform_settings: {
@@ -245,6 +249,50 @@ export class ElevenLabsService {
     }
 
     return await response.json();
+  }
+
+  /**
+   * Register a persistent tool in the workspace (Proper Registry Pattern)
+   */
+  async createTool(tool: AgentTool): Promise<{ tool_id: string }> {
+    const response = await fetch(`${ELEVENLABS_API_URL}/convai/tools`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': this.apiKey,
+      },
+      body: JSON.stringify({
+        type: tool.type || 'webhook',
+        name: tool.name,
+        description: tool.description,
+        configuration: tool.configuration,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to create tool: ${error}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * List all workspace tools
+   */
+  async listTools(): Promise<any[]> {
+    const response = await fetch(`${ELEVENLABS_API_URL}/convai/tools`, {
+      headers: {
+        'xi-api-key': this.apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to list tools: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.tools || [];
   }
 
   /**

@@ -93,30 +93,42 @@ export const SEED_AGENTS: AgentSeed[] = [
 ];
 
 export async function seedAgents() {
-  console.log('🌱 Seeding agents and creating ElevenLabs instances...');
+  console.log('🌱 Seeding agents and creating/linking ElevenLabs tools...');
 
   const webhookUrl = `${process.env.NEXT_PUBLIC_WEBHOOK_URL}/api/webhooks/elevenlabs`;
 
-  for (const agent of SEED_AGENTS) {
-    let final_elevenlabs_id = agent.elevenlabs_agent_id;
+  // 1. REGISTER standard tools in the ElevenLabs Workspace first
+  const workspaceTools: Record<string, string> = {}; // { name: id }
 
-    // Create ElevenLabs agent if API key is present and no ID exists
-    if (!final_elevenlabs_id && process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_CONVERSATIONAL_ENABLED === 'true') {
-      try {
-        console.log(`  🛠️ Creating ElevenLabs instance for ${agent.name}...`);
+  if (process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_CONVERSATIONAL_ENABLED === 'true') {
+    try {
+      console.log('  🔍 Fetching existing workspace tools...');
+      const existingTools = await elevenLabsService.listTools();
 
-        // Define tool schemas for ElevenLabs
-        const tools = agent.skills.map(skill => {
-          if (skill === 'research') return {
-            name: 'search_web',
-            description: 'Search the web for real-time information',
-            parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }
-          };
-          if (skill === 'book') return {
-            name: 'book_appointment',
-            description: 'Book an appointment or service',
+      const standardTools = [
+        {
+          name: 'search_web',
+          description: 'Search the web for real-time information',
+          type: 'webhook' as const,
+          configuration: {
+            url: webhookUrl,
+            method: 'POST' as const,
             parameters: {
-              type: 'object',
+              type: 'object' as const,
+              properties: { query: { type: 'string', description: 'Search query' } },
+              required: ['query']
+            }
+          }
+        },
+        {
+          name: 'book_appointment',
+          description: 'Book an appointment or service',
+          type: 'webhook' as const,
+          configuration: {
+            url: webhookUrl,
+            method: 'POST' as const,
+            parameters: {
+              type: 'object' as const,
               properties: {
                 businessName: { type: 'string' },
                 dateTime: { type: 'string' },
@@ -124,22 +136,53 @@ export async function seedAgents() {
               },
               required: ['businessName', 'dateTime', 'serviceType']
             }
-          };
+          }
+        }
+      ];
+
+      for (const toolDef of standardTools) {
+        // Check if tool exists
+        const existing = existingTools.find((t: any) => t.name === toolDef.name);
+        if (existing) {
+          console.log(`  🔗 Linking existing tool: ${toolDef.name} (${existing.tool_id})`);
+          workspaceTools[toolDef.name] = existing.tool_id;
+        } else {
+          console.log(`  🛠️ Registering new tool: ${toolDef.name}...`);
+          const result = await elevenLabsService.createTool(toolDef as any);
+          workspaceTools[toolDef.name] = result.tool_id;
+        }
+      }
+    } catch (error) {
+      console.error('  ❌ Failed to manage workspace tools:', error);
+    }
+  }
+
+  // 2. CREATE or UPDATE agents using the Tool IDs
+  for (const agent of SEED_AGENTS) {
+    let final_elevenlabs_id = agent.elevenlabs_agent_id;
+
+    if (!final_elevenlabs_id && process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_CONVERSATIONAL_ENABLED === 'true') {
+      try {
+        console.log(`  🤖 Creating agent: ${agent.name}...`);
+
+        // Map skills to Tool IDs
+        const toolIds = agent.skills.map(skill => {
+          if (skill === 'research') return workspaceTools['search_web'];
+          if (skill === 'book') return workspaceTools['book_appointment'];
           return null;
-        }).filter(Boolean);
+        }).filter(Boolean) as string[];
 
         const result = await elevenLabsService.createAgent({
           name: agent.name,
           system_prompt: agent.system_prompt || agent.description,
           voice_id: agent.voiceId,
-          webhook_url: webhookUrl,
-          tools: tools as any[]
+          tool_ids: toolIds
         });
 
         final_elevenlabs_id = result.agent_id;
-        console.log(`  ✅ ElevenLabs agent created: ${final_elevenlabs_id}`);
+        console.log(`  ✅ Created ElevenLabs agent: ${final_elevenlabs_id}`);
       } catch (error) {
-        console.error(`  ❌ Failed to create ElevenLabs agent for ${agent.name}:`, error);
+        console.error(`  ❌ Failed for ${agent.name}:`, error);
       }
     }
 
@@ -150,10 +193,10 @@ export async function seedAgents() {
     };
 
     await redis.hset(`agent:${agent.id}`, agentData as unknown as Record<string, string>);
-    console.log(`  ✅ Seeded ${agent.name} to Redis`);
+    console.log(`  ✅ Saved ${agent.name} to Redis`);
   }
 
-  console.log(`🎉 Seeding complete! ${SEED_AGENTS.length} agents are ready.`);
+  console.log(`🎉 Seeding complete! ${SEED_AGENTS.length} agents are synchronized.`);
 }
 
 export async function getAgent(agentId: string): Promise<AgentSeed | null> {

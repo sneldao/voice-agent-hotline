@@ -131,27 +131,26 @@ export async function POST(req: NextRequest) {
     let elevenlabs_agent_id = null;
     if (conversational_enabled && process.env.ELEVENLABS_CONVERSATIONAL_ENABLED === 'true') {
       try {
-        // Map skills to tools
-        const tools: any[] = [];
+        // 1. Resolve workspace tools
+        console.log('[Agents API] Resolving workspace tools...');
+        const workspaceTools = await elevenLabsService.listTools();
 
-        // Add Native Tools
+        // Map skills to tool IDs
+        const toolIds: string[] = [];
         skills.forEach((skill: string) => {
-          if (NATIVE_TOOLS[skill as keyof typeof NATIVE_TOOLS]) {
-            tools.push(NATIVE_TOOLS[skill as keyof typeof NATIVE_TOOLS]);
+          // Map local skill name to potential workspace tool name
+          const toolMap: Record<string, string> = {
+            'research': 'search_web',
+            'book': 'book_appointment',
+            'order': 'create_order',
+            'schedule': 'set_reminder'
+          };
+
+          const toolName = toolMap[skill] || skill;
+          const tool = workspaceTools.find((t: any) => t.name === toolName);
+          if (tool) {
+            toolIds.push(tool.tool_id);
           }
-        });
-
-        // Add Composio Tools (as descriptions for LLM to know it can call them)
-        const composioTools = skills.flatMap((skill: string) =>
-          composioService.getToolsForSkill(skill)
-        );
-
-        composioTools.forEach((slug: string) => {
-          tools.push({
-            name: slug.toLowerCase(),
-            description: `Execute ${slug} action`,
-            parameters: { type: 'object', properties: { query: { type: 'string' } } }
-          });
         });
 
         const agentConfig = {
@@ -160,14 +159,13 @@ export async function POST(req: NextRequest) {
           voice_id,
           model: 'gpt-4',
           language: 'en',
-          tools: tools,
-          webhook_url: `${process.env.NEXT_PUBLIC_WEBHOOK_URL}/api/webhooks/elevenlabs`,
+          tool_ids: toolIds,
         };
 
         const result = await elevenLabsService.createAgent(agentConfig);
         elevenlabs_agent_id = result.agent_id;
 
-        console.log('[Agents API] Created ElevenLabs agent with tools:', elevenlabs_agent_id, tools.map(t => t.name));
+        console.log('[Agents API] Created ElevenLabs agent with tool_ids:', elevenlabs_agent_id, toolIds);
       } catch (error: any) {
         console.error('[Agents API] ElevenLabs creation failed:', error);
       }
