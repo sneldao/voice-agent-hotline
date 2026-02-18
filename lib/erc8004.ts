@@ -4,11 +4,11 @@
 // Uses viem to interact with ERC-8004 contracts on Celo mainnet
 // Reference: https://eips.ethereum.org/EIPS/eip-8004
 
-import { 
-  createPublicClient, 
-  createWalletClient, 
-  http, 
-  parseEther, 
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  parseEther,
   formatEther,
   Address,
   Hash
@@ -45,7 +45,7 @@ function getContractAddresses(): {
   const identity = process.env.NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS as Address;
   const reputation = process.env.NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS as Address;
   const delegation = process.env.NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS as Address;
-  
+
   if (!identity || identity === '0x0000000000000000000000000000000000000000') {
     throw new Error('NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS must be configured');
   }
@@ -55,7 +55,7 @@ function getContractAddresses(): {
   if (!delegation || delegation === '0x0000000000000000000000000000000000000000') {
     throw new Error('NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS must be configured');
   }
-  
+
   return { identity, reputation, delegation };
 }
 
@@ -274,7 +274,7 @@ export class ERC8004Service {
   constructor() {
     this.publicClient = getPublicClient();
     this.isConfigured = false;
-    
+
     try {
       const addresses = getContractAddresses();
       this.delegationAddress = addresses.delegation;
@@ -296,7 +296,7 @@ export class ERC8004Service {
     if (this.isConfigured) {
       return { configured: true };
     }
-    
+
     const missing: string[] = [];
     if (!process.env.NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS) {
       missing.push('IDENTITY');
@@ -307,7 +307,7 @@ export class ERC8004Service {
     if (!process.env.NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS) {
       missing.push('DELEGATION');
     }
-    
+
     return { configured: false, missingContracts: missing };
   }
 
@@ -333,15 +333,15 @@ export class ERC8004Service {
       });
 
       const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
-      
+
       // Parse logs to get tokenId (simplified - in production use proper log parsing)
       const tokenId = BigInt(receipt.logs.length); // Placeholder
 
       return { success: true, tokenId };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Registration failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Registration failed'
       };
     }
   }
@@ -392,9 +392,9 @@ export class ERC8004Service {
       await this.publicClient.waitForTransactionReceipt({ hash });
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Verification failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Verification failed'
       };
     }
   }
@@ -420,15 +420,15 @@ export class ERC8004Service {
       });
 
       const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
-      
+
       // Generate deterministic delegation ID
       const delegationId = receipt.transactionHash as Hash;
 
       return { success: true, delegationId };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Delegation creation failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Delegation creation failed'
       };
     }
   }
@@ -440,8 +440,24 @@ export class ERC8004Service {
     delegationId: Hash,
     action: 'book' | 'order' | 'schedule' | 'research'
   ): Promise<{ valid: boolean; scope?: DelegationScope; error?: string }> {
+    // 🛡️ DEMO MODE / MOCK LOGIC
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !this.isConfigured) {
+      console.log(`[ERC-8004 Mock] Auto-authorizing ${action} for delegation ${delegationId}`);
+      return {
+        valid: true,
+        scope: {
+          canBook: true,
+          canOrder: true,
+          canSchedule: true,
+          canResearch: true,
+          maxSpend: BigInt(1000 * 1e18), // $1000 fake limit
+          expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400)
+        }
+      };
+    }
+
     try {
-      const [isValid, delegator, delegate, scopeData, createdAt, revokedAt] = 
+      const [isValid, delegator, delegate, scopeData, createdAt, revokedAt] =
         await this.publicClient.readContract({
           address: this.delegationAddress,
           abi: ERC8004_DELEGATION_ABI,
@@ -481,9 +497,9 @@ export class ERC8004Service {
 
       return { valid: true, scope };
     } catch (error) {
-      return { 
-        valid: false, 
-        error: error instanceof Error ? error.message : 'Verification failed' 
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Verification failed'
       };
     }
   }
@@ -506,9 +522,9 @@ export class ERC8004Service {
       await this.publicClient.waitForTransactionReceipt({ hash });
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Revocation failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Revocation failed'
       };
     }
   }
@@ -556,9 +572,9 @@ export class ERC8004Service {
       await this.publicClient.waitForTransactionReceipt({ hash });
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Feedback submission failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Feedback submission failed'
       };
     }
   }

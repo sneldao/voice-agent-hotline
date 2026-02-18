@@ -12,7 +12,7 @@ import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { useOnboarding } from '@/lib/useOnboarding';
 import { ActiveCall } from '@/components/ActiveCall';
 import { Onboarding } from '@/components/Onboarding';
-import { SmartAgentSearch } from '@/components/SmartAgentSearch';
+import { SmartAgentFinder } from '@/components/SmartAgentFinder';
 import { ShareModal } from '@/components/ShareModal';
 import { ExportModal } from '@/components/ExportModal';
 
@@ -31,7 +31,7 @@ export default function Home() {
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [inCall, setInCall] = useState(false);
   const [callId, setCallId] = useState<string | null>(null);
-  const [showSmartSearch, setShowSmartSearch] = useState(false);
+  const [showSmartFinder, setShowSmartFinder] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [userBalance, setUserBalance] = useState(0);
@@ -73,9 +73,6 @@ export default function Home() {
         if (inCall) {
           endCall();
           announce('Call ended');
-        } else if (showSmartSearch) {
-          setShowSmartSearch(false);
-          announce('Smart search closed');
         } else if (selectedAgent) {
           setSelectedAgent(null);
           announce('Agent details closed');
@@ -85,16 +82,16 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inCall, showSmartSearch, selectedAgent]);
+  }, [inCall, selectedAgent]);
 
   // Focus management when modals open/close
   useEffect(() => {
-    if (selectedAgent || showSmartSearch) {
+    if (selectedAgent) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-  }, [selectedAgent, showSmartSearch]);
+  }, [selectedAgent]);
 
   const startCall = useCallback(async () => {
     if (!selectedAgent) return;
@@ -272,7 +269,8 @@ export default function Home() {
                 onCategoryChange={setSelectedCategory}
                 onCall={startCall}
                 onRefresh={refetchAgents}
-                onOpenSmartSearch={() => setShowSmartSearch(true)}
+                showSmartFinder={showSmartFinder}
+                onToggleSmartFinder={() => setShowSmartFinder(!showSmartFinder)}
               />
             )}
             {activeTab === 'calls' && (
@@ -309,19 +307,6 @@ export default function Home() {
           onTabChange={(t) => setActiveTab(t as Tab)}
         />
       )}
-
-      {/* Smart Agent Search */}
-      <SmartAgentSearch
-        availableAgents={agents.map(a => a.id)}
-        onSelectAgent={(agentId) => {
-          const agent = agents.find(a => a.id === agentId);
-          if (agent) {
-            setSelectedAgent(agent);
-            setShowSmartSearch(false);
-          }
-        }}
-        onClose={() => setShowSmartSearch(false)}
-      />
     </div>
   );
 }
@@ -341,7 +326,8 @@ function DiscoverTab({
   onCategoryChange,
   onCall,
   onRefresh,
-  onOpenSmartSearch,
+  showSmartFinder,
+  onToggleSmartFinder,
 }: {
   agents: any[];
   isLoading: boolean;
@@ -354,7 +340,8 @@ function DiscoverTab({
   onCategoryChange: (c: string) => void;
   onCall: () => void;
   onRefresh: () => Promise<void>;
-  onOpenSmartSearch: () => void;
+  showSmartFinder: boolean;
+  onToggleSmartFinder: () => void;
 }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -396,33 +383,37 @@ function DiscoverTab({
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="p-4 space-y-5">
-        {/* Smart Search Button */}
-        <button
-          onClick={onOpenSmartSearch}
-          className="w-full p-4 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl text-left hover:border-cyan-500/50 transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-cyan-400" />
+        {/* Smart Agent Finder - Inline */}
+        {showSmartFinder ? (
+          <SmartAgentFinder
+            availableAgents={agents.map(a => a.id)}
+            onSelectAgent={(agentId) => {
+              const agent = agents.find(a => a.id === agentId);
+              if (agent) {
+                onSelect(agent);
+              }
+            }}
+            onMinimize={onToggleSmartFinder}
+          />
+        ) : (
+          <button
+            onClick={onToggleSmartFinder}
+            className="w-full p-4 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-xl text-left hover:border-cyan-500/50 transition-all group flex items-center gap-3"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
               <p className="font-medium text-white group-hover:text-cyan-400 transition-colors">
-                Describe what you need help with
+                Smart Agent Finder
               </p>
               <p className="text-sm text-gray-400">
-                We will match you with the best agent
+                AI-powered agent matching
               </p>
             </div>
             <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors" />
-          </div>
-        </button>
-
-        {/* Or divider */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1 h-px bg-gray-800" />
-          <span className="text-xs text-gray-500">or browse</span>
-          <div className="flex-1 h-px bg-gray-800" />
-        </div>
+          </button>
+        )}
 
         {/* Search with refresh */}
         <div className="flex gap-2">
@@ -430,7 +421,7 @@ function DiscoverTab({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search agents..."
+              placeholder="Or search agents manually..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
