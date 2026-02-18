@@ -21,6 +21,8 @@ import { useMiniPay } from '@/lib/minipay';
 import { WalletConnectGate } from '@/components/WalletConnectGate';
 import { LowBalanceWarning } from '@/components/LowBalanceWarning';
 import { Tooltip } from '@/components/Tooltip';
+import { AgentCardSkeleton, CallHistorySkeleton, ProfileSkeleton } from '@/components/Skeletons';
+import { EmptyState } from '@/components/EmptyState';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -47,6 +49,7 @@ export default function Home() {
   const [showWalletGate, setShowWalletGate] = useState(false);
   const [showLowBalance, setShowLowBalance] = useState(false);
   const [requiredBalance, setRequiredBalance] = useState(0);
+  const [isConnectingCall, setIsConnectingCall] = useState(false);
   const mainContentRef = useRef<HTMLElement>(null);
 
   // Get wallet connection state
@@ -166,23 +169,36 @@ export default function Home() {
       return;
     }
 
-    const newCallId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    setCallId(newCallId);
-    setInCall(true);
+    // Start connecting to call
+    setIsConnectingCall(true);
 
-    // Start voice call
-    const success = await startVoiceCall({
-      agentId: selectedAgent.id,
-      callId: newCallId,
-      userId: address!,
-    });
+    try {
+      const newCallId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      setCallId(newCallId);
 
-    if (!success) {
-      showError('Failed to start call. Please try again.');
-      setInCall(false);
-      setCallId(null);
+      // Start voice call
+      const success = await startVoiceCall({
+        agentId: selectedAgent.id,
+        callId: newCallId,
+        userId: address!,
+      });
+
+      if (!success) {
+        showError('Failed to start call. Please try again.');
+        setIsConnectingCall(false);
+        return;
+      }
+
+      setInCall(true);
+      
+      // Success feedback
+      showSuccess(`Connected to ${selectedAgent.name}! First minute free.`);
+      announce(`Connected to ${selectedAgent.name}. First minute free.`);
+    } catch (error) {
+      showError('Failed to connect. Please try again.');
+      setIsConnectingCall(false);
     }
-  }, [selectedAgent, isWebRTCSupported, micPermissions, connected, userBalance, address, startVoiceCall]);
+  }, [selectedAgent, isWebRTCSupported, micPermissions, requestMicrophonePermission, connected, userBalance, startVoiceCall, address]);
 
   const endCall = useCallback(async () => {
     endVoiceCall();
@@ -440,25 +456,45 @@ function DiscoverTab({
 
   if (isLoading) {
     return (
-      <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-500 mb-4" />
-        <p className="text-gray-400">Loading agents...</p>
+      <div className="p-4 space-y-4">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <AgentCardSkeleton key={i} />
+        ))}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
-        <AlertCircle className="w-8 h-8 text-red-500 mb-4" />
-        <p className="text-red-400 text-center mb-4">{error}</p>
-        <button
-          onClick={handleRefresh}
-          className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-400 transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
+      <EmptyState
+        type="agents"
+        title="Failed to load agents"
+        description={error}
+        actionLabel="Try Again"
+        onAction={handleRefresh}
+      />
+    );
+  }
+
+  if (hasNoResults) {
+    return (
+      <EmptyState
+        type="agents"
+        title="No agents available"
+        description="Check back later for new AI agents"
+      />
+    );
+  }
+
+  if (hasNoSearchResults) {
+    return (
+      <EmptyState
+        type="search"
+        title="No agents found"
+        description={`No results for "${searchQuery}"`}
+        actionLabel="Clear Search"
+        onAction={() => onSearchChange('')}
+      />
     );
   }
 
@@ -655,65 +691,98 @@ const AgentCard = React.memo(function AgentCard({
       interactive
       variant={selected ? 'gradient' : 'default'}
       className={`
-        flex items-center gap-4 p-4
-        ${selected ? 'border-cyan-500/50' : ''}
+        group relative overflow-hidden p-4
+        ${selected ? 'border-cyan-500/50 bg-gradient-to-br from-cyan-500/10 to-blue-500/10' : 'hover:border-gray-700/50'}
+        transition-all duration-200
       `}
       onClick={onClick}
     >
-      <Avatar size="lg" online={agent.online}>
-        {agent.avatar}
-      </Avatar>
+      {/* Online indicator gradient for selected card */}
+      {selected && (
+        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-transparent rounded-bl-full" />
+      )}
 
-      <div className="flex-1 text-left min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-semibold truncate">{agent.name}</span>
+      <div className="flex items-start gap-4 relative">
+        {/* Avatar with improved presence */}
+        <div className="relative flex-shrink-0">
+          <Avatar size="lg" online={agent.online}>
+            {agent.avatar}
+          </Avatar>
           {agent.online && (
-            <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-          )}
-          {agent.verified && (
-            <Badge variant="info" size="sm">✓ Verified</Badge>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full animate-pulse" />
           )}
         </div>
-        <p className="text-sm text-gray-400 truncate">{agent.bio || agent.specialty}</p>
 
-        {/* Visual Star Rating */}
-        <div className="flex items-center gap-2 mt-2">
-          <div className="flex items-center gap-0.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Star
-                key={i}
-                className={`w-3 h-3 ${
-                  i < fullStars
-                    ? 'text-yellow-400 fill-yellow-400'
-                    : i === fullStars && hasHalfStar
-                    ? 'text-yellow-400 fill-yellow-400/50'
-                    : 'text-gray-600'
-                }`}
-              />
-            ))}
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          {/* Name and badges */}
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="font-bold text-white truncate max-w-[180px]">{agent.name}</span>
+            {agent.verified && (
+              <Badge variant="info" size="sm" className="flex-shrink-0">✓ Verified</Badge>
+            )}
           </div>
-          <span className="text-xs text-gray-400">
-            {rating.toFixed(1)} ({agent.totalRatings || 0})
-          </span>
+          
+          {/* Specialty - improved readability */}
+          <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed mb-2.5">
+            {agent.bio || agent.specialty}
+          </p>
+
+          {/* Rating with better visual weight */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star
+                  key={i}
+                  className={`w-4 h-4 ${
+                    i < fullStars
+                      ? 'text-yellow-400 fill-yellow-400'
+                      : i === fullStars && hasHalfStar
+                      ? 'text-yellow-400 fill-yellow-400/50'
+                      : 'text-gray-600'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-sm font-medium text-gray-300">
+              {rating.toFixed(1)}
+            </span>
+            <span className="text-xs text-gray-500">
+              ({agent.totalRatings || 0})
+            </span>
+          </div>
+
+          {/* Stats pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {agent.totalCalls && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-800/50 text-xs text-gray-400">
+                <Phone className="w-3 h-3" />
+                {agent.totalCalls} calls
+              </span>
+            )}
+            {agent.category && (
+              <Badge variant="default" size="sm">{agent.category}</Badge>
+            )}
+          </div>
         </div>
 
-        {/* Additional Stats */}
-        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-          {agent.totalCalls && (
-            <span>{agent.totalCalls} calls</span>
-          )}
-          {agent.category && (
-            <Badge variant="default" size="sm">{agent.category}</Badge>
-          )}
+        {/* Rate and CTA */}
+        <div className="text-right flex-shrink-0">
+          <div className="text-xl font-bold text-cyan-400">${agent.rate}</div>
+          <div className="text-xs text-gray-500 mb-2">/min</div>
+          <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+            agent.online 
+              ? 'bg-green-500/10 text-green-400 border border-green-500/30' 
+              : 'bg-gray-800 text-gray-500 border border-gray-700'
+          }`}>
+            {agent.online ? '● Available' : '○ Offline'}
+          </div>
         </div>
       </div>
 
-      <div className="text-right flex-shrink-0">
-        <div className="text-lg font-bold text-cyan-400">${agent.rate}</div>
-        <div className="text-xs text-gray-500">/min</div>
-        <Badge variant={agent.online ? 'success' : 'default'} size="sm" className="mt-1">
-          {agent.online ? 'Available' : 'Offline'}
-        </Badge>
+      {/* Hover effect arrow */}
+      <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ChevronRight className="w-5 h-5 text-cyan-400" />
       </div>
     </Card>
   );
@@ -891,6 +960,38 @@ function CallsHistoryTab({
       showError('Agent not available');
     }
   };
+
+  // Loading state
+  if (isLoading) {
+    return <CallHistorySkeleton />;
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <EmptyState
+        type="calls"
+        title="Failed to load calls"
+        description={error}
+      />
+    );
+  }
+
+  // Empty state
+  if (localHistory.calls.length === 0) {
+    return (
+      <EmptyState
+        type="calls"
+        title="No calls yet"
+        description="Start your first voice call with an AI agent"
+        actionLabel="Browse Agents"
+        onAction={() => {
+          const event = new CustomEvent('switch-tab', { detail: 'discover' });
+          window.dispatchEvent(event);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="p-4 space-y-5">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
-import { Mic, MicOff, Volume2, PhoneOff, Clock, Signal, AlertCircle } from 'lucide-react';
+import { Mic, MicOff, Volume2, PhoneOff, Clock, Signal, AlertCircle, Phone } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 
@@ -40,6 +40,7 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
   const [hasStarted, setHasStarted] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [savedCallId, setSavedCallId] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(true);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,6 +55,13 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
       setHasStarted(true);
     }
   }, [hasStarted, isSupported, agent.id, callId, userId, startCall]);
+
+  // Update connecting state when call is active
+  useEffect(() => {
+    if (call.isConnected || call.duration > 0) {
+      setIsConnecting(false);
+    }
+  }, [call.isConnected, call.duration]);
 
   // Haptic feedback helper — safe no-op when browser doesn't support it
   const vibrate = (pattern: number | number[]) => {
@@ -182,6 +190,28 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+      {/* Connecting Overlay */}
+      {isConnecting && (
+        <div className="absolute inset-0 z-50 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full border-4 border-cyan-500/30" />
+              <div className="absolute inset-0 rounded-full border-4 border-cyan-500 border-t-transparent animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Phone className="w-8 h-8 text-cyan-400 animate-pulse" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Connecting to {agent.name}...</h3>
+            <p className="text-sm text-gray-400">Establishing secure voice connection</p>
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
+              <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-800">
         <div className="flex items-center gap-3">
