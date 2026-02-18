@@ -20,9 +20,9 @@ module.exports = {
       // Application name
       name: 'voice-hotline-celo',
       
-      // Start with npm (uses package.json start script)
-      script: 'npm',
-      args: 'start',
+      // Start with standalone server (required for output: 'standalone')
+      // 'next start' does not work with standalone output - must use server.js directly
+      script: '.next/standalone/server.js',
       
       // Use fork mode (Next.js handles its own clustering internally)
       instances: 1,

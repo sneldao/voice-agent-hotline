@@ -204,9 +204,10 @@ export class ElevenLabsService {
 
   /**
    * Create a new conversational agent (Enhanced V1 Registry Pattern)
+   * Updated: ElevenLabs create endpoint is POST /convai/agents/create
    */
   async createAgent(config: ConversationalAgentConfig): Promise<{ agent_id: string }> {
-    const response = await fetch(`${ELEVENLABS_API_URL}/convai/agents`, {
+    const response = await fetch(`${ELEVENLABS_API_URL}/convai/agents/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -256,6 +257,7 @@ export class ElevenLabsService {
 
   /**
    * Register a persistent tool in the workspace (Proper Registry Pattern)
+   * Updated for ElevenLabs API v1 (2025): requires tool_config wrapper
    */
   async createTool(tool: AgentTool): Promise<{ tool_id: string }> {
     const response = await fetch(`${ELEVENLABS_API_URL}/convai/tools`, {
@@ -265,10 +267,17 @@ export class ElevenLabsService {
         'xi-api-key': this.apiKey,
       },
       body: JSON.stringify({
-        type: tool.type || 'webhook',
         name: tool.name,
-        description: tool.description,
-        configuration: tool.configuration,
+        tool_config: {
+          type: tool.type || 'webhook',
+          name: tool.name,
+          description: tool.description,
+          api_schema: {
+            url: tool.configuration?.url,
+            method: tool.configuration?.method || 'POST',
+            request_body_schema: tool.configuration?.parameters,
+          },
+        },
       }),
     });
 
