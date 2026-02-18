@@ -605,7 +605,7 @@ const AgentCard = React.memo(function AgentCard({
   onClick: () => void;
   selected: boolean;
 }) {
-  const rating = agent.rating || 0;
+  const rating = Number(agent.rating) || 0;
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 >= 0.5;
 
@@ -652,7 +652,7 @@ const AgentCard = React.memo(function AgentCard({
             ))}
           </div>
           <span className="text-xs text-gray-400">
-            {(rating || 0).toFixed(1)} ({agent.totalRatings || 0})
+            {rating.toFixed(1)} ({agent.totalRatings || 0})
           </span>
         </div>
 
@@ -717,7 +717,7 @@ function AgentDetailModal({
         <div className="flex items-center justify-center gap-6 mt-4">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 font-bold text-white">
-              <span>⭐</span> {(agent.rating ?? 0).toFixed(1)}
+              <span>⭐</span> {(Number(agent.rating) || 0).toFixed(1)}
             </div>
             <div className="text-xs text-white/60">{agent.totalRatings ?? 0} reviews</div>
           </div>
