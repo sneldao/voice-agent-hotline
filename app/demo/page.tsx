@@ -151,7 +151,7 @@ export default function VoiceAgentDemo() {
             <h3>{personality.name}</h3>
             <p className="specialty">{personality.specialty}</p>
             <div className="agent-meta">
-              <span className="rating">⭐ {(personality.rating || 0).toFixed(2)}</span>
+              <span className="rating">⭐ {(Number(personality.rating) || 0).toFixed(2)}</span>
               <span className="price">${personality.pricePerMinute}/min</span>
             </div>
             <p className="style">{personality.speakingStyle}</p>

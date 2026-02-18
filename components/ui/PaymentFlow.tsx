@@ -117,12 +117,12 @@ export function PaymentFlow({
 
   // Per-second billing display
   const getPerSecondRate = () => {
-    const rate = state.perSecondRate;
+    const rate = Number(state.perSecondRate) || 0;
     return `$${(rate / 100).toFixed(4)}/sec`;
   };
 
   const getPerMinuteRate = () => {
-    const rate = perMinuteRate;
+    const rate = Number(perMinuteRate) || 0;
     return `$${(rate / 100).toFixed(2)}/min`;
   };
 
