@@ -9,9 +9,11 @@ export function useUserBalance(address?: string | null) {
     address ? `/api/users/${address}` : null,
     fetcher,
     {
-      refreshInterval: 30000, // Refresh every 30 seconds
-      revalidateOnFocus: true,
-      dedupingInterval: 5000,
+      refreshInterval: 30000, // 30 seconds
+      revalidateOnFocus: false, // Don't revalidate on focus (saves requests)
+      dedupingInterval: 10000, // 10 seconds deduplication
+      staleTime: 5000, // Consider data fresh for 5 seconds
+      keepPreviousData: true, // Show previous data while loading
     }
   );
 
@@ -25,9 +27,11 @@ export function useUserBalance(address?: string | null) {
 
 export function useAgents() {
   const { data, error, isLoading, mutate } = useSWR('/api/agents?capability=all', fetcher, {
-    refreshInterval: 60000,
+    refreshInterval: 60000, // 60 seconds
     revalidateOnFocus: false,
     dedupingInterval: 10000,
+    staleTime: 10000, // 10 seconds fresh
+    keepPreviousData: true,
   });
 
   return {

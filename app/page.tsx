@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, Suspense } from 'react';
+import React from 'react';
 import { ToastProvider, showSuccess, showError } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContext';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
@@ -12,10 +13,12 @@ import { Onboarding } from '@/components/Onboarding';
 import { WalletConnectGate } from '@/components/WalletConnectGate';
 import { LowBalanceWarning } from '@/components/LowBalanceWarning';
 import { Header } from '@/components/Header';
-import { DiscoverTab } from '@/components/DiscoverTab';
-import { CallsHistoryTab } from '@/components/CallsHistoryTab';
-import { ProfileTab } from '@/components/ProfileTab';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Lazy load tabs for code splitting
+const DiscoverTab = React.lazy(() => import('@/components/DiscoverTab').then(m => ({ default: m.DiscoverTab })));
+const CallsHistoryTab = React.lazy(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
+const ProfileTab = React.lazy(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
 
 const MIN_BALANCE_FOR_CALL = 0.50;
 
@@ -136,39 +139,45 @@ export default function Home() {
           ) : (
             <>
               {activeTab === 'discover' && (
-                <DiscoverTab
-                  agents={filteredAgents}
-                  isLoading={isLoadingAgents}
-                  error={agentsError}
-                  onSelect={setSelectedAgent}
-                  selectedAgent={selectedAgent}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  selectedCategory={selectedCategory}
-                  onCategoryChange={setSelectedCategory}
-                  onCall={startCall}
-                  onRefresh={mutateAgents}
-                  showSmartFinder={showSmartFinder}
-                  onToggleSmartFinder={() => setShowSmartFinder(!showSmartFinder)}
-                />
+                <Suspense fallback={<TabLoading />}>
+                  <DiscoverTab
+                    agents={filteredAgents}
+                    isLoading={isLoadingAgents}
+                    error={agentsError}
+                    onSelect={setSelectedAgent}
+                    selectedAgent={selectedAgent}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={setSelectedCategory}
+                    onCall={startCall}
+                    onRefresh={mutateAgents}
+                    showSmartFinder={showSmartFinder}
+                    onToggleSmartFinder={() => setShowSmartFinder(!showSmartFinder)}
+                  />
+                </Suspense>
               )}
               {activeTab === 'calls' && (
-                <CallsHistoryTab
-                  localHistory={localCallHistory}
-                  serverHistory={[]}
-                  isLoading={false}
-                  error={null}
-                  onRefresh={async () => {}}
-                  agents={agents}
-                  onSelectAgent={setSelectedAgent}
-                />
+                <Suspense fallback={<TabLoading />}>
+                  <CallsHistoryTab
+                    localHistory={localCallHistory}
+                    serverHistory={[]}
+                    isLoading={false}
+                    error={null}
+                    onRefresh={async () => {}}
+                    agents={agents}
+                    onSelectAgent={setSelectedAgent}
+                  />
+                </Suspense>
               )}
               {activeTab === 'profile' && (
-                <ProfileTab
-                  balance={userBalance}
-                  address={address}
-                  isLoading={isLoadingBalance}
-                />
+                <Suspense fallback={<TabLoading />}>
+                  <ProfileTab
+                    balance={userBalance}
+                    address={address}
+                    isLoading={isLoadingBalance}
+                  />
+                </Suspense>
               )}
             </>
           )}
@@ -195,5 +204,14 @@ export default function Home() {
         </nav>
       </div>
     </ErrorBoundary>
+  );
+}
+
+function TabLoading() {
+  return (
+    <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
+      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-gray-400 text-sm mt-4">Loading...</p>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { ArrowRight, Search, Sparkles, Star } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
@@ -48,6 +48,7 @@ export function DiscoverTab({
   onToggleSmartFinder,
 }: DiscoverTabProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20); // Pagination
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -60,6 +61,7 @@ export function DiscoverTab({
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
   const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
 
+  // Memoize filtered agents with dependency tracking
   const filteredAgents = useMemo(() => {
     return agents.filter(agent => {
       const matchesSearch = !searchQuery || 
@@ -69,6 +71,19 @@ export function DiscoverTab({
       return matchesSearch && matchesCategory;
     });
   }, [agents, searchQuery, selectedCategory]);
+
+  // Reset pagination when filters change
+  useMemo(() => {
+    setVisibleCount(20);
+  }, [searchQuery, selectedCategory]);
+
+  const onlineAgents = useMemo(() => filteredAgents.filter(a => a.online), [filteredAgents]);
+  const visibleAgents = filteredAgents.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredAgents.length;
+
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount(prev => prev + 20);
+  }, []);
 
   if (isLoading) {
     return (
@@ -187,14 +202,14 @@ export function DiscoverTab({
         {/* Content */}
         {!hasNoResults && !hasNoSearchResults && (
           <>
-            {/* Featured Agents */}
-            {filteredAgents.filter(a => a.online).length > 0 && (
+            {/* Featured Agents - show max 10 */}
+            {onlineAgents.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
                   <Star className="w-4 h-4 text-yellow-400" /> Featured
                 </h2>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
-                  {filteredAgents.filter(a => a.online).map(agent => (
+                  {onlineAgents.slice(0, 10).map(agent => (
                     <FeaturedCard
                       key={agent.id}
                       agent={agent}
@@ -206,13 +221,14 @@ export function DiscoverTab({
               </section>
             )}
 
-            {/* All Agents */}
+            {/* All Agents - Paginated */}
             <section>
               <h2 className="text-sm font-semibold text-gray-400 mb-3">
                 {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
+                <span className="ml-2 text-xs text-gray-500">({filteredAgents.length})</span>
               </h2>
               <div className="space-y-3">
-                {filteredAgents.map(agent => (
+                {visibleAgents.map(agent => (
                   <AgentCard
                     key={agent.id}
                     agent={agent}
@@ -221,6 +237,14 @@ export function DiscoverTab({
                   />
                 ))}
               </div>
+              {hasMore && (
+                <button
+                  onClick={handleLoadMore}
+                  className="w-full mt-4 py-3 text-sm font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl transition-colors"
+                >
+                  Load More ({filteredAgents.length - visibleCount} remaining)
+                </button>
+              )}
             </section>
           </>
         )}
