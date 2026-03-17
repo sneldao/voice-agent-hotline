@@ -90,19 +90,19 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
 
       <style jsx>{`
         .rate-limit-container {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(59, 130, 246, 0.1));
-          border: 1px solid rgba(34, 197, 94, 0.3);
+          background: rgba(2, 6, 23, 0.55);
+          border: 1px solid rgba(148, 163, 184, 0.25);
           border-radius: 16px;
           padding: 24px;
           margin: 20px 0;
           transition: all 0.3s;
         }
         .rate-limit-container.warning {
-          background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(245, 158, 11, 0.1));
+          background: rgba(251, 191, 36, 0.12);
           border-color: rgba(234, 179, 8, 0.5);
         }
         .rate-limit-container.error {
-          background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(244, 63, 94, 0.1));
+          background: rgba(248, 113, 113, 0.12);
           border-color: rgba(239, 68, 68, 0.5);
         }
         .rate-limit-header {
@@ -117,12 +117,13 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
         .rate-limit-header h3 {
           margin: 0;
           font-size: 18px;
+          color: #f8fafc;
         }
         .rate-limit-header .badge {
           margin-left: auto;
           padding: 4px 10px;
-          background: rgba(34, 197, 94, 0.2);
-          color: #4ade80;
+          background: rgba(34, 211, 238, 0.2);
+          color: #7dd3fc;
           border-radius: 20px;
           font-size: 11px;
         }
@@ -135,22 +136,22 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
         .info-row {
           text-align: center;
           padding: 12px;
-          background: rgba(0, 0, 0, 0.2);
+          background: rgba(15, 23, 42, 0.65);
           border-radius: 10px;
         }
         .info-label {
           display: block;
           font-size: 11px;
-          color: #888;
+          color: #94a3b8;
           margin-bottom: 4px;
         }
         .info-value {
           font-size: 18px;
           font-weight: 700;
-          color: #4ade80;
+          color: #7dd3fc;
         }
         .usage-display {
-          background: rgba(0, 0, 0, 0.2);
+          background: rgba(15, 23, 42, 0.65);
           border-radius: 12px;
           padding: 16px;
           margin-bottom: 16px;
@@ -162,25 +163,25 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
         }
         .usage-label {
           font-size: 14px;
-          color: #888;
+          color: #94a3b8;
         }
         .usage-value {
           font-weight: 600;
-          color: #4ade80;
+          color: #7dd3fc;
         }
         .usage-value.error {
           color: #ef4444;
         }
         .usage-bar {
           height: 8px;
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(148, 163, 184, 0.2);
           border-radius: 4px;
           overflow: hidden;
           margin-bottom: 10px;
         }
         .usage-fill {
           height: 100%;
-          background: linear-gradient(90deg, #22c554, #3b82f6);
+          background: linear-gradient(90deg, #22d3ee, #0ea5e9);
           border-radius: 4px;
           transition: width 0.3s ease;
         }
@@ -213,7 +214,7 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
           align-items: center;
           gap: 10px;
           padding: 12px;
-          background: rgba(34, 197, 94, 0.1);
+          background: rgba(34, 211, 238, 0.1);
           border-radius: 10px;
           font-size: 13px;
         }
@@ -223,8 +224,8 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
         .status-badge {
           margin-left: auto;
           padding: 4px 10px;
-          background: #22c554;
-          color: white;
+          background: #22d3ee;
+          color: #0b1117;
           border-radius: 20px;
           font-size: 11px;
           font-weight: 600;

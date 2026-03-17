@@ -130,7 +130,15 @@ export default function Home() {
         <main id="main-content" className="max-w-md mx-auto pb-28" role="main">
           {inCall && selectedAgent && callId ? (
             <ActiveCall
-              agent={{ id: selectedAgent.id, name: selectedAgent.name, specialty: selectedAgent.specialty, avatar: selectedAgent.avatar, rate: selectedAgent.rate, color: selectedAgent.color }}
+              agent={{
+                id: selectedAgent.id,
+                name: selectedAgent.name,
+                specialty: selectedAgent.specialty,
+                avatar: selectedAgent.avatar,
+                rate: selectedAgent.rate,
+                color: selectedAgent.color,
+                walletAddress: selectedAgent.wallet_address || selectedAgent.walletAddress,
+              }}
               callId={callId}
               userId={address || 'anonymous'}
               onEnd={endCall}

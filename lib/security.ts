@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { validateAddress } from './address'
 
 // Rate limiter using in-memory store (use Redis in production)
 const rateLimits = new Map<string, { count: number; resetTime: number }>()
@@ -96,10 +97,6 @@ export function withRateLimit(
 /**
  * Input validation
  */
-export function validateAddress(address: string): boolean {
-  return /^0x[a-fA-F0-9]{40}$/.test(address)
-}
-
 export function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }

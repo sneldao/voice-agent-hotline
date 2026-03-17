@@ -193,8 +193,8 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
 
       <style jsx>{`
         .agent-chat-container {
-          background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1));
-          border: 1px solid rgba(139, 92, 246, 0.3);
+          background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(16, 185, 129, 0.12));
+          border: 1px solid rgba(14, 165, 233, 0.35);
           border-radius: 16px;
           padding: 24px;
           margin: 20px 0;
@@ -215,13 +215,13 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
         .chat-header .badge {
           margin-left: auto;
           padding: 4px 10px;
-          background: rgba(139, 92, 246, 0.2);
-          color: #a78bfa;
+          background: rgba(14, 165, 233, 0.2);
+          color: #7dd3fc;
           border-radius: 20px;
           font-size: 11px;
         }
         .chat-description {
-          color: #888;
+          color: #94a3b8;
           font-size: 14px;
           margin: 0 0 20px 0;
         }
@@ -236,19 +236,19 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
           align-items: center;
           gap: 12px;
           padding: 12px;
-          background: rgba(0, 0, 0, 0.2);
+          background: rgba(15, 23, 42, 0.65);
           border-radius: 12px;
           border: 2px solid transparent;
           transition: all 0.3s;
         }
         .agent-status.active {
-          border-color: #06b6d4;
-          background: rgba(6, 182, 212, 0.1);
+          border-color: #22d3ee;
+          background: rgba(14, 165, 233, 0.15);
         }
         .agent-avatar {
           width: 44px;
           height: 44px;
-          background: linear-gradient(135deg, #06b6d4, #3b82f6);
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -265,7 +265,7 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
         }
         .agent-specialty {
           font-size: 12px;
-          color: #888;
+          color: #94a3b8;
         }
         .speaking-indicator {
           animation: pulse 1s infinite;
@@ -275,7 +275,7 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
           50% { opacity: 0.5; }
         }
         .chat-messages {
-          background: rgba(0, 0, 0, 0.2);
+          background: rgba(15, 23, 42, 0.65);
           border-radius: 12px;
           padding: 16px;
           min-height: 200px;
@@ -289,7 +289,7 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
           align-items: center;
           justify-content: center;
           height: 200px;
-          color: #666;
+          color: #64748b;
         }
         .empty-icon {
           font-size: 48px;
@@ -315,20 +315,21 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
           align-items: center;
           justify-content: center;
           font-size: 16px;
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(148, 163, 184, 0.2);
         }
         .message.right .message-avatar {
-          background: rgba(6, 182, 212, 0.3);
+          background: rgba(14, 165, 233, 0.3);
         }
         .message-bubble {
           max-width: 70%;
           padding: 10px 14px;
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(15, 23, 42, 0.7);
           border-radius: 16px;
           border-top-left-radius: 4px;
+          color: #e2e8f0;
         }
         .message.right .message-bubble {
-          background: rgba(6, 182, 212, 0.2);
+          background: rgba(14, 165, 233, 0.2);
           border-radius: 16px;
           border-top-right-radius: 4px;
         }
@@ -352,12 +353,12 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
           transition: all 0.2s;
         }
         .control-btn.primary {
-          background: linear-gradient(135deg, #8b5cf6, #06b6d4);
-          color: white;
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+          color: #0b1117;
         }
         .control-btn.primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
         }
         .control-btn.secondary {
           background: rgba(255, 255, 255, 0.1);
@@ -372,9 +373,9 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
           align-items: center;
           gap: 12px;
           padding: 12px;
-          background: rgba(139, 92, 246, 0.1);
+          background: rgba(14, 165, 233, 0.1);
           border-radius: 10px;
-          border: 1px dashed rgba(139, 92, 246, 0.3);
+          border: 1px dashed rgba(14, 165, 233, 0.3);
         }
         .info-icon {
           font-size: 24px;
@@ -386,11 +387,11 @@ export function AgentToAgentChat({ agents }: AgentChatProps) {
           display: block;
           font-weight: 600;
           font-size: 13px;
-          color: #a78bfa;
+          color: #7dd3fc;
         }
         .info-desc {
           font-size: 12px;
-          color: #888;
+          color: #94a3b8;
         }
       `}</style>
     </div>

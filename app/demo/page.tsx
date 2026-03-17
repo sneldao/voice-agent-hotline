@@ -1,42 +1,74 @@
 // ============================================
-// Enhanced Voice Agent Demo Page v2
+// Voice Agent Hotline Experience
 // ============================================
-// Improvements: Voice preview, real-time transcription, animated payments,
-// call estimator, agent comparison
 
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useAgentVoice } from '@/lib/useAgentVoice';
-import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import { AGENT_PERSONALITIES } from '@/lib/agent-voice';
-import { AgentPersonality } from '@/lib/agent-voice';
 import { StreamingPaymentModal } from '@/components/StreamingPaymentModal';
 import { AnimatedPaymentFlow } from '@/components/AnimatedPaymentFlow';
 import { AgentComparison } from '@/components/AgentComparison';
 import { CallEstimator } from '@/components/CallEstimator';
 import { AgentToAgentChat } from '@/components/AgentToAgentChat';
 import { RateLimitDemo } from '@/components/RateLimitDisplay';
-import { MobilePolish } from '@/components/MobilePolish';
-import { AgentSkillsPanel } from '@/components/AgentSkillsPanel';
+
+const HERO_MODES = [
+  {
+    id: 'golden',
+    label: 'Golden Path',
+    description: 'Start a paid call in minutes',
+  },
+  {
+    id: 'comparison',
+    label: 'Compare Agents',
+    description: 'Side-by-side capabilities',
+  },
+  {
+    id: 'agent_chat',
+    label: 'Agent-to-Agent',
+    description: 'Delegation in action',
+  },
+  {
+    id: 'rate_limit',
+    label: 'Rate Limits',
+    description: 'Trust + abuse protection',
+  },
+] as const;
+
+const PAYMENT_MODES = [
+  {
+    id: 'x402',
+    label: 'x402 Direct',
+    description: 'Pay per call segment',
+    highlight: 'Recommended',
+  },
+  {
+    id: 'streaming',
+    label: 'Superfluid Streaming',
+    description: 'Pay per second',
+    highlight: 'Continuous',
+  },
+] as const;
 
 export default function VoiceAgentDemo() {
   const [apiKey, setApiKey] = useState('');
   const [agentId, setAgentId] = useState('maria_garcia');
   const [textInput, setTextInput] = useState('');
-  const [showComparison, setShowComparison] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState('');
+  const [heroMode, setHeroMode] = useState<(typeof HERO_MODES)[number]['id']>('golden');
+  const [paymentMode, setPaymentMode] = useState<(typeof PAYMENT_MODES)[number]['id']>('x402');
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
-  
+
   const {
     isSpeaking,
     isGenerating,
     error,
     currentResponse,
     speak,
-    stopSpeaking,
     setPersonality,
     generateGreeting,
   } = useAgentVoice(apiKey || 'demo-key', agentId);
@@ -54,9 +86,9 @@ export default function VoiceAgentDemo() {
   const startRecording = () => {
     setIsRecording(true);
     setRecordingDuration(0);
-    setTranscription('🎤 Listening...');
+    setTranscription('🎤 Listening for your request…');
     recordingInterval.current = setInterval(() => {
-      setRecordingDuration(d => d + 1);
+      setRecordingDuration((d) => d + 1);
     }, 1000);
   };
 
@@ -65,521 +97,643 @@ export default function VoiceAgentDemo() {
     if (recordingInterval.current) {
       clearInterval(recordingInterval.current);
     }
-    setTranscription('✅ Recorded 0:0' + recordingDuration + 's - "Hello, I\'d like to learn Spanish"');
+    setTranscription(`Captured ${recordingDuration}s of voice input. Ready to send.`);
   };
 
   const personality = AGENT_PERSONALITIES[agentId];
+  const platformAddress = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
+  const streamingDisabled = !platformAddress;
+
+  const renderHeroCanvas = () => {
+    if (heroMode === 'comparison') {
+      return (
+        <div className="hero-panel">
+          <div className="panel-header">
+            <h3>Compare agents in seconds</h3>
+            <p>Choose who gets the call based on price, rating, and specialty.</p>
+          </div>
+          <AgentComparison agents={Object.values(AGENT_PERSONALITIES) as any} />
+        </div>
+      );
+    }
+
+    if (heroMode === 'agent_chat') {
+      return (
+        <div className="hero-panel">
+          <div className="panel-header">
+            <h3>Delegated agents collaborating live</h3>
+            <p>ERC-8004 delegation enables agents to coordinate tasks on your behalf.</p>
+          </div>
+          <AgentToAgentChat agents={Object.values(AGENT_PERSONALITIES) as unknown as any[]} />
+        </div>
+      );
+    }
+
+    if (heroMode === 'rate_limit') {
+      return (
+        <div className="hero-panel">
+          <div className="panel-header">
+            <h3>Built-in trust & abuse protection</h3>
+            <p>Rate limiting, settlement checks, and reputation safeguards are always on.</p>
+          </div>
+          <RateLimitDemo />
+        </div>
+      );
+    }
+
+    return (
+      <div className="golden-grid" id="golden-path">
+        <div className="step-card">
+          <div className="step-header">
+            <span className="step-index">1</span>
+            <div>
+              <h3>Pick your agent</h3>
+              <p>Every agent has a verified specialty and live pricing.</p>
+            </div>
+          </div>
+          <div className="config-section">
+            <div className="config-card">
+              <div className="input-group">
+                <label>ElevenLabs API Key (optional)</label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Bring your own ElevenLabs key"
+                />
+                <span className="hint">Use the built-in preview voice if you skip this.</span>
+              </div>
+              <div className="input-group">
+                <label>Select Agent</label>
+                <select value={agentId} onChange={(e) => setAgentId(e.target.value)}>
+                  {Object.entries(AGENT_PERSONALITIES).map(([id, p]) => (
+                    <option key={id} value={id}>
+                      {p.name} — {p.specialty}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="config-card agent-card">
+              <div className="agent-avatar">
+                {personality.avatar || '👤'}
+              </div>
+              <div className="agent-details">
+                <h3>{personality.name}</h3>
+                <p className="specialty">{personality.specialty}</p>
+                <div className="agent-meta">
+                  <span className="rating">⭐ {(Number(personality.rating) || 0).toFixed(2)}</span>
+                  <span className="price">${personality.pricePerMinute}/min</span>
+                </div>
+                <p className="style">{personality.speakingStyle} voice · {personality.pace} pace</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="step-card">
+          <div className="step-header">
+            <span className="step-index">2</span>
+            <div>
+              <h3>Select payment mode</h3>
+              <p>Switch between x402 direct and Superfluid streaming.</p>
+            </div>
+          </div>
+
+          <div className="payment-modes">
+            {PAYMENT_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setPaymentMode(mode.id)}
+                className={`payment-option ${paymentMode === mode.id ? 'active' : ''}`}
+                aria-pressed={paymentMode === mode.id}
+              >
+                <div>
+                  <h4>{mode.label}</h4>
+                  <p>{mode.description}</p>
+                </div>
+                <span className="mode-tag">{mode.highlight}</span>
+              </button>
+            ))}
+          </div>
+
+          <CallEstimator pricePerMinute={personality.pricePerMinute} />
+
+          {paymentMode === 'x402' ? (
+            <AnimatedPaymentFlow agentName={personality.name} pricePerMinute={personality.pricePerMinute} />
+          ) : (
+            <div className="streaming-wrapper">
+              {streamingDisabled ? (
+                <div className="notice">
+                  <strong>Streaming requires configuration.</strong>
+                  <span>Set NEXT_PUBLIC_PLATFORM_ADDRESS to enable payouts.</span>
+                </div>
+              ) : (
+                <StreamingPaymentModal
+                  agentName={personality.name}
+                  agentAddress={platformAddress}
+                  ratePerMinute={personality.pricePerMinute}
+                  onPaymentStart={() => console.log('Streaming started')}
+                  onPaymentStop={() => console.log('Streaming stopped')}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="step-card full">
+          <div className="step-header">
+            <span className="step-index">3</span>
+            <div>
+              <h3>Speak & pay in real time</h3>
+              <p>Preview the conversation before you connect a full call.</p>
+            </div>
+          </div>
+
+          <div className="voice-section">
+            <div className="recording-area">
+              <div className="transcription-box">
+                {transcription || 'Type or record a message to preview the agent response…'}
+              </div>
+              <div className="recording-controls">
+                <button
+                  className={`record-btn ${isRecording ? 'recording' : ''}`}
+                  onClick={isRecording ? stopRecording : startRecording}
+                >
+                  {isRecording ? '⏹️ Stop' : '🎙️ Record'}
+                </button>
+                {isRecording && (
+                  <div className="recording-indicator">
+                    <span className="pulse"></span>
+                    {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="text-input-area">
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Or type your message here…"
+                rows={3}
+              />
+              <div className="button-group">
+                <button
+                  onClick={generateGreeting}
+                  disabled={isGenerating}
+                  className="secondary"
+                >
+                  {isGenerating ? '⏳…' : '👋 Generate Greeting'}
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isGenerating || !textInput.trim()}
+                  className="primary"
+                >
+                  {isGenerating ? '⏳ Generating…' : 'Send to Agent'}
+                </button>
+              </div>
+            </div>
+
+            {(currentResponse || error) && (
+              <div className={`response-card ${error ? 'error' : 'success'}`}>
+                <div className="waveform">
+                  {[...Array(20)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`bar ${isSpeaking ? 'animate' : ''}`}
+                      style={{ animationDelay: `${i * 0.05}s` }}
+                    ></div>
+                  ))}
+                </div>
+                {error ? (
+                  <p className="error-text">❌ {error}</p>
+                ) : (
+                  <div className="response-content">
+                    <p><strong>Response:</strong> {currentResponse?.text}</p>
+                    <div className="response-meta">
+                      <span>⏱️ {(currentResponse?.duration || 0).toFixed(2)}s</span>
+                      <span>🔊 {isSpeaking ? 'Playing' : 'Stopped'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="demo-container">
-      {/* Header with animated title */}
-      <div className="demo-header">
-        <div className="logo-pulse">🎙️</div>
-        <h1>VOISSS Voice Agent v2</h1>
-        <p>Next-gen AI voice marketplace with real-time payments</p>
-        <div className="live-badge">
-          <span className="pulse"></span>
-          LIVE DEMO
-        </div>
-      </div>
-
-      {/* Quick Stats Bar */}
-      <div className="stats-bar">
-        <div className="stat">
-          <span className="stat-value">4</span>
-          <span className="stat-label">Agents</span>
-        </div>
-        <div className="stat">
-          <span className="stat-value">$0.01</span>
-          <span className="stat-label">Min/min</span>
-        </div>
-        <div className="stat">
-          <span className="stat-value">99.9%</span>
-          <span className="stat-label">Uptime</span>
-        </div>
-        <div className="stat">
-          <span className="stat-value">~2s</span>
-          <span className="stat-label">Latency</span>
-        </div>
-      </div>
-
-      {/* Agent Comparison Toggle */}
-      <div className="comparison-toggle">
-        <button 
-          onClick={() => setShowComparison(!showComparison)}
-          className={showComparison ? 'active' : ''}
-        >
-          {showComparison ? '✕ Hide Comparison' : '⚖️ Compare Agents'}
-        </button>
-      </div>
-
-      {showComparison && <AgentComparison agents={(Object.values(AGENT_PERSONALITIES) as unknown as any[])} />}
-
-      {/* Agent-to-Agent Chat Demo */}
-      <AgentToAgentChat agents={Object.values(AGENT_PERSONALITIES) as unknown as any[]} />
-
-      {/* Configuration */}
-      <div className="config-section">
-        <div className="config-card">
-          <h3>⚙️ Setup</h3>
-          <div className="input-group">
-            <label>ElevenLabs API Key (optional)</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter your API key..."
-            />
-            <span className="hint">Demo mode works without key</span>
-          </div>
-          <div className="input-group">
-            <label>Select Agent</label>
-            <select value={agentId} onChange={(e) => setAgentId(e.target.value)}>
-              {Object.entries(AGENT_PERSONALITIES).map(([id, p]) => (
-                <option key={id} value={id}>{p.name} - {p.specialty}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Agent Info Card */}
-        <div className="config-card agent-card">
-          <div className="agent-avatar">
-            {personality.avatar || '👤'}
-          </div>
-          <div className="agent-details">
-            <h3>{personality.name}</h3>
-            <p className="specialty">{personality.specialty}</p>
-            <div className="agent-meta">
-              <span className="rating">⭐ {(Number(personality.rating) || 0).toFixed(2)}</span>
-              <span className="price">${personality.pricePerMinute}/min</span>
-            </div>
-            <p className="style">{personality.speakingStyle}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Call Estimator */}
-      <CallEstimator pricePerMinute={personality.pricePerMinute} />
-
-      {/* Voice Recording & Transcription */}
-      <div className="voice-section">
-        <h3>🎤 Voice Input</h3>
-        <div className="recording-area">
-          <div className="transcription-box">
-            {transcription || 'Type or speak your message...'}
-          </div>
-          <div className="recording-controls">
-            <button 
-              className={`record-btn ${isRecording ? 'recording' : ''}`}
-              onClick={isRecording ? stopRecording : startRecording}
-            >
-              {isRecording ? '⏹️ Stop' : '🎤 Record'}
+    <div className="experience-shell">
+      <section className="hero">
+        <div className="hero-intro">
+          <div className="eyebrow">Celo-native voice agents</div>
+          <h1>Voice Agent Hotline</h1>
+          <p>
+            Talk to verified AI agents. Pay per second with Celo stablecoins.
+            Build real-world actions with on-chain trust.
+          </p>
+          <div className="hero-actions">
+            <button className="primary" onClick={() => setHeroMode('golden')}>
+              Start the Golden Path
             </button>
-            {isRecording && (
-              <div className="recording-indicator">
-                <span className="pulse"></span>
-                {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-              </div>
-            )}
+            <a href="#golden-path" className="secondary">See how it works</a>
+          </div>
+          <div className="hero-chips">
+            <span>x402 payments</span>
+            <span>ERC-8004 delegation</span>
+            <span>Agent Skills framework</span>
+            <span>Superfluid streaming</span>
           </div>
         </div>
 
-        {/* Text Input */}
-        <div className="text-input-area">
-          <textarea
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            placeholder="Or type your message here..."
-            rows={3}
-          />
-          <div className="button-group">
-            <button 
-              onClick={generateGreeting} 
-              disabled={isGenerating}
-              className="secondary"
+        <div className="hero-switcher">
+          {HERO_MODES.map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => setHeroMode(mode.id)}
+              className={heroMode === mode.id ? 'active' : ''}
+              aria-pressed={heroMode === mode.id}
             >
-              {isGenerating ? '⏳...' : '👋 Say Hello'}
+              <span className="mode-label">{mode.label}</span>
+              <span className="mode-desc">{mode.description}</span>
             </button>
-            <button 
-              onClick={handleSendMessage} 
-              disabled={isGenerating || !textInput.trim()}
-              className="primary"
-            >
-              {isGenerating ? '⏳ Generating...' : '🚀 Send'}
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Response with Waveform */}
-        {(currentResponse || error) && (
-          <div className={`response-card ${error ? 'error' : 'success'}`}>
-            <div className="waveform">
-              {[...Array(20)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`bar ${isSpeaking ? 'animate' : ''}`}
-                  style={{ animationDelay: `${i * 0.05}s` }}
-                ></div>
-              ))}
-            </div>
-            {error ? (
-              <p className="error-text">❌ {error}</p>
-            ) : (
-              <div className="response-content">
-                <p><strong>Response:</strong> {currentResponse?.text}</p>
-                <div className="response-meta">
-                  <span>⏱️ {(currentResponse?.duration || 0).toFixed(2)}s</span>
-                  <span>🔊 {isSpeaking ? 'Playing' : 'Stopped'}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Animated Payment Flow */}
-      <AnimatedPaymentFlow 
-        agentName={personality.name}
-        pricePerMinute={personality.pricePerMinute}
-      />
-
-      {/* Payment Options */}
-      <div className="payment-section">
-        <h3>💰 Payment Options</h3>
-        <div className="payment-options">
-          <div className="option highlight">
-            <div className="option-header">
-              <span className="icon">⚡</span>
-              <h4>x402 Direct</h4>
-            </div>
-            <p>Pay per call segment</p>
-            <div className="option-features">
-              <span>✓ Instant</span>
-              <span>✓ No gas</span>
-              <span>✓ Secure</span>
-            </div>
-            <span className="badge available">Available</span>
-          </div>
-          <div className="option">
-            <div className="option-header">
-              <span className="icon">💧</span>
-              <h4>Superfluid</h4>
-            </div>
-            <p>Pay per second continuously</p>
-            <div className="option-features">
-              <span>✓ Continuous</span>
-              <span>✓ Streaming</span>
-              <span>✓ Cancel anytime</span>
-            </div>
-            <StreamingPaymentModal
-              agentName={personality.name}
-              agentAddress="0x1234567890123456789012345678901234567890"
-              ratePerMinute={personality.pricePerMinute}
-              onPaymentStart={() => console.log('Streaming started')}
-              onPaymentStop={() => console.log('Streaming stopped')}
-            />
-          </div>
+        <div className="hero-canvas">
+          {renderHeroCanvas()}
         </div>
-      </div>
-
-
-      {/* Rate Limiting Demo */}
-      <div className="rate-limit-section">
-        <h3>🛡️ Rate Limiting</h3>
-        <p className="section-desc">Upstash Redis with ERC-8004 rate limiting</p>
-        <RateLimitDemo />
-      </div>
-
-      {/* Mobile Polish */}
-      <MobilePolish />
-
-      {/* Agent Skills Panel */}
-      <AgentSkillsPanel />
-      {/* Integrations Status */}
-      <div className="status-section">
-        <h3>🔗 Integrations</h3>
-        <div className="status-grid">
-          <div className="status-item">
-            <span className="status-icon">✅</span>
-            <span>WebRTC Voice</span>
-          </div>
-          <div className="status-item">
-            <span className="status-icon">✅</span>
-            <span>x402 Payments</span>
-          </div>
-          <div className="status-item">
-            <span className="status-icon">✅</span>
-            <span>Superfluid</span>
-          </div>
-          <div className="status-item">
-            <span className="status-icon">✅</span>
-            <span>ElevenLabs TTS</span>
-          </div>
-          <div className="status-item">
-            <span className="status-icon">✅</span>
-            <span>ERC-8004</span>
-          </div>
-          <div className="status-item">
-            <span className="status-icon">✅</span>
-            <span>Redis Cache</span>
-          </div>
-        </div>
-      </div>
+      </section>
 
       <style jsx>{`
-        .demo-container {
-          max-width: 900px;
-          margin: 0 auto;
-          padding: 40px 20px;
-          font-family: system-ui, -apple-system, sans-serif;
-        }
-        .demo-header {
-          text-align: center;
-          margin-bottom: 30px;
+        .experience-shell {
           position: relative;
+          min-height: 100vh;
+          padding: 48px 20px 80px;
+          color: #e2e8f0;
+          background:
+            radial-gradient(60% 60% at 10% 10%, rgba(34, 211, 238, 0.18), transparent 60%),
+            radial-gradient(60% 60% at 90% 0%, rgba(251, 191, 36, 0.12), transparent 55%),
+            radial-gradient(50% 50% at 70% 80%, rgba(16, 185, 129, 0.12), transparent 60%),
+            #0b1117;
+          overflow-x: hidden;
         }
-        .logo-pulse {
-          font-size: 48px;
-          animation: pulse 2s infinite;
+        .hero {
+          max-width: 1100px;
+          margin: 0 auto;
+          display: grid;
+          gap: 32px;
         }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
+        .hero-intro {
+          display: grid;
+          gap: 16px;
+          text-align: left;
+          animation: fade-up 0.8s ease both;
         }
-        .demo-header h1 {
-          font-size: 36px;
-          margin: 10px 0;
-          background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-        .demo-header p {
-          color: #666;
-          margin: 0;
-        }
-        .live-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          margin-top: 15px;
-          padding: 6px 16px;
-          background: #e8f5e9;
-          color: #2e7d32;
-          border-radius: 20px;
+        .eyebrow {
+          text-transform: uppercase;
           font-size: 12px;
+          letter-spacing: 0.3em;
+          color: #7dd3fc;
           font-weight: 600;
         }
-        .pulse {
-          width: 8px;
-          height: 8px;
-          background: #4caf50;
-          border-radius: 50%;
-          animation: blink 1s infinite;
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        .stats-bar {
-          display: flex;
-          justify-content: center;
-          gap: 40px;
-          padding: 20px;
-          background: linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(0, 255, 136, 0.1) 100%);
-          border-radius: 12px;
-          margin-bottom: 20px;
-        }
-        .stat {
-          text-align: center;
-        }
-        .stat-value {
-          display: block;
-          font-size: 24px;
+        .hero-intro h1 {
+          font-size: clamp(2.6rem, 4vw, 3.6rem);
+          line-height: 1.05;
+          margin: 0;
           font-weight: 700;
-          color: #00d9ff;
+          color: #f8fafc;
         }
-        .stat-label {
+        .hero-intro p {
+          max-width: 680px;
+          color: #cbd5f5;
+          font-size: 1rem;
+          line-height: 1.6;
+        }
+        .hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .hero-actions button,
+        .hero-actions a {
+          padding: 12px 18px;
+          border-radius: 999px;
+          font-size: 14px;
+          font-weight: 600;
+          text-decoration: none;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .hero-actions .primary {
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+          color: #0b1117;
+          box-shadow: 0 12px 30px rgba(14, 165, 233, 0.25);
+          border: none;
+        }
+        .hero-actions .secondary {
+          border: 1px solid rgba(148, 163, 184, 0.4);
+          color: #e2e8f0;
+        }
+        .hero-actions button:hover,
+        .hero-actions a:hover {
+          transform: translateY(-1px);
+        }
+        .hero-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .hero-chips span {
+          padding: 6px 12px;
+          border-radius: 999px;
           font-size: 12px;
-          color: #666;
+          background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(148, 163, 184, 0.3);
+          color: #cbd5f5;
         }
-        .comparison-toggle {
-          text-align: center;
-          margin-bottom: 20px;
+        .hero-switcher {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 12px;
         }
-        .comparison-toggle button {
-          padding: 10px 20px;
-          background: #f5f5f5;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          cursor: pointer;
+        .hero-switcher button {
+          background: rgba(15, 23, 42, 0.7);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 16px;
+          padding: 14px 16px;
+          text-align: left;
+          color: #cbd5f5;
+          transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .hero-switcher button.active {
+          border-color: rgba(34, 211, 238, 0.8);
+          background: rgba(14, 165, 233, 0.15);
+          color: #f8fafc;
+        }
+        .mode-label {
+          display: block;
+          font-weight: 600;
           font-size: 14px;
         }
-        .comparison-toggle button.active {
-          background: #e8f5e9;
-          border-color: #4caf50;
+        .mode-desc {
+          display: block;
+          font-size: 12px;
+          color: #94a3b8;
+          margin-top: 4px;
+        }
+        .hero-canvas {
+          background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 24px;
+          padding: 24px;
+          box-shadow: 0 30px 60px rgba(2, 8, 23, 0.6);
+          animation: fade-up 1s ease both;
+        }
+        .hero-panel {
+          display: grid;
+          gap: 16px;
+        }
+        .panel-header h3 {
+          margin: 0;
+          font-size: 20px;
+          color: #f8fafc;
+        }
+        .panel-header p {
+          margin: 6px 0 0;
+          font-size: 14px;
+          color: #94a3b8;
+        }
+        .golden-grid {
+          display: grid;
+          gap: 24px;
+        }
+        .step-card {
+          background: rgba(2, 8, 23, 0.55);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 18px;
+          padding: 20px;
+        }
+        .step-card.full {
+          background: rgba(2, 8, 23, 0.7);
+        }
+        .step-header {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 16px;
+          align-items: center;
+        }
+        .step-index {
+          width: 32px;
+          height: 32px;
+          border-radius: 999px;
+          background: rgba(34, 211, 238, 0.2);
+          color: #67e8f9;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .step-header h3 {
+          margin: 0;
+          font-size: 18px;
+          color: #f8fafc;
+        }
+        .step-header p {
+          margin: 4px 0 0;
+          font-size: 13px;
+          color: #94a3b8;
         }
         .config-section {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 25px;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 16px;
         }
         .config-card {
-          background: #f8f9fa;
-          padding: 25px;
+          background: rgba(15, 23, 42, 0.6);
           border-radius: 16px;
-        }
-        .config-card h3 {
-          margin: 0 0 20px 0;
-          font-size: 18px;
+          padding: 18px;
+          border: 1px solid rgba(148, 163, 184, 0.15);
         }
         .input-group {
-          margin-bottom: 15px;
+          margin-bottom: 16px;
         }
         .input-group label {
           display: block;
           margin-bottom: 6px;
           font-weight: 500;
-          font-size: 13px;
-          color: #555;
+          font-size: 12px;
+          color: #cbd5f5;
         }
         .input-group input,
         .input-group select {
           width: 100%;
           padding: 12px;
-          border: 1px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 14px;
-          transition: border-color 0.2s;
+          border-radius: 12px;
+          border: 1px solid rgba(148, 163, 184, 0.25);
+          background: rgba(2, 6, 23, 0.7);
+          color: #f8fafc;
+          font-size: 13px;
         }
         .input-group input:focus,
         .input-group select:focus {
           outline: none;
-          border-color: #00d9ff;
+          border-color: rgba(34, 211, 238, 0.8);
+          box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
         }
         .hint {
           font-size: 11px;
-          color: #888;
+          color: #64748b;
           margin-top: 4px;
           display: block;
         }
         .agent-card {
           display: flex;
-          gap: 20px;
+          gap: 16px;
           align-items: center;
         }
         .agent-avatar {
-          width: 80px;
-          height: 80px;
-          background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
-          border-radius: 50%;
+          width: 64px;
+          height: 64px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 36px;
+          font-size: 28px;
         }
         .agent-details h3 {
-          margin: 0 0 5px 0;
+          margin: 0 0 6px 0;
         }
         .specialty {
-          color: #00d9ff;
-          font-size: 13px;
-          margin: 0 0 10px 0;
+          color: #7dd3fc;
+          font-size: 12px;
+          margin: 0 0 8px 0;
         }
         .agent-meta {
           display: flex;
-          gap: 15px;
-          margin-bottom: 8px;
+          gap: 12px;
+          margin-bottom: 6px;
         }
-        .rating, .price {
-          font-size: 14px;
+        .rating,
+        .price {
+          font-size: 13px;
           font-weight: 600;
+          color: #e2e8f0;
         }
         .style {
-          font-size: 12px;
-          color: #666;
-          font-style: italic;
+          font-size: 11px;
+          color: #94a3b8;
+        }
+        .payment-modes {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .payment-option {
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          background: rgba(15, 23, 42, 0.7);
+          border-radius: 14px;
+          padding: 14px 16px;
+          text-align: left;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+          color: #e2e8f0;
+        }
+        .payment-option.active {
+          border-color: rgba(34, 211, 238, 0.8);
+          background: rgba(14, 165, 233, 0.12);
+        }
+        .payment-option h4 {
+          margin: 0 0 4px 0;
+          font-size: 14px;
+        }
+        .payment-option p {
           margin: 0;
+          font-size: 12px;
+          color: #94a3b8;
         }
-        .voice-section,
-        .payment-section,
-
-      .rate-limit-section {
-        background: #f8f9fa;
-        padding: 25px;
-        border-radius: 16px;
-        margin-bottom: 20px;
-      }
-      .rate-limit-section h3 {
-        margin: 0 0 10px 0;
-      }
-      .section-desc {
-        color: #666;
-        font-size: 14px;
-        margin: 0 0 20px 0;
-      }
-        .status-section {
-          background: #f8f9fa;
-          padding: 25px;
-          border-radius: 16px;
-          margin-bottom: 20px;
+        .mode-tag {
+          font-size: 10px;
+          background: rgba(251, 191, 36, 0.2);
+          color: #facc15;
+          padding: 4px 8px;
+          border-radius: 999px;
+          border: 1px solid rgba(251, 191, 36, 0.3);
         }
-        .voice-section h3,
-        .payment-section h3,
-        .status-section h3 {
-          margin: 0 0 20px 0;
+        .notice {
+          background: rgba(251, 191, 36, 0.12);
+          border: 1px solid rgba(251, 191, 36, 0.3);
+          border-radius: 12px;
+          padding: 12px 14px;
+          font-size: 12px;
+          color: #facc15;
+          display: grid;
+          gap: 4px;
+          margin-bottom: 12px;
         }
-        .recording-area {
-          margin-bottom: 20px;
+        .voice-section {
+          display: grid;
+          gap: 16px;
         }
         .transcription-box {
-          background: white;
-          padding: 15px;
-          border-radius: 12px;
+          background: rgba(2, 6, 23, 0.7);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          padding: 16px;
+          border-radius: 14px;
           min-height: 60px;
-          margin-bottom: 15px;
-          border: 1px solid #e0e0e0;
           font-size: 14px;
-          color: #555;
+          color: #cbd5f5;
         }
         .recording-controls {
           display: flex;
           align-items: center;
-          gap: 15px;
+          gap: 12px;
         }
         .record-btn {
-          padding: 12px 30px;
+          padding: 12px 24px;
           border: none;
-          border-radius: 25px;
-          font-size: 14px;
+          border-radius: 999px;
+          font-size: 13px;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s;
-        }
-        .record-btn:not(.recording) {
-          background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
-          color: #000;
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+          color: #0b1117;
         }
         .record-btn.recording {
-          background: #f44336;
-          color: white;
+          background: #ef4444;
+          color: #fff;
         }
         .recording-indicator {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 18px;
           font-weight: 600;
-          color: #f44336;
+          color: #f87171;
+        }
+        .pulse {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #f87171;
+          animation: blink 1s infinite;
         }
         .text-input-area textarea {
           width: 100%;
-          padding: 15px;
-          border: 1px solid #e0e0e0;
-          border-radius: 12px;
+          padding: 14px;
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 14px;
+          background: rgba(2, 6, 23, 0.7);
+          color: #e2e8f0;
           font-size: 14px;
           resize: none;
-          margin-bottom: 15px;
         }
         .button-group {
           display: flex;
@@ -587,158 +741,82 @@ export default function VoiceAgentDemo() {
         }
         .button-group button {
           flex: 1;
-          padding: 14px;
-          border: none;
+          padding: 12px;
           border-radius: 12px;
-          font-size: 14px;
+          border: none;
           font-weight: 600;
           cursor: pointer;
-          transition: transform 0.2s;
-        }
-        .button-group button:hover:not(:disabled) {
-          transform: translateY(-2px);
-        }
-        .button-group button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
         }
         .button-group button.primary {
-          background: linear-gradient(135deg, #00d9ff 0%, #00ff88 100%);
-          color: #000;
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+          color: #0b1117;
         }
         .button-group button.secondary {
-          background: #e0e0e0;
-          color: #333;
+          background: rgba(148, 163, 184, 0.2);
+          color: #e2e8f0;
+        }
+        .button-group button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
         .response-card {
-          margin-top: 20px;
-          padding: 20px;
-          border-radius: 12px;
-          animation: slideIn 0.3s ease;
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
+          padding: 16px;
+          border-radius: 14px;
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          background: rgba(15, 23, 42, 0.6);
         }
         .response-card.success {
-          background: linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(0, 255, 136, 0.1) 100%);
+          border-color: rgba(34, 211, 238, 0.4);
         }
         .response-card.error {
-          background: rgba(244, 67, 54, 0.1);
+          border-color: rgba(248, 113, 113, 0.5);
         }
         .waveform {
           display: flex;
-          align-items: center;
+          gap: 4px;
           justify-content: center;
-          gap: 3px;
-          height: 40px;
-          margin-bottom: 15px;
+          margin-bottom: 12px;
         }
         .waveform .bar {
           width: 4px;
-          height: 20px;
-          background: linear-gradient(180deg, #00d9ff 0%, #00ff88 100%);
+          height: 18px;
           border-radius: 2px;
-          opacity: 0.3;
+          background: linear-gradient(180deg, #22d3ee, #0ea5e9);
+          opacity: 0.35;
         }
         .waveform .bar.animate {
           animation: wave 0.5s ease-in-out infinite;
         }
-        @keyframes wave {
-          0%, 100% { height: 10px; opacity: 0.3; }
-          50% { height: 40px; opacity: 1; }
-        }
-        .response-content p {
-          margin: 0 0 10px 0;
-        }
         .response-meta {
           display: flex;
-          gap: 20px;
-          font-size: 13px;
-          color: #666;
+          gap: 16px;
+          font-size: 12px;
+          color: #94a3b8;
+          margin-top: 8px;
         }
-        .payment-options {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
         }
-        .option {
-          background: white;
-          padding: 20px;
-          border-radius: 12px;
-          border: 1px solid #e0e0e0;
-          position: relative;
+        @keyframes wave {
+          0%, 100% { height: 10px; opacity: 0.3; }
+          50% { height: 32px; opacity: 1; }
         }
-        .option.highlight {
-          border-color: #00d9ff;
-          background: linear-gradient(135deg, rgba(0, 217, 255, 0.05) 0%, rgba(0, 255, 136, 0.05) 100%);
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        .option-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 8px;
-        }
-        .option-header .icon {
-          font-size: 24px;
-        }
-        .option-header h4 {
-          margin: 0;
-          font-size: 16px;
-        }
-        .option p {
-          margin: 0 0 15px 0;
-          color: #666;
-          font-size: 13px;
-        }
-        .option-features {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-bottom: 15px;
-        }
-        .option-features span {
-          font-size: 11px;
-          padding: 4px 8px;
-          background: #f5f5f5;
-          border-radius: 4px;
-          color: #555;
-        }
-        .badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-        .badge.available {
-          background: #e8f5e9;
-          color: #2e7d32;
-        }
-        .status-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 10px;
-        }
-        .status-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px;
-          background: white;
-          border-radius: 8px;
-          font-size: 13px;
-        }
-        @media (max-width: 600px) {
-          .config-section {
-            grid-template-columns: 1fr;
+        @media (max-width: 720px) {
+          .experience-shell {
+            padding: 32px 16px 64px;
           }
-          .stats-bar {
-            flex-wrap: wrap;
-            gap: 20px;
+          .hero-actions {
+            flex-direction: column;
           }
-          .payment-options {
-            grid-template-columns: 1fr;
+          .hero-actions button,
+          .hero-actions a {
+            width: 100%;
+            text-align: center;
           }
         }
       `}</style>

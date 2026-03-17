@@ -1,8 +1,21 @@
 import type { Metadata, Viewport } from 'next';
+import { Space_Grotesk, IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/lib/WalletContext';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
+
+const displayFont = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-display',
+  weight: ['400', '500', '600', '700'],
+});
+
+const bodyFont = IBM_Plex_Sans({
+  subsets: ['latin'],
+  variable: '--font-body',
+  weight: ['300', '400', '500', '600', '700'],
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -80,7 +93,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">
+      <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
         <Providers>
           <ThemeProvider>
             <DarkModeToggle />

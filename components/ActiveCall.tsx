@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
+import { useRealPayment } from '@/lib/useRealPayment';
 import { Mic, MicOff, Volume2, PhoneOff, Clock, Signal, AlertCircle, Phone } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
+import { parseEther } from 'viem';
 
 interface Agent {
   id: string;
@@ -14,6 +16,7 @@ interface Agent {
   avatar?: string;
   rate: number;
   color?: string;
+  walletAddress?: string;
 }
 
 interface ActiveCallProps {
@@ -33,6 +36,7 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
     toggleMute, 
     transcripts 
   } = useRealVoiceCall(agent.rate);
+  const { payment, settlePayment, resetPayment } = useRealPayment();
   
   const { isSupported, permissions } = useWebRTCSupport();
   const { saveCall, rateCall, toggleSaveCall, exportTranscript } = useLocalCallHistory();
@@ -51,10 +55,11 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
 
   useEffect(() => {
     if (!hasStarted && isSupported) {
+      resetPayment();
       startCall({ agentId: agent.id, callId, userId });
       setHasStarted(true);
     }
-  }, [hasStarted, isSupported, agent.id, callId, userId, startCall]);
+  }, [hasStarted, isSupported, agent.id, callId, userId, startCall, resetPayment]);
 
   // Update connecting state when call is active
   useEffect(() => {
@@ -71,6 +76,18 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
   const handleEnd = useCallback(() => {
     vibrate([100, 50, 100]); // double-pulse on hang-up
     endCall();
+
+    const payoutAddress = agent.walletAddress || process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
+    const totalCost = Number.isFinite(call.cost) ? call.cost : 0;
+    if (totalCost > 0 && !payment.isProcessing && !payment.isSettled) {
+      const amount = parseEther(totalCost.toFixed(6));
+      settlePayment({
+        callId,
+        agentAddress: payoutAddress as `0x${string}`,
+        amount,
+        token: 'cUSD',
+      });
+    }
     
     // Save call to history
     const id = saveCall({
@@ -83,7 +100,7 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
     });
     setSavedCallId(id);
     setShowSummary(true);
-  }, [endCall, saveCall, agent, call.duration, call.cost, transcripts]);
+  }, [endCall, saveCall, agent, call.duration, call.cost, transcripts, callId, settlePayment, payment.isProcessing, payment.isSettled]);
 
   const handleCloseSummary = useCallback(() => {
     setShowSummary(false);
@@ -356,6 +373,7 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
       {/* Call Summary Modal */}
       <CallSummary
         isOpen={showSummary}
+        callId={callId}
         agent={{
           id: agent.id,
           name: agent.name,
@@ -366,7 +384,8 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
         duration={call.duration}
         cost={call.cost}
         transcripts={transcripts}
-        txHash={call.txHash}
+        txHash={payment.txHash || call.txHash}
+        payment={payment}
         onClose={handleCloseSummary}
         onRate={handleRate}
         onSave={handleSave}

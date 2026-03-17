@@ -70,10 +70,11 @@ export function AgentComparison({ agents }: AgentComparisonProps) {
 
       <style jsx>{`
         .comparison-container {
-          background: #f8f9fa;
+          background: rgba(2, 6, 23, 0.55);
           padding: 20px;
-          border-radius: 12px;
+          border-radius: 18px;
           margin-bottom: 20px;
+          border: 1px solid rgba(148, 163, 184, 0.2);
         }
         .comparison-header {
           display: flex;
@@ -83,6 +84,7 @@ export function AgentComparison({ agents }: AgentComparisonProps) {
         }
         .comparison-header h3 {
           margin: 0;
+          color: #e2e8f0;
         }
         .sort-controls {
           display: flex;
@@ -90,16 +92,17 @@ export function AgentComparison({ agents }: AgentComparisonProps) {
         }
         .sort-controls button {
           padding: 6px 12px;
-          border: 1px solid #ddd;
-          background: white;
+          border: 1px solid rgba(148, 163, 184, 0.25);
+          background: rgba(15, 23, 42, 0.7);
           border-radius: 6px;
           cursor: pointer;
           font-size: 12px;
+          color: #e2e8f0;
         }
         .sort-controls button.active {
-          background: #00d9ff;
-          border-color: #00d9ff;
-          color: white;
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+          border-color: transparent;
+          color: #0b1117;
         }
         .comparison-grid {
           display: grid;
@@ -107,16 +110,16 @@ export function AgentComparison({ agents }: AgentComparisonProps) {
           gap: 15px;
         }
         .comparison-card {
-          background: white;
+          background: rgba(15, 23, 42, 0.7);
           padding: 15px;
-          border-radius: 10px;
+          border-radius: 14px;
           text-align: center;
-          border: 1px solid #eee;
+          border: 1px solid rgba(148, 163, 184, 0.15);
         }
         .agent-avatar {
           width: 50px;
           height: 50px;
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
           border-radius: 50%;
           margin: 0 auto 10px;
           display: flex;
@@ -127,10 +130,11 @@ export function AgentComparison({ agents }: AgentComparisonProps) {
         .comparison-card h4 {
           margin: 0 0 5px 0;
           font-size: 14px;
+          color: #f8fafc;
         }
         .specialty {
           font-size: 12px;
-          color: #666;
+          color: #94a3b8;
           margin: 0 0 15px 0;
         }
         .metrics {
@@ -145,27 +149,27 @@ export function AgentComparison({ agents }: AgentComparisonProps) {
         .metric .value {
           display: block;
           font-weight: 600;
-          color: #00d9ff;
+          color: #7dd3fc;
         }
         .metric .label {
           font-size: 10px;
-          color: #888;
+          color: #64748b;
         }
         .style-tag {
           font-size: 11px;
           padding: 4px 8px;
-          background: #f0f0f0;
+          background: rgba(148, 163, 184, 0.2);
           border-radius: 4px;
           margin-bottom: 15px;
-          color: #555;
+          color: #cbd5f5;
         }
         .select-btn {
           width: 100%;
           padding: 8px;
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
           border: none;
           border-radius: 6px;
-          color: #000;
+          color: #0b1117;
           font-weight: 500;
           cursor: pointer;
         }

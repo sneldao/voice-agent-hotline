@@ -3,11 +3,13 @@
 import { useState, useCallback } from 'react';
 import { useWallet, signMessage } from './WalletContext';
 import { paymentSettlement, CELO_TOKENS } from './payment-settlement';
+import { validateAddress } from './address';
 import type { Address } from 'viem';
 
 export interface PaymentState {
   isProcessing: boolean;
   isSettled: boolean;
+  isSimulated: boolean;
   txHash?: string;
   error: string | null;
   explorerUrl?: string;
@@ -28,10 +30,12 @@ export function useRealPayment(): UseRealPaymentReturn {
   const [payment, setPayment] = useState<PaymentState>({
     isProcessing: false,
     isSettled: false,
+    isSimulated: false,
     error: null,
   });
 
   const { address } = useWallet();
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   const settlePayment = useCallback(async ({
     callId,
@@ -48,7 +52,18 @@ export function useRealPayment(): UseRealPaymentReturn {
       setPayment({
         isProcessing: false,
         isSettled: false,
+        isSimulated: false,
         error: 'Wallet not connected',
+      });
+      return false;
+    }
+
+    if (!validateAddress(agentAddress)) {
+      setPayment({
+        isProcessing: false,
+        isSettled: false,
+        isSimulated: false,
+        error: 'Agent payout address is not configured',
       });
       return false;
     }
@@ -56,30 +71,34 @@ export function useRealPayment(): UseRealPaymentReturn {
     setPayment({
       isProcessing: true,
       isSettled: false,
+      isSimulated: false,
       error: null,
     });
 
     try {
       // Check if facilitator wallet is configured
       if (!paymentSettlement.isConfigured()) {
-        // Fallback: simulate payment for demo/hackathon
-        console.warn('[Payment] Facilitator not configured, using simulation mode');
-        
-        // Simulate processing delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const mockTxHash = `0x${Array.from({ length: 64 }, () => 
-          Math.floor(Math.random() * 16).toString(16)
-        ).join('')}` as `0x${string}`;
-        
+        if (!isDemoMode) {
+          setPayment({
+            isProcessing: false,
+            isSettled: false,
+            isSimulated: false,
+            error: 'Settlement not configured. Set FACILITATOR_PRIVATE_KEY to enable on-chain payments.',
+          });
+          return false;
+        }
+
+        // Explicit demo mode: simulate settlement without fake tx hashes
+        console.warn('[Payment] Demo mode enabled: simulating settlement');
+        await new Promise(resolve => setTimeout(resolve, 1200));
+
         setPayment({
           isProcessing: false,
           isSettled: true,
-          txHash: mockTxHash,
-          explorerUrl: `https://celoscan.io/tx/${mockTxHash}`,
+          isSimulated: true,
           error: null,
         });
-        
+
         return true;
       }
 
@@ -137,6 +156,7 @@ export function useRealPayment(): UseRealPaymentReturn {
         setPayment({
           isProcessing: false,
           isSettled: true,
+          isSimulated: false,
           txHash: result.receipt.txHash,
           explorerUrl: result.explorerUrl,
           error: null,
@@ -150,16 +170,18 @@ export function useRealPayment(): UseRealPaymentReturn {
       setPayment({
         isProcessing: false,
         isSettled: false,
+        isSimulated: false,
         error: err.message || 'Payment failed',
       });
       return false;
     }
-  }, [address, signMessage]);
+  }, [address, signMessage, isDemoMode]);
 
   const resetPayment = useCallback(() => {
     setPayment({
       isProcessing: false,
       isSettled: false,
+      isSimulated: false,
       error: null,
     });
   }, []);

@@ -66,9 +66,14 @@
 body {
   color: rgb(var(--foreground));
   background: rgb(var(--background));
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body), 'IBM Plex Sans', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display), 'Space Grotesk', 'Segoe UI', sans-serif;
+  letter-spacing: -0.01em;
 }
 
 /* Smooth transitions for theme switching */

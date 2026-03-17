@@ -57,9 +57,9 @@ export function CallEstimator({ pricePerMinute }: CallEstimatorProps) {
 
       <style jsx>{`
         .estimator-container {
-          background: linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(0, 255, 136, 0.1) 100%);
-          border: 1px solid rgba(0, 217, 255, 0.3);
-          border-radius: 12px;
+          background: rgba(2, 6, 23, 0.55);
+          border: 1px solid rgba(148, 163, 184, 0.25);
+          border-radius: 16px;
           padding: 20px;
           margin-bottom: 20px;
         }
@@ -75,6 +75,7 @@ export function CallEstimator({ pricePerMinute }: CallEstimatorProps) {
         .estimator-header h3 {
           margin: 0;
           font-size: 16px;
+          color: #e2e8f0;
         }
         .duration-selector {
           display: flex;
@@ -84,44 +85,45 @@ export function CallEstimator({ pricePerMinute }: CallEstimatorProps) {
         .duration-selector button {
           flex: 1;
           padding: 8px;
-          border: 1px solid #ddd;
-          background: white;
-          border-radius: 8px;
+          border: 1px solid rgba(148, 163, 184, 0.25);
+          background: rgba(15, 23, 42, 0.7);
+          border-radius: 12px;
           cursor: pointer;
           font-size: 12px;
           transition: all 0.2s;
+          color: #e2e8f0;
         }
         .duration-selector button:hover {
-          border-color: #00d9ff;
+          border-color: rgba(34, 211, 238, 0.8);
         }
         .duration-selector button.active {
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
           border-color: transparent;
-          color: #000;
+          color: #0b1117;
           font-weight: 600;
         }
         .cost-display {
-          background: white;
-          border-radius: 10px;
+          background: rgba(15, 23, 42, 0.7);
+          border-radius: 14px;
           padding: 15px;
         }
         .cost-main {
           text-align: center;
           margin-bottom: 15px;
           padding-bottom: 15px;
-          border-bottom: 1px solid #eee;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2);
         }
         .cost-value {
           display: block;
           font-size: 32px;
           font-weight: 700;
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
         .cost-label {
           font-size: 12px;
-          color: #888;
+          color: #94a3b8;
         }
         .cost-breakdown {
           font-size: 12px;
@@ -130,7 +132,7 @@ export function CallEstimator({ pricePerMinute }: CallEstimatorProps) {
           display: flex;
           justify-content: space-between;
           padding: 5px 0;
-          color: #666;
+          color: #cbd5f5;
         }
       `}</style>
     </div>

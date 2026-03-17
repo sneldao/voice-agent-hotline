@@ -89,9 +89,9 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
 
       <style jsx>{`
         .payment-flow-container {
-          background: linear-gradient(135deg, rgba(0, 217, 255, 0.05) 0%, rgba(102, 126, 234, 0.05) 100%);
-          border: 1px solid rgba(0, 217, 255, 0.2);
-          border-radius: 12px;
+          background: rgba(2, 6, 23, 0.55);
+          border: 1px solid rgba(148, 163, 184, 0.25);
+          border-radius: 16px;
           padding: 20px;
           margin-bottom: 20px;
         }
@@ -108,13 +108,14 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
           flex: 1;
           margin: 0;
           font-size: 16px;
+          color: #e2e8f0;
         }
         .play-btn {
           padding: 6px 12px;
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
           border: none;
           border-radius: 6px;
-          color: #000;
+          color: #0b1117;
           font-size: 12px;
           cursor: pointer;
         }
@@ -136,7 +137,7 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
           opacity: 1;
         }
         .flow-step.current {
-          background: rgba(0, 217, 255, 0.1);
+          background: rgba(34, 211, 238, 0.12);
           margin: 0 -10px;
           padding: 10px;
           border-radius: 8px;
@@ -144,7 +145,7 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
         .step-icon {
           width: 36px;
           height: 36px;
-          background: #f0f0f0;
+          background: rgba(15, 23, 42, 0.8);
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -153,7 +154,8 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
           flex-shrink: 0;
         }
         .flow-step.active .step-icon {
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+          color: #0b1117;
         }
         .spinner {
           animation: spin 1s linear infinite;
@@ -170,10 +172,11 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
           font-weight: 600;
           font-size: 13px;
           margin-bottom: 2px;
+          color: #e2e8f0;
         }
         .step-desc {
           font-size: 11px;
-          color: #888;
+          color: #94a3b8;
         }
         .step-connector {
           position: absolute;
@@ -183,16 +186,16 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
         .connector-line {
           width: 2px;
           height: 20px;
-          background: #e0e0e0;
+          background: rgba(148, 163, 184, 0.25);
         }
         .connector-line.completed {
-          background: linear-gradient(180deg, #00d9ff, #00ff88);
+          background: linear-gradient(180deg, #22d3ee, #0ea5e9);
         }
         .flow-summary {
           display: flex;
           justify-content: space-around;
           padding-top: 15px;
-          border-top: 1px solid #eee;
+          border-top: 1px solid rgba(148, 163, 184, 0.2);
         }
         .summary-item {
           text-align: center;
@@ -200,12 +203,12 @@ export function AnimatedPaymentFlow({ agentName, pricePerMinute }: AnimatedPayme
         .summary-label {
           display: block;
           font-size: 11px;
-          color: #888;
+          color: #94a3b8;
           margin-bottom: 4px;
         }
         .summary-value {
           font-weight: 600;
-          color: #00d9ff;
+          color: #7dd3fc;
           font-size: 14px;
         }
       `}</style>

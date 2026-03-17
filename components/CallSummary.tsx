@@ -9,6 +9,8 @@ import {
   Share2, 
   Bookmark, 
   CheckCircle,
+  AlertCircle,
+  Loader2,
   MessageSquare,
   ThumbsUp,
   ArrowRight,
@@ -16,9 +18,11 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { ShareModal } from './ShareModal';
+import type { PaymentState } from '@/lib/useRealPayment';
 
 interface CallSummaryProps {
   isOpen: boolean;
+  callId?: string;
   agent: {
     id: string;
     name: string;
@@ -34,6 +38,7 @@ interface CallSummaryProps {
     timestamp: number;
   }>;
   txHash?: string;
+  payment?: PaymentState;
   onClose: () => void;
   onRate: (rating: number, feedback?: string) => void;
   onSave: () => void;
@@ -51,11 +56,13 @@ interface CallSummaryProps {
 
 export function CallSummary({
   isOpen,
+  callId,
   agent,
   duration,
   cost,
   transcripts,
   txHash,
+  payment,
   onClose,
   onRate,
   onSave,
@@ -73,6 +80,45 @@ export function CallSummary({
   const [showShareModal, setShowShareModal] = useState(false);
 
   if (!isOpen) return null;
+
+  const explorerUrl = payment?.explorerUrl || (txHash ? `https://celoscan.io/tx/${txHash}` : undefined);
+  const status: 'settled' | 'processing' | 'pending' | 'error' | 'simulated' = payment?.isProcessing
+    ? 'processing'
+    : payment?.error
+      ? 'error'
+      : payment?.isSimulated
+        ? 'simulated'
+        : payment?.isSettled || !!txHash
+          ? 'settled'
+          : 'pending';
+
+  const statusConfig = {
+    settled: {
+      label: 'Payment settled on Celo',
+      className: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+      icon: <CheckCircle className="w-6 h-6 text-emerald-400" />,
+    },
+    processing: {
+      label: 'Settling payment on Celo',
+      className: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+      icon: <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />,
+    },
+    pending: {
+      label: 'Payment pending confirmation',
+      className: 'bg-slate-500/10 border-slate-500/30 text-slate-300',
+      icon: <Clock className="w-6 h-6 text-slate-400" />,
+    },
+    error: {
+      label: 'Payment failed',
+      className: 'bg-red-500/10 border-red-500/30 text-red-400',
+      icon: <AlertCircle className="w-6 h-6 text-red-400" />,
+    },
+    simulated: {
+      label: 'Payment simulated (demo mode)',
+      className: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+      icon: <CheckCircle className="w-6 h-6 text-amber-400" />,
+    },
+  }[status];
 
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -119,17 +165,17 @@ export function CallSummary({
             </button>
           </div>
 
-          {/* Success Banner */}
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6 flex items-center gap-3">
-            <CheckCircle className="w-6 h-6 text-green-400" />
-            <div>
-              <p className="text-green-400 font-medium">Payment Successful</p>
-              {txHash && (
-                <a 
-                  href={`https://celoscan.io/tx/${txHash}`}
+          {/* Payment Status Banner */}
+          <div className={`border rounded-xl p-4 mb-6 flex items-center gap-3 ${statusConfig.className}`}>
+            {statusConfig.icon}
+            <div className="flex-1">
+              <p className="font-medium">{statusConfig.label}</p>
+              {explorerUrl && (
+                <a
+                  href={explorerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-400 hover:text-cyan-400 transition-colors"
+                  className="text-sm text-gray-400 hover:text-cyan-300 transition-colors"
                 >
                   View on CeloScan →
                 </a>
@@ -163,6 +209,54 @@ export function CallSummary({
 
           {activeTab === 'overview' ? (
             <>
+              {/* Receipt */}
+              <div className="bg-gray-900 rounded-xl p-5 mb-6 border border-gray-800">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-widest text-gray-500">Receipt</p>
+                    <p className="text-white font-semibold">Call settlement</p>
+                  </div>
+                  <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusConfig.className}`}>
+                    {status === 'settled' ? 'On-chain' : status === 'simulated' ? 'Simulated' : status === 'processing' ? 'Settling' : status === 'error' ? 'Failed' : 'Pending'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-gray-800/60 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Total Cost</p>
+                    <p className="text-lg font-semibold text-white">${(cost || 0).toFixed(4)}</p>
+                  </div>
+                  <div className="bg-gray-800/60 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Duration</p>
+                    <p className="text-lg font-semibold text-white">{formatDuration(duration)}</p>
+                  </div>
+                  <div className="bg-gray-800/60 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Token</p>
+                    <p className="text-lg font-semibold text-white">cUSD</p>
+                  </div>
+                  <div className="bg-gray-800/60 rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Call ID</p>
+                    <p className="text-sm text-gray-200 font-mono truncate">{callId || '—'}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  {explorerUrl ? (
+                    <a
+                      href={explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 text-sm font-medium hover:text-cyan-300 transition-colors"
+                    >
+                      Open CeloScan →
+                    </a>
+                  ) : (
+                    <span className="text-xs text-gray-500">On-chain receipt will appear once settled.</span>
+                  )}
+                  {payment?.error && (
+                    <span className="text-xs text-red-400">{payment.error}</span>
+                  )}
+                </div>
+              </div>
+
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <StatCard
@@ -181,7 +275,7 @@ export function CallSummary({
                   icon={<MessageSquare className="w-5 h-5" />}
                   label="Messages"
                   value={transcripts.length.toString()}
-                  color="purple"
+                  color="amber"
                 />
               </div>
 
@@ -368,12 +462,12 @@ function StatCard({
   icon: React.ReactNode; 
   label: string; 
   value: string; 
-  color: 'cyan' | 'green' | 'purple';
+  color: 'cyan' | 'green' | 'amber';
 }) {
   const colorClasses = {
     cyan: 'bg-cyan-500/10 text-cyan-400',
     green: 'bg-green-500/10 text-green-400',
-    purple: 'bg-purple-500/10 text-purple-400',
+    amber: 'bg-amber-500/10 text-amber-400',
   };
 
   return (
