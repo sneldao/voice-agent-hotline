@@ -10,9 +10,18 @@ export interface PaymentState {
   isProcessing: boolean;
   isSettled: boolean;
   isSimulated: boolean;
+  mode: 'x402_direct' | 'superfluid_stream';
   txHash?: string;
   error: string | null;
   explorerUrl?: string;
+}
+
+export interface SettlementAttempt {
+  success: boolean;
+  txHash?: string;
+  explorerUrl?: string;
+  isSimulated?: boolean;
+  error?: string;
 }
 
 interface UseRealPaymentReturn {
@@ -22,7 +31,7 @@ interface UseRealPaymentReturn {
     agentAddress: Address;
     amount: bigint;
     token?: 'cUSD' | 'USDC';
-  }) => Promise<boolean>;
+  }) => Promise<SettlementAttempt>;
   resetPayment: () => void;
 }
 
@@ -31,6 +40,7 @@ export function useRealPayment(): UseRealPaymentReturn {
     isProcessing: false,
     isSettled: false,
     isSimulated: false,
+    mode: 'x402_direct',
     error: null,
   });
 
@@ -47,15 +57,16 @@ export function useRealPayment(): UseRealPaymentReturn {
     agentAddress: Address;
     amount: bigint;
     token?: 'cUSD' | 'USDC';
-  }): Promise<boolean> => {
+  }): Promise<SettlementAttempt> => {
     if (!address) {
       setPayment({
         isProcessing: false,
         isSettled: false,
         isSimulated: false,
+        mode: 'x402_direct',
         error: 'Wallet not connected',
       });
-      return false;
+      return { success: false, error: 'Wallet not connected' };
     }
 
     if (!validateAddress(agentAddress)) {
@@ -63,15 +74,17 @@ export function useRealPayment(): UseRealPaymentReturn {
         isProcessing: false,
         isSettled: false,
         isSimulated: false,
+        mode: 'x402_direct',
         error: 'Agent payout address is not configured',
       });
-      return false;
+      return { success: false, error: 'Agent payout address is not configured' };
     }
 
     setPayment({
       isProcessing: true,
       isSettled: false,
       isSimulated: false,
+      mode: 'x402_direct',
       error: null,
     });
 
@@ -83,9 +96,13 @@ export function useRealPayment(): UseRealPaymentReturn {
             isProcessing: false,
             isSettled: false,
             isSimulated: false,
+            mode: 'x402_direct',
             error: 'Settlement not configured. Set FACILITATOR_PRIVATE_KEY to enable on-chain payments.',
           });
-          return false;
+          return {
+            success: false,
+            error: 'Settlement not configured. Set FACILITATOR_PRIVATE_KEY to enable on-chain payments.',
+          };
         }
 
         // Explicit demo mode: simulate settlement without fake tx hashes
@@ -96,10 +113,11 @@ export function useRealPayment(): UseRealPaymentReturn {
           isProcessing: false,
           isSettled: true,
           isSimulated: true,
+          mode: 'x402_direct',
           error: null,
         });
 
-        return true;
+        return { success: true, isSimulated: true };
       }
 
       // Real on-chain settlement
@@ -157,11 +175,16 @@ export function useRealPayment(): UseRealPaymentReturn {
           isProcessing: false,
           isSettled: true,
           isSimulated: false,
+          mode: 'x402_direct',
           txHash: result.receipt.txHash,
           explorerUrl: result.explorerUrl,
           error: null,
         });
-        return true;
+        return {
+          success: true,
+          txHash: result.receipt.txHash,
+          explorerUrl: result.explorerUrl,
+        };
       } else {
         throw new Error(result.error || 'Payment failed');
       }
@@ -171,9 +194,10 @@ export function useRealPayment(): UseRealPaymentReturn {
         isProcessing: false,
         isSettled: false,
         isSimulated: false,
+        mode: 'x402_direct',
         error: err.message || 'Payment failed',
       });
-      return false;
+      return { success: false, error: err.message || 'Payment failed' };
     }
   }, [address, signMessage, isDemoMode]);
 
@@ -182,6 +206,7 @@ export function useRealPayment(): UseRealPaymentReturn {
       isProcessing: false,
       isSettled: false,
       isSimulated: false,
+      mode: 'x402_direct',
       error: null,
     });
   }, []);

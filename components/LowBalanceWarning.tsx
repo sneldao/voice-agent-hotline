@@ -7,6 +7,11 @@ interface LowBalanceWarningProps {
   isOpen: boolean;
   balance: number;
   requiredAmount: number;
+  title?: string;
+  description?: string;
+  balanceLabel?: string;
+  requiredLabel?: string;
+  assetSymbol?: string;
   onAddFunds: () => void;
   onClose: () => void;
   onGoHome: () => void;
@@ -16,6 +21,11 @@ export function LowBalanceWarning({
   isOpen, 
   balance, 
   requiredAmount, 
+  title = 'Insufficient Balance',
+  description = 'Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.',
+  balanceLabel = 'Current Balance',
+  requiredLabel = 'Required',
+  assetSymbol,
   onAddFunds, 
   onClose,
   onGoHome 
@@ -23,6 +33,9 @@ export function LowBalanceWarning({
   if (!isOpen) return null;
 
   const shortfall = requiredAmount - balance;
+  const formatAmount = (amount: number) => assetSymbol
+    ? `${amount.toFixed(2)} ${assetSymbol}`
+    : `$${amount.toFixed(2)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
@@ -45,30 +58,30 @@ export function LowBalanceWarning({
 
           {/* Title */}
           <h2 className="text-xl font-bold text-white mb-2">
-            Insufficient Balance
+            {title}
           </h2>
 
           {/* Balance Info */}
           <div className="bg-gray-800/50 rounded-xl p-4 mb-6">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-400">Current Balance</span>
-              <span className="text-lg font-bold text-red-400">${balance.toFixed(2)}</span>
+              <span className="text-sm text-gray-400">{balanceLabel}</span>
+              <span className="text-lg font-bold text-red-400">{formatAmount(balance)}</span>
             </div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-400">Required</span>
-              <span className="text-lg font-bold text-white">${requiredAmount.toFixed(2)}</span>
+              <span className="text-sm text-gray-400">{requiredLabel}</span>
+              <span className="text-lg font-bold text-white">{formatAmount(requiredAmount)}</span>
             </div>
             <div className="border-t border-gray-700 pt-2 mt-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-400">Shortfall</span>
-                <span className="text-lg font-bold text-orange-400">${shortfall.toFixed(2)}</span>
+                <span className="text-lg font-bold text-orange-400">{formatAmount(shortfall)}</span>
               </div>
             </div>
           </div>
 
           {/* Message */}
           <p className="text-sm text-gray-400 mb-6">
-            Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.
+            {description}
           </p>
 
           {/* Actions */}

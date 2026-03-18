@@ -9,6 +9,7 @@ import {
   SignedAuthorization,
   CELO_TOKENS 
 } from '@/lib/payment-settlement';
+import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
 import { redis } from '@/lib/redis';
 
 // ============================================
@@ -114,6 +115,8 @@ export async function POST(req: NextRequest) {
       blockNumber: result.blockNumber,
     });
 
+    const explorerUrl = result.txHash ? getExplorerTxUrl(result.txHash) : undefined;
+
     return NextResponse.json({
       success: true,
       receipt: {
@@ -125,7 +128,7 @@ export async function POST(req: NextRequest) {
         gasUsed: result.gasUsed?.toString(),
         timestamp: Date.now(),
       },
-      explorerUrl: `https://celoscan.io/tx/${result.txHash}`,
+      explorerUrl,
     });
 
   } catch (error: any) {
@@ -157,10 +160,11 @@ export async function GET(req: NextRequest) {
     const receipt = paymentSettlement.getReceipt(callId);
     
     if (receipt) {
+      const explorerUrl = receipt.txHash ? getExplorerTxUrl(receipt.txHash) : undefined;
       return NextResponse.json({
         settled: true,
         receipt,
-        explorerUrl: `https://celoscan.io/tx/${receipt.txHash}`,
+        explorerUrl,
       });
     }
 
@@ -168,6 +172,8 @@ export async function GET(req: NextRequest) {
     const redisReceipt = await redis.hgetall(`settlement:${callId}`);
     
     if (redisReceipt && redisReceipt.settled === 'true') {
+      const redisTxHash = typeof redisReceipt.txHash === 'string' ? redisReceipt.txHash : undefined;
+      const explorerUrl = redisTxHash ? getExplorerTxUrl(redisTxHash) : undefined;
       return NextResponse.json({
         settled: true,
         receipt: {
@@ -175,7 +181,7 @@ export async function GET(req: NextRequest) {
           blockNumber: parseInt(redisReceipt.blockNumber as string),
           timestamp: parseInt(redisReceipt.timestamp as string),
         },
-        explorerUrl: `https://celoscan.io/tx/${redisReceipt.txHash}`,
+        explorerUrl,
       });
     }
 

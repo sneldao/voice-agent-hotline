@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
+import { useWallet } from '@/lib/WalletContext';
 import { formatFlowRate, calculatePerSecondCost } from '@/lib/superfluid-streaming';
-import { Phone, PhoneOff, AlertCircle, Loader2, Clock, Zap } from 'lucide-react';
+import { Phone, PhoneOff, AlertCircle, Loader2, Zap } from 'lucide-react';
 
 interface StreamingPaymentModalProps {
   agentName: string;
@@ -25,8 +26,8 @@ export function StreamingPaymentModal({
     error,
     startStream,
     stopStream,
-    grantPermissions,
   } = useSuperfluidStreaming();
+  const { connected, connect } = useWallet();
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -34,10 +35,7 @@ export function StreamingPaymentModal({
   const [isStopping, setIsStopping] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // Facilitator address from env — required for Superfluid ACL delegation.
-  // Set NEXT_PUBLIC_FACILITATOR_ADDRESS in .env.local
-  const facilitatorAddress = process.env.NEXT_PUBLIC_FACILITATOR_ADDRESS ?? null;
-  const facilitatorMissing = !facilitatorAddress;
+  const receiverMissing = !agentAddress;
 
   const monthlyRate = ratePerMinute * 60 * 24 * 30;
   const perSecondCost = calculatePerSecondCost(monthlyRate);
@@ -60,23 +58,25 @@ export function StreamingPaymentModal({
   const handleStartCall = async () => {
     setLocalError(null);
 
-    if (facilitatorMissing) {
-      setLocalError('Streaming not configured: NEXT_PUBLIC_FACILITATOR_ADDRESS is not set. Add it to .env.local.');
+    if (!connected) {
+      await connect();
+      return;
+    }
+
+    if (receiverMissing) {
+      setLocalError('Streaming not configured: this agent is missing a payout address.');
       return;
     }
 
     setIsStarting(true);
     try {
-      // Grant ACL permissions to facilitator (one-time; safe to call again)
-      await grantPermissions(facilitatorAddress);
-
-      const success = await startStream(agentAddress, monthlyRate);
-      if (success) {
+      const txHash = await startStream(agentAddress, monthlyRate);
+      if (txHash) {
         setIsStreaming(true);
         setDuration(0);
         onPaymentStart();
       } else {
-        setLocalError(error ?? 'Failed to start stream. Check your wallet balance and network.');
+        setLocalError(error ?? 'Failed to start stream. Check your wallet connection, balance, and network.');
       }
     } catch (e) {
       setLocalError(e instanceof Error ? e.message : String(e));
@@ -88,9 +88,11 @@ export function StreamingPaymentModal({
   const handleEndCall = async () => {
     setIsStopping(true);
     try {
-      await stopStream(agentAddress);
-      setIsStreaming(false);
-      onPaymentStop();
+      const txHash = await stopStream(agentAddress);
+      if (txHash || !flowRate || flowRate === '0') {
+        setIsStreaming(false);
+        onPaymentStop();
+      }
     } catch (e) {
       setLocalError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -118,14 +120,14 @@ export function StreamingPaymentModal({
 
       <div className="p-5 space-y-4">
 
-        {/* Config warning */}
-        {facilitatorMissing && (
+        {/* Receiver warning */}
+        {receiverMissing && (
           <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
             <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-semibold text-amber-300">Streaming not configured</p>
               <p className="text-xs text-amber-400/80 mt-0.5">
-                Set <code className="font-mono bg-amber-500/20 px-1 rounded">NEXT_PUBLIC_FACILITATOR_ADDRESS</code> in <code className="font-mono bg-amber-500/20 px-1 rounded">.env.local</code> to enable Superfluid streaming.
+                Add a valid payout address to this agent to enable wallet-signed Superfluid streaming.
               </p>
             </div>
           </div>
@@ -193,7 +195,7 @@ export function StreamingPaymentModal({
         ) : (
           <button
             onClick={handleStartCall}
-            disabled={isStarting || facilitatorMissing}
+            disabled={isStarting || receiverMissing}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold transition-all active:scale-[0.98] shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isStarting ? (
@@ -213,7 +215,7 @@ export function StreamingPaymentModal({
         )}
 
         <p className="text-xs text-center text-gray-600">
-          Powered by Superfluid on Celo • Payment stops instantly when you end the call
+          Powered by Superfluid on Celo • Your wallet signs the stream directly and payment stops instantly when you end the call
         </p>
       </div>
     </div>

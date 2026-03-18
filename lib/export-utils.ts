@@ -1,4 +1,5 @@
 import { CallRecord } from './useCallHistory';
+import { getExplorerTxUrl } from './superfluid-streaming';
 
 export interface ExportOptions {
   format: 'txt' | 'json' | 'pdf' | 'csv';
@@ -70,7 +71,7 @@ function exportAsTXT(call: CallRecord, timestamp: string): { filename: string; c
   }
 
   if (call.txHash) {
-    lines.push(`Transaction: https://celoscan.io/tx/${call.txHash}`);
+    lines.push(`Transaction: ${getExplorerTxUrl(call.txHash)}`);
   }
 
   lines.push('', '───────────────────────────────────────────────────────────────', '');
@@ -404,7 +405,7 @@ function exportAsPDF(call: CallRecord, timestamp: string): { filename: string; c
         ${call.txHash ? `
         <div class="meta-item">
           <span class="meta-label">Transaction</span>
-          <a class="meta-value highlight" href="https://celoscan.io/tx/${call.txHash}" target="_blank">View on CeloScan →</a>
+          <a class="meta-value highlight" href="${getExplorerTxUrl(call.txHash)}" target="_blank">View on CeloScan →</a>
         </div>
         ` : ''}
       </div>
@@ -638,7 +639,7 @@ export function exportMultipleCalls(calls: CallRecord[], format: 'txt' | 'json' 
       lines.push(`Rating: ${'⭐'.repeat(call.rating)}`);
     }
     if (call.txHash) {
-      lines.push(`Transaction: https://celoscan.io/tx/${call.txHash}`);
+      lines.push(`Transaction: ${getExplorerTxUrl(call.txHash)}`);
     }
     lines.push('');
   });

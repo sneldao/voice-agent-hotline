@@ -235,8 +235,8 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
   );
 }
 
-// Demo component for showcasing rate limiting
-export function RateLimitDemo() {
+// Interactive panel for showcasing rate limiting
+export function RateLimitPanel() {
   const [usage, setUsage] = useState({ callsThisMinute: 3, secondsUntilReset: 45 });
 
   const config: RateLimitConfig = {
@@ -249,28 +249,28 @@ export function RateLimitDemo() {
     <div>
       <RateLimitDisplay config={config} currentUsage={usage} />
       
-      <div className="demo-controls">
+      <div className="control-bar">
         <button
           onClick={() => setUsage(u => ({ ...u, callsThisMinute: Math.min(u.callsThisMinute + 1, 10) }))}
-          className="demo-btn"
+          className="control-btn"
         >
           + Simulate Call
         </button>
         <button
           onClick={() => setUsage({ callsThisMinute: 0, secondsUntilReset: 60 })}
-          className="demo-btn reset"
+          className="control-btn reset"
         >
           ↺ Reset
         </button>
       </div>
 
       <style jsx>{`
-        .demo-controls {
+        .control-bar {
           display: flex;
           gap: 12px;
           margin-top: 16px;
         }
-        .demo-btn {
+        .control-btn {
           flex: 1;
           padding: 12px;
           background: linear-gradient(135deg, #06b6d4, #3b82f6);
@@ -281,10 +281,10 @@ export function RateLimitDemo() {
           cursor: pointer;
           transition: transform 0.2s;
         }
-        .demo-btn:hover {
+        .control-btn:hover {
           transform: translateY(-2px);
         }
-        .demo-btn.reset {
+        .control-btn.reset {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
         }

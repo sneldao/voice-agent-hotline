@@ -227,7 +227,7 @@ export function DelegationPanel() {
           <h3 className="font-semibold text-white">ERC-8004 Not Configured</h3>
         </div>
         <p className="text-sm text-gray-400 mb-2">
-          The delegation contracts are not yet deployed. Agent permissions work in demo mode.
+          The delegation contracts are not yet deployed. Agent permissions are running in sandbox mode.
         </p>
         <p className="text-xs text-gray-600">
           To enable: deploy ERC-8004 contracts on Celo and set{' '}

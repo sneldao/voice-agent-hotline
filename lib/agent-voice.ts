@@ -30,6 +30,17 @@ export interface AgentPersonality {
   toneModifier: number; // 0-1, affects pitch/variation
 }
 
+interface AgentVoiceSource {
+  id: string;
+  name: string;
+  specialty: string;
+  rating: number;
+  rate: number;
+  avatar?: string;
+  voiceId?: string;
+  category?: string;
+}
+
 // ============================================
 // Predefined Agent Personalities
 // ============================================
@@ -84,6 +95,26 @@ export const AGENT_PERSONALITIES: Record<string, AgentPersonality> = {
     toneModifier: 0.6,
   },
 };
+
+export const DEFAULT_AGENT_PERSONALITY = AGENT_PERSONALITIES.general_advisor;
+
+export function createAgentPersonality(agent: AgentVoiceSource): AgentPersonality {
+  const speakingStyle = getSpeakingStyle(agent);
+  const pace = speakingStyle === 'casual' ? 'fast' : 'normal';
+
+  return {
+    id: agent.id,
+    name: agent.name,
+    specialty: agent.specialty,
+    rating: agent.rating,
+    pricePerMinute: agent.rate,
+    avatar: agent.avatar,
+    voiceId: agent.voiceId || DEFAULT_AGENT_PERSONALITY.voiceId,
+    speakingStyle,
+    pace,
+    toneModifier: getToneModifier(speakingStyle),
+  };
+}
 
 // ============================================
 // Response Templates
@@ -252,6 +283,42 @@ export class AgentVoiceResponse {
       }
     }
     this.cache.clear();
+  }
+}
+
+function getSpeakingStyle(agent: AgentVoiceSource): AgentPersonality['speakingStyle'] {
+  const category = agent.category?.toLowerCase() || '';
+  const specialty = agent.specialty.toLowerCase();
+
+  if (category === 'finance' || specialty.includes('advisor')) {
+    return 'professional';
+  }
+
+  if (category === 'tech' || specialty.includes('engineer') || specialty.includes('infrastructure')) {
+    return 'professional';
+  }
+
+  if (specialty.includes('travel') || specialty.includes('guide') || specialty.includes('concierge')) {
+    return 'enthusiastic';
+  }
+
+  if (specialty.includes('blockchain') || specialty.includes('analyst')) {
+    return 'casual';
+  }
+
+  return 'friendly';
+}
+
+function getToneModifier(style: AgentPersonality['speakingStyle']): number {
+  switch (style) {
+    case 'enthusiastic':
+      return 0.7;
+    case 'casual':
+      return 0.4;
+    case 'professional':
+      return 0.35;
+    default:
+      return 0.5;
   }
 }
 

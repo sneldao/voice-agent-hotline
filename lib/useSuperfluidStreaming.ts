@@ -3,36 +3,37 @@
 // ============================================
 // Client-side hook for Superfluid stream management.
 //
-// Read operations (checkStream, getNetFlowRate) are executed directly via
-// the public Celo RPC – no server key required.
-//
-// Write operations (start / update / stop stream) are routed through server
-// API endpoints so that the FACILITATOR_PRIVATE_KEY never reaches the client.
+// Stream creation/deletion is signed directly by the user's connected wallet.
+// Stream existence checks use public Celo RPC reads, with no server key.
 // ============================================
 
 'use client';
 
 import { useState, useCallback } from 'react';
 import {
+  ACTIVE_CHAIN,
+  CFA_V1_FORWARDER,
+  CFA_V1_FORWARDER_ABI,
+  SUPERFLUID_TOKEN,
+  RPC_URL,
   SuperfluidStreamingService,
   StreamingPaymentState,
-  StreamInfo,
   monthlyUsdcToTokenUnits,
 } from './superfluid-streaming';
 import { useWallet } from './WalletContext';
+import { createPublicClient, encodeFunctionData, http, type Address, type Hash } from 'viem';
 
 // Shared read-only instance (public RPC, no wallet needed).
 const readService = new SuperfluidStreamingService();
+const publicClient = createPublicClient({
+  chain: ACTIVE_CHAIN,
+  transport: http(RPC_URL),
+});
 
 interface UseSuperfluidStreamingReturn extends StreamingPaymentState {
   connect: () => Promise<void>;
-  startStream: (recipient: string, monthlyUSDC: number) => Promise<boolean>;
-  updateStream: (recipient: string, monthlyUSDC: number) => Promise<boolean>;
-  stopStream: (recipient: string) => Promise<boolean>;
-  checkStream: (recipient: string) => Promise<StreamInfo>;
-  getNetFlowRate: () => Promise<string>;
-  /** One-time ACL grant so the facilitator can manage streams on behalf of this user. */
-  grantPermissions: (facilitatorAddress: string) => Promise<boolean>;
+  startStream: (recipient: string, monthlyUSDC: number) => Promise<Hash | null>;
+  stopStream: (recipient: string) => Promise<Hash | null>;
 }
 
 export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
@@ -40,149 +41,100 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
   const [state, setState] = useState<StreamingPaymentState>({ status: 'idle' });
 
   // --------------------------------------------------
-  // Write operations – delegated to server API
-  // The server uses FACILITATOR_PRIVATE_KEY to pay gas.
+  // Write operations – wallet-signed direct Superfluid transactions
   // --------------------------------------------------
 
   const startStream = useCallback(
-    async (recipient: string, monthlyUSDC: number): Promise<boolean> => {
+    async (recipient: string, monthlyUSDC: number): Promise<Hash | null> => {
       if (!address) {
         setState({ status: 'error', error: 'Wallet not connected' });
-        return false;
+        return null;
+      }
+      if (!window.ethereum) {
+        setState({ status: 'error', error: 'Wallet provider not available' });
+        return null;
       }
 
       setState({ status: 'pending' });
 
       try {
-        const res = await fetch('/api/streaming/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: address,
-            recipient,
-            monthlyAmount: monthlyUsdcToTokenUnits(monthlyUSDC),
-          }),
+        const monthlyAmount = monthlyUsdcToTokenUnits(monthlyUSDC);
+        const flowRate = SuperfluidStreamingService.calculateFlowRate(monthlyAmount);
+        const existing = await readService.checkStream(address as Address, recipient as Address);
+        const functionName = existing.exists ? 'updateFlow' : 'createFlow';
+        const data = encodeFunctionData({
+          abi: CFA_V1_FORWARDER_ABI,
+          functionName,
+          args: [SUPERFLUID_TOKEN, address as Address, recipient as Address, flowRate, '0x'],
         });
-
-        const data = await res.json();
-        if (!res.ok) {
-          setState({ status: 'error', error: data.error || 'Stream start failed' });
-          return false;
-        }
+        const txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: address,
+            to: CFA_V1_FORWARDER,
+            data,
+          }],
+        }) as Hash;
+        await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
 
         setState({
           status: 'streaming',
-          streamId: data.streamId,
-          flowRate: data.flowRate,
+          streamId: txHash,
+          txHash,
+          flowRate: flowRate.toString(),
           startedAt: new Date(),
         });
-        return true;
+        return txHash;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Stream start failed';
         setState({ status: 'error', error: msg });
-        return false;
-      }
-    },
-    [address]
-  );
-
-  const updateStream = useCallback(
-    async (recipient: string, monthlyUSDC: number): Promise<boolean> => {
-      if (!address) {
-        setState({ status: 'error', error: 'Wallet not connected' });
-        return false;
-      }
-
-      try {
-        const res = await fetch('/api/streaming/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sender: address,
-            recipient,
-            monthlyAmount: monthlyUsdcToTokenUnits(monthlyUSDC),
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          setState(prev => ({ ...prev, status: 'error', error: data.error }));
-          return false;
-        }
-
-        setState(prev => ({ ...prev, status: 'streaming', flowRate: data.flowRate }));
-        return true;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Stream update failed';
-        setState(prev => ({ ...prev, status: 'error', error: msg }));
-        return false;
+        return null;
       }
     },
     [address]
   );
 
   const stopStream = useCallback(
-    async (recipient: string): Promise<boolean> => {
+    async (recipient: string): Promise<Hash | null> => {
       if (!address) {
         setState({ status: 'error', error: 'Wallet not connected' });
-        return false;
+        return null;
+      }
+      if (!window.ethereum) {
+        setState({ status: 'error', error: 'Wallet provider not available' });
+        return null;
       }
 
-      try {
-        const res = await fetch('/api/streaming/stop', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender: address, recipient }),
-        });
+      setState(prev => ({ ...prev, status: 'pending', error: undefined }));
 
-        const data = await res.json();
-        if (!res.ok) {
-          setState(prev => ({ ...prev, status: 'error', error: data.error }));
-          return false;
+      try {
+        const existing = await readService.checkStream(address as Address, recipient as Address);
+        if (!existing.exists) {
+          setState({ status: 'stopped', stoppedAt: new Date() });
+          return null;
         }
 
-        setState({ status: 'stopped', stoppedAt: new Date() });
-        return true;
+        const data = encodeFunctionData({
+          abi: CFA_V1_FORWARDER_ABI,
+          functionName: 'deleteFlow',
+          args: [SUPERFLUID_TOKEN, address as Address, recipient as Address, '0x'],
+        });
+        const txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: address,
+            to: CFA_V1_FORWARDER,
+            data,
+          }],
+        }) as Hash;
+        await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+
+        setState({ status: 'stopped', txHash, stoppedAt: new Date() });
+        return txHash;
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Stream stop failed';
         setState(prev => ({ ...prev, status: 'error', error: msg }));
-        return false;
-      }
-    },
-    [address]
-  );
-
-  // --------------------------------------------------
-  // Read operations – public RPC, no server call needed
-  // --------------------------------------------------
-
-  const checkStream = useCallback(
-    async (recipient: string): Promise<StreamInfo> => {
-      if (!address) {
-        return { exists: false, currentFlowRate: '0', deposit: '0', owedDeposit: '0' };
-      }
-      return readService.checkStream(address as `0x${string}`, recipient as `0x${string}`);
-    },
-    [address]
-  );
-
-  const getNetFlowRate = useCallback(async (): Promise<string> => {
-    if (!address) return '0';
-    return readService.getNetFlowRate(address as `0x${string}`);
-  }, [address]);
-
-  const grantPermissions = useCallback(
-    async (facilitatorAddress: string): Promise<boolean> => {
-      if (!address) return false;
-      try {
-        const res = await fetch('/api/streaming/grant-permissions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender: address, facilitator: facilitatorAddress }),
-        });
-        return res.ok;
-      } catch {
-        return false;
+        return null;
       }
     },
     [address]
@@ -192,10 +144,6 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
     ...state,
     connect,
     startStream,
-    updateStream,
     stopStream,
-    checkStream,
-    getNetFlowRate,
-    grantPermissions,
   };
 }

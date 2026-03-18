@@ -123,6 +123,24 @@ export function useLocalCallHistory() {
     });
   }, []);
 
+  const updateCallReceipt = useCallback((callId: string, receipt: { txHash?: string; cost?: number }) => {
+    setState(prev => {
+      const calls = prev.calls.map(c =>
+        c.id === callId
+          ? {
+              ...c,
+              txHash: receipt.txHash ?? c.txHash,
+              cost: receipt.cost ?? c.cost,
+            }
+          : c
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(calls));
+
+      const totalSpent = calls.reduce((sum, c) => sum + c.cost, 0);
+      return { ...prev, calls, totalSpent };
+    });
+  }, []);
+
   const deleteCall = useCallback((callId: string) => {
     setState(prev => {
       const calls = prev.calls.filter(c => c.id !== callId);
@@ -172,6 +190,7 @@ export function useLocalCallHistory() {
     saveCall,
     rateCall,
     toggleSaveCall,
+    updateCallReceipt,
     deleteCall,
     getSavedCalls,
     getCallById,

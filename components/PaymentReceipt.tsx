@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CheckCircle, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
+import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
 
 interface PaymentReceiptProps {
   callId: string;
@@ -69,7 +70,7 @@ export function PaymentReceipt({ callId }: PaymentReceiptProps) {
     );
   }
 
-  const explorerUrl = `https://celoscan.io/tx/${receipt.txHash}`;
+  const explorerUrl = getExplorerTxUrl(receipt.txHash);
   const date = new Date(receipt.timestamp).toLocaleString();
 
   return (

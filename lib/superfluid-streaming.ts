@@ -7,7 +7,6 @@
 
 import {
   createPublicClient,
-  createWalletClient,
   http,
   parseUnits,
   formatUnits,
@@ -15,30 +14,30 @@ import {
   Hash,
 } from 'viem';
 import { celo, celoAlfajores } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
 
 // ============================================
 // Configuration
 // ============================================
 
 // CFAv1Forwarder is deployed at the same address on every Superfluid-enabled chain.
-const CFA_V1_FORWARDER = '0xcfA132E353cB4E3180835bd80aA1126F87b751Ee' as Address;
+export const CFA_V1_FORWARDER = '0xcfA132E353cB4E3180835bd80aA1126F87b751Ee' as Address;
 
 // Super-token used for voice-call streaming.
 // Override with NEXT_PUBLIC_SUPERFLUID_TOKEN env var for testnet/custom tokens.
 // Default: cUSDCx on Celo mainnet (Superfluid-wrapped USDC)
-const SUPERFLUID_TOKEN: Address = (
+export const SUPERFLUID_TOKEN: Address = (
   process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN ||
   '0x1BA8603DA702602A8657980e825A6DAa03Dee93a' // cUSDCx – Celo mainnet
 ) as Address;
+export const SUPERFLUID_TOKEN_SYMBOL = process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN_SYMBOL || 'cUSDCx';
 
-const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoAlfajores;
-const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
+export const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoAlfajores;
+export const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
 
 // ============================================
 // CFAv1Forwarder ABI (minimal surface)
 // ============================================
-const CFA_V1_FORWARDER_ABI = [
+export const CFA_V1_FORWARDER_ABI = [
   {
     name: 'createFlow',
     type: 'function',
@@ -114,16 +113,10 @@ const CFA_V1_FORWARDER_ABI = [
 // Types
 // ============================================
 
-export interface StreamingPaymentRequest {
-  recipient: Address;
-  /** Monthly USDC amount expressed as a string in token units (18 decimals). */
-  monthlyAmount: string;
-  sender: Address;
-}
-
 export interface StreamingPaymentState {
   status: 'idle' | 'pending' | 'streaming' | 'stopped' | 'error';
   streamId?: Hash;
+  txHash?: Hash;
   flowRate?: string;
   startedAt?: Date;
   stoppedAt?: Date;
@@ -145,7 +138,6 @@ export class SuperfluidStreamingService {
   // 'any' avoids the chain-specific generic mismatch from viem's overloads.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private publicClient: any;
-  private walletClient: ReturnType<typeof createWalletClient> | null = null;
   private superToken: Address;
 
   constructor(superToken?: Address) {
@@ -155,22 +147,6 @@ export class SuperfluidStreamingService {
       chain: ACTIVE_CHAIN,
       transport: http(RPC_URL),
     });
-
-    // Initialise facilitator wallet if a valid server-side private key is provided.
-    // This key pays gas for flow management on behalf of callers.
-    const facilitatorKey = process.env.FACILITATOR_PRIVATE_KEY;
-    if (facilitatorKey && facilitatorKey.startsWith('0x') && facilitatorKey.length === 66) {
-      try {
-        const account = privateKeyToAccount(facilitatorKey as `0x${string}`);
-        this.walletClient = createWalletClient({
-          account,
-          chain: ACTIVE_CHAIN,
-          transport: http(RPC_URL),
-        });
-      } catch (e) {
-        console.warn('[Superfluid] Invalid FACILITATOR_PRIVATE_KEY, streaming disabled');
-      }
-    }
   }
 
   // --------------------------------------------------
@@ -185,15 +161,6 @@ export class SuperfluidStreamingService {
     const SECONDS_PER_MONTH = BigInt(30 * 24 * 60 * 60);
     return BigInt(monthlyAmount) / SECONDS_PER_MONTH;
   }
-
-  /** Whether a server-side wallet is available to submit transactions. */
-  isConfigured(): boolean {
-    return this.walletClient !== null;
-  }
-
-  // --------------------------------------------------
-  // Read operations
-  // --------------------------------------------------
 
   /** Return live flow info between sender and receiver. */
   async checkStream(sender: Address, receiver: Address): Promise<StreamInfo> {
@@ -229,124 +196,6 @@ export class SuperfluidStreamingService {
       return flowRate.toString();
     } catch {
       return '0';
-    }
-  }
-
-  // --------------------------------------------------
-  // Write operations (require walletClient / facilitator key)
-  // --------------------------------------------------
-
-  /** Start a new stream from sender to receiver at the given monthly rate. */
-  async startStream(request: StreamingPaymentRequest): Promise<StreamingPaymentState> {
-    if (!this.walletClient) {
-      return {
-        status: 'error',
-        error: 'Facilitator wallet not configured. Set FACILITATOR_PRIVATE_KEY.',
-      };
-    }
-
-    try {
-      const flowRate = SuperfluidStreamingService.calculateFlowRate(request.monthlyAmount);
-
-      // Check whether a stream already exists – update instead of create.
-      const existing = await this.checkStream(request.sender, request.recipient);
-      const functionName = existing.exists ? 'updateFlow' : 'createFlow';
-
-      const hash = await this.walletClient.writeContract({
-        address: CFA_V1_FORWARDER,
-        abi: CFA_V1_FORWARDER_ABI,
-        functionName,
-        args: [this.superToken, request.sender, request.recipient, flowRate, '0x'],
-      } as any);
-
-      await this.publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
-
-      console.log(`[Superfluid] Stream ${existing.exists ? 'updated' : 'created'}:`, {
-        sender: request.sender,
-        recipient: request.recipient,
-        flowRate: flowRate.toString(),
-        txHash: hash,
-      });
-
-      return {
-        status: 'streaming',
-        streamId: hash,
-        flowRate: flowRate.toString(),
-        startedAt: new Date(),
-      };
-    } catch (error) {
-      console.error('[Superfluid] startStream error:', error);
-      return {
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Stream creation failed',
-      };
-    }
-  }
-
-  /** Update the flow rate of an existing stream. */
-  async updateStream(
-    sender: Address,
-    receiver: Address,
-    newMonthlyAmount: string
-  ): Promise<StreamingPaymentState> {
-    if (!this.walletClient) {
-      return { status: 'error', error: 'Facilitator wallet not configured.' };
-    }
-
-    try {
-      const newFlowRate = SuperfluidStreamingService.calculateFlowRate(newMonthlyAmount);
-
-      const hash = await this.walletClient.writeContract({
-        address: CFA_V1_FORWARDER,
-        abi: CFA_V1_FORWARDER_ABI,
-        functionName: 'updateFlow',
-        args: [this.superToken, sender, receiver, newFlowRate, '0x'],
-      } as any);
-
-      await this.publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
-
-      console.log('[Superfluid] Stream updated:', { sender, receiver, newFlowRate: newFlowRate.toString(), txHash: hash });
-
-      return { status: 'streaming', flowRate: newFlowRate.toString() };
-    } catch (error) {
-      console.error('[Superfluid] updateStream error:', error);
-      return {
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Stream update failed',
-      };
-    }
-  }
-
-  /** Delete a stream between sender and receiver. */
-  async stopStream(sender: Address, receiver: Address): Promise<StreamingPaymentState> {
-    if (!this.walletClient) {
-      return { status: 'error', error: 'Facilitator wallet not configured.' };
-    }
-
-    try {
-      const existing = await this.checkStream(sender, receiver);
-      if (!existing.exists) {
-        return { status: 'stopped', stoppedAt: new Date() };
-      }
-
-      const hash = await this.walletClient.writeContract({
-        address: CFA_V1_FORWARDER,
-        abi: CFA_V1_FORWARDER_ABI,
-        functionName: 'deleteFlow',
-        args: [this.superToken, sender, receiver, '0x'],
-      } as any);
-
-      await this.publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
-
-      console.log('[Superfluid] Stream stopped:', { sender, receiver, txHash: hash });
-
-      return { status: 'stopped', stoppedAt: new Date() };
-    } catch (error) {
-      console.error('[Superfluid] stopStream error:', error);
-      return {
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Stream stop failed',
-      };
     }
   }
 }
@@ -397,7 +246,7 @@ export function calculatePerSecondCost(monthlyUSDC: number): number {
   return monthlyUSDC / secondsPerMonth;
 }
 
-// ============================================
-// Singleton (uses env-configured super token)
-// ============================================
-export const superfluidService = new SuperfluidStreamingService();
+export function getExplorerTxUrl(txHash: string): string {
+  const baseUrl = ACTIVE_CHAIN.blockExplorers?.default?.url || 'https://celoscan.io';
+  return `${baseUrl}/tx/${txHash}`;
+}

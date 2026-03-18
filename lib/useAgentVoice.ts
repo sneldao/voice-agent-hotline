@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { AgentVoiceResponse, AgentPersonality, AGENT_PERSONALITIES } from './agent-voice';
+import { AgentVoiceResponse, AgentPersonality, AGENT_PERSONALITIES, DEFAULT_AGENT_PERSONALITY } from './agent-voice';
 
 interface UseAgentVoiceReturn {
   isSpeaking: boolean;
@@ -15,7 +15,7 @@ interface UseAgentVoiceReturn {
   currentResponse: VoiceMessage | null;
   speak: (text: string) => Promise<void>;
   stopSpeaking: () => void;
-  setPersonality: (agentId: string) => void;
+  setPersonality: (agent: string | AgentPersonality) => void;
   generateGreeting: () => Promise<void>;
 }
 
@@ -25,7 +25,7 @@ interface VoiceMessage {
   duration: number;
 }
 
-export function useAgentVoice(apiKey: string, initialAgentId: string = 'general_advisor') {
+export function useAgentVoice(apiKey: string, initialAgent: string | AgentPersonality = 'general_advisor') {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +36,13 @@ export function useAgentVoice(apiKey: string, initialAgentId: string = 'general_
 
   // Initialize voice service
   if (!voiceRef.current && apiKey) {
-    const personality = AGENT_PERSONALITIES[initialAgentId] || AGENT_PERSONALITIES.general_advisor;
+    const personality = resolvePersonality(initialAgent);
     voiceRef.current = new AgentVoiceResponse(apiKey, personality);
   }
 
-  const setPersonality = useCallback((agentId: string) => {
+  const setPersonality = useCallback((agent: string | AgentPersonality) => {
     if (voiceRef.current) {
-      const personality = AGENT_PERSONALITIES[agentId] || AGENT_PERSONALITIES.general_advisor;
+      const personality = resolvePersonality(agent);
       voiceRef.current.setPersonality(personality);
     }
   }, []);
@@ -159,4 +159,12 @@ export function useAgentVoice(apiKey: string, initialAgentId: string = 'general_
     setPersonality,
     generateGreeting,
   };
+}
+
+function resolvePersonality(agent: string | AgentPersonality): AgentPersonality {
+  if (typeof agent === 'string') {
+    return AGENT_PERSONALITIES[agent] || DEFAULT_AGENT_PERSONALITY;
+  }
+
+  return agent;
 }

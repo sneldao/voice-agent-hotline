@@ -17,6 +17,7 @@ export interface Agent {
   voiceId?: string;
   elevenlabsAgentId?: string;
   category?: string;
+  walletAddress?: string;
 }
 
 export interface CallHistory {
@@ -62,6 +63,7 @@ const FALLBACK_AGENTS: Agent[] = [
     voiceId: 'CwhRBWXzGAHq8TQ4Fs17',
     elevenlabsAgentId: 'agent_2101khgsy8aqfxv8yr3r9548bqrx',
     category: 'blockchain',
+    walletAddress: process.env.NEXT_PUBLIC_PLATFORM_ADDRESS,
   },
   {
     id: 'agent_0201khgsya1dfcgv6p5ch10995b9',
@@ -78,6 +80,7 @@ const FALLBACK_AGENTS: Agent[] = [
     voiceId: 'EXAVITQu4vr4xnSDxMaL',
     elevenlabsAgentId: 'agent_0201khgsya1dfcgv6p5ch10995b9',
     category: 'tech',
+    walletAddress: process.env.NEXT_PUBLIC_PLATFORM_ADDRESS,
   },
   {
     id: 'agent_diversifi_prod_001',
@@ -94,6 +97,7 @@ const FALLBACK_AGENTS: Agent[] = [
     voiceId: '21m00Tcm4TlvDq8ikWAM',
     elevenlabsAgentId: '', // Set after seeding
     category: 'finance',
+    walletAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
   },
   {
     id: 'agent_clawdy_prod_001',
@@ -110,6 +114,7 @@ const FALLBACK_AGENTS: Agent[] = [
     voiceId: 'pNInz6obpgnuMvscWqt5',
     elevenlabsAgentId: '', // Set after seeding
     category: 'tech',
+    walletAddress: '0x321d35Cc6634C0532925a3b844Bc454e4438f44e',
   },
 ];
 
@@ -142,9 +147,9 @@ export function useRealAgents(): UseRealAgentsReturn {
           name: agent.name,
           specialty: agent.specialty || agent.category || 'General',
           bio: agent.bio || agent.description || '',
-          rating: agent.rating || 0,
-          totalRatings: agent.totalRatings || 0,
-          rate: agent.rate || agent.ratePerMinute || agent.price_per_minute || 0.1,
+          rating: Number(agent.rating || 0),
+          totalRatings: Number(agent.totalRatings || 0),
+          rate: Number(agent.rate || agent.ratePerMinute || agent.price_per_minute || 0.1),
           avatar: agent.avatar || getDefaultAvatar(agent.category),
           color: agent.color || getDefaultColor(agent.category),
           online: agent.online !== false,
@@ -152,6 +157,7 @@ export function useRealAgents(): UseRealAgentsReturn {
           voiceId: agent.voiceId || agent.voice_id,
           elevenlabsAgentId: agent.elevenlabsAgentId || agent.elevenlabs_agent_id,
           category: agent.category,
+          walletAddress: agent.walletAddress || agent.wallet_address,
         }));
 
         setAgents(transformedAgents);

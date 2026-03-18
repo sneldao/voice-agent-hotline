@@ -3,10 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
-import { useRealPayment } from '@/lib/useRealPayment';
+import { useRealPayment, type PaymentState } from '@/lib/useRealPayment';
+import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
+import type { AgentRecommendation } from '@/lib/agent-recommendations';
+import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
 import { Mic, MicOff, Volume2, PhoneOff, Clock, Signal, AlertCircle, Phone } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
+import { showError } from './ui';
 import { parseEther } from 'viem';
 
 interface Agent {
@@ -23,11 +27,29 @@ interface ActiveCallProps {
   agent: Agent;
   callId: string;
   userId: string;
+  paymentMode?: 'x402' | 'streaming';
+  streamingPreflight?: {
+    chainName: string;
+    tokenSymbol: string;
+    payoutAddress: string;
+    availableBalance?: number;
+    requiredBalance?: number;
+  };
+  relatedAgents?: AgentRecommendation[];
   onEnd: () => void;
   onSelectRelatedAgent?: (agentId: string) => void;
 }
 
-export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent }: ActiveCallProps) {
+export function ActiveCall({
+  agent,
+  callId,
+  userId,
+  paymentMode = 'x402',
+  streamingPreflight,
+  relatedAgents = [],
+  onEnd,
+  onSelectRelatedAgent,
+}: ActiveCallProps) {
   const { 
     call, 
     startCall, 
@@ -37,15 +59,26 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
     transcripts 
   } = useRealVoiceCall(agent.rate);
   const { payment, settlePayment, resetPayment } = useRealPayment();
+  const {
+    status: streamingStatus,
+    txHash: streamingTxHash,
+    error: streamingError,
+    startStream,
+    stopStream,
+  } = useSuperfluidStreaming();
   
   const { isSupported, permissions } = useWebRTCSupport();
-  const { saveCall, rateCall, toggleSaveCall, exportTranscript } = useLocalCallHistory();
+  const { saveCall, rateCall, toggleSaveCall, exportTranscript, updateCallReceipt } = useLocalCallHistory();
   const [showTranscript, setShowTranscript] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [savedCallId, setSavedCallId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(true);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const streamingStartedRef = useRef(false);
+  const payoutAddress = agent.walletAddress || process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
+  const monthlyStreamingRate = agent.rate * 60 * 24 * 30;
 
   useEffect(() => {
     if (showTranscript && transcriptEndRef.current) {
@@ -68,28 +101,45 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
     }
   }, [call.isConnected, call.duration]);
 
+  useEffect(() => {
+    if (paymentMode !== 'streaming' || !call.isConnected || streamingStartedRef.current) {
+      return;
+    }
+
+    if (!payoutAddress) {
+      showError('Streaming payment requires an agent payout address.');
+      endCall();
+      onEnd();
+      return;
+    }
+
+    streamingStartedRef.current = true;
+
+    void startStream(payoutAddress, monthlyStreamingRate).then((txHash) => {
+      if (!txHash) {
+        streamingStartedRef.current = false;
+        showError('Failed to start streaming payment. Ending call.');
+        endCall();
+        onEnd();
+      }
+    });
+  }, [call.isConnected, endCall, monthlyStreamingRate, onEnd, paymentMode, payoutAddress, startStream]);
+
   // Haptic feedback helper — safe no-op when browser doesn't support it
   const vibrate = (pattern: number | number[]) => {
     try { navigator.vibrate?.(pattern); } catch { /* unsupported */ }
   };
 
-  const handleEnd = useCallback(() => {
+  const handleEnd = useCallback(async () => {
+    if (isFinalizing) {
+      return;
+    }
+
+    setIsFinalizing(true);
     vibrate([100, 50, 100]); // double-pulse on hang-up
     endCall();
 
-    const payoutAddress = agent.walletAddress || process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
     const totalCost = Number.isFinite(call.cost) ? call.cost : 0;
-    if (totalCost > 0 && !payment.isProcessing && !payment.isSettled) {
-      const amount = parseEther(totalCost.toFixed(6));
-      settlePayment({
-        callId,
-        agentAddress: payoutAddress as `0x${string}`,
-        amount,
-        token: 'cUSD',
-      });
-    }
-    
-    // Save call to history
     const id = saveCall({
       agentId: agent.id,
       agentName: agent.name,
@@ -99,8 +149,45 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
       transcripts,
     });
     setSavedCallId(id);
+
+    if (paymentMode === 'streaming' && payoutAddress) {
+      const stopTxHash = await stopStream(payoutAddress);
+      if (stopTxHash) {
+        updateCallReceipt(id, { txHash: stopTxHash, cost: totalCost });
+      }
+    } else if (totalCost > 0 && !payment.isProcessing && !payment.isSettled) {
+      const amount = parseEther(totalCost.toFixed(6));
+      const settlement = await settlePayment({
+        callId,
+        agentAddress: payoutAddress as `0x${string}`,
+        amount,
+        token: 'cUSD',
+      });
+
+      if (settlement.txHash) {
+        updateCallReceipt(id, { txHash: settlement.txHash, cost: totalCost });
+      }
+    }
+
     setShowSummary(true);
-  }, [endCall, saveCall, agent, call.duration, call.cost, transcripts, callId, settlePayment, payment.isProcessing, payment.isSettled]);
+    setIsFinalizing(false);
+  }, [
+    agent,
+    call.cost,
+    call.duration,
+    callId,
+    endCall,
+    isFinalizing,
+    paymentMode,
+    payment.isProcessing,
+    payment.isSettled,
+    payoutAddress,
+    saveCall,
+    settlePayment,
+    stopStream,
+    transcripts,
+    updateCallReceipt,
+  ]);
 
   const handleCloseSummary = useCallback(() => {
     setShowSummary(false);
@@ -158,6 +245,37 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
   };
 
   const quality = getQualityIndicator();
+  const shortAddress = (value: string) => {
+    if (!value || value.length < 12) return value || 'Not set';
+    return `${value.slice(0, 6)}...${value.slice(-4)}`;
+  };
+  const streamingPayment: PaymentState = {
+    isProcessing: isFinalizing || streamingStatus === 'pending',
+    isSettled: streamingStatus === 'stopped',
+    isSimulated: false,
+    mode: 'superfluid_stream',
+    txHash: streamingTxHash,
+    explorerUrl: streamingTxHash ? getExplorerTxUrl(streamingTxHash) : undefined,
+    error: streamingError || null,
+  };
+  const activePayment = paymentMode === 'streaming' ? streamingPayment : payment;
+  const paymentBadge = paymentMode === 'streaming'
+    ? (isFinalizing || streamingStatus === 'pending'
+        ? { label: 'Settling', className: 'bg-amber-500/15 text-amber-300 border-amber-500/40' }
+        : streamingError
+          ? { label: 'Payment Error', className: 'bg-red-500/15 text-red-300 border-red-500/40' }
+          : streamingStatus === 'stopped'
+            ? { label: 'On-Chain', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' }
+            : streamingStatus === 'streaming'
+              ? { label: 'Streaming Live', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' }
+              : { label: 'Streaming Ready', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' })
+    : (isFinalizing || payment.isProcessing
+        ? { label: 'Settling', className: 'bg-amber-500/15 text-amber-300 border-amber-500/40' }
+        : payment.error
+          ? { label: 'Payment Error', className: 'bg-red-500/15 text-red-300 border-red-500/40' }
+          : payment.isSettled
+            ? { label: payment.isSimulated ? 'Simulated' : 'On-Chain', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' }
+            : { label: 'x402 Ready', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' });
 
   if (!isSupported) {
     return (
@@ -247,6 +365,9 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
             <Signal className="w-3 h-3" />
             <span className="text-xs">{quality.label}</span>
           </div>
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full border ${paymentBadge.className}`}>
+            <span className="text-[10px] font-bold uppercase tracking-wide">{paymentBadge.label}</span>
+          </div>
           {/* Live badge */}
           <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40">
             <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
@@ -259,8 +380,37 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
         </div>
       </div>
 
+      {paymentMode === 'streaming' && streamingPreflight && (
+        <div className="px-4 py-2 border-b border-gray-800/60 bg-gray-900/70">
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <span className="px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-200">
+              Chain: {streamingPreflight.chainName}
+            </span>
+            <span className="px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-200">
+              Token: {streamingPreflight.tokenSymbol}
+            </span>
+            <span className="px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-200">
+              Payout: {shortAddress(streamingPreflight.payoutAddress)}
+            </span>
+            {typeof streamingPreflight.availableBalance === 'number' && typeof streamingPreflight.requiredBalance === 'number' && (
+              <span className="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">
+                Reserve: {streamingPreflight.availableBalance.toFixed(3)} / {streamingPreflight.requiredBalance.toFixed(3)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-4">
+        {isFinalizing && (
+          <div className="w-full max-w-md mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center">
+            <p className="text-sm font-medium text-amber-200">Finalizing payment on Celo</p>
+            <p className="mt-1 text-xs text-amber-300/80">
+              Waiting for settlement before opening the receipt.
+            </p>
+          </div>
+        )}
         <div className="relative mb-8">
           <div className={`w-32 h-32 rounded-full bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} flex items-center justify-center`}>
             <span className="text-5xl">{agent.avatar || agent.name.charAt(0)}</span>
@@ -322,8 +472,10 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={() => { vibrate(40); toggleMute(); }}
+            disabled={isFinalizing}
             className={`
               w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90
+              disabled:opacity-50 disabled:cursor-not-allowed
               ${isMuted 
                 ? 'bg-red-500 text-white shadow-lg shadow-red-500/40' 
                 : 'bg-gray-800 text-white hover:bg-gray-700'
@@ -336,7 +488,8 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
 
           <button
             onClick={handleEnd}
-            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all active:scale-90 shadow-lg shadow-red-500/25"
+            disabled={isFinalizing}
+            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all active:scale-90 shadow-lg shadow-red-500/25 disabled:opacity-60 disabled:cursor-not-allowed"
             title="End Call"
           >
             <PhoneOff className="w-8 h-8" />
@@ -345,7 +498,8 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
           {/* Speaker toggle — cycles through volume levels */}
           <button
             onClick={() => {/* speaker volume toggle — placeholder for audio output control */}}
-            className="w-14 h-14 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95"
+            disabled={isFinalizing}
+            className="w-14 h-14 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Speaker volume"
           >
             <Volume2 className="w-6 h-6" />
@@ -384,30 +538,14 @@ export function ActiveCall({ agent, callId, userId, onEnd, onSelectRelatedAgent 
         duration={call.duration}
         cost={call.cost}
         transcripts={transcripts}
-        txHash={payment.txHash || call.txHash}
-        payment={payment}
+        txHash={activePayment.txHash || call.txHash}
+        payment={activePayment}
         onClose={handleCloseSummary}
         onRate={handleRate}
         onSave={handleSave}
         onShare={handleShare}
         onDownload={handleDownload}
-        relatedAgents={[
-          // Mock related agents - in real app, fetch from matching engine
-          {
-            id: 'related_1',
-            name: 'Crypto Tax Pro',
-            specialty: 'Tax Optimization',
-            rate: 0.35,
-            reason: 'Similar to your call',
-          },
-          {
-            id: 'related_2',
-            name: 'DeFi Analyst',
-            specialty: 'Yield Strategies',
-            rate: 0.50,
-            reason: 'Popular in your area',
-          },
-        ]}
+        relatedAgents={relatedAgents}
         onSelectRelatedAgent={(id) => {
           setShowSummary(false);
           onSelectRelatedAgent?.(id);

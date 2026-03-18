@@ -19,6 +19,8 @@ import {
 import { Button } from './ui/Button';
 import { ShareModal } from './ShareModal';
 import type { PaymentState } from '@/lib/useRealPayment';
+import type { AgentRecommendation } from '@/lib/agent-recommendations';
+import { SUPERFLUID_TOKEN_SYMBOL, getExplorerTxUrl } from '@/lib/superfluid-streaming';
 
 interface CallSummaryProps {
   isOpen: boolean;
@@ -44,13 +46,7 @@ interface CallSummaryProps {
   onSave: () => void;
   onShare: () => void;
   onDownload: () => void;
-  relatedAgents: Array<{
-    id: string;
-    name: string;
-    specialty: string;
-    rate: number;
-    reason: string;
-  }>;
+  relatedAgents: AgentRecommendation[];
   onSelectRelatedAgent: (agentId: string) => void;
 }
 
@@ -81,7 +77,8 @@ export function CallSummary({
 
   if (!isOpen) return null;
 
-  const explorerUrl = payment?.explorerUrl || (txHash ? `https://celoscan.io/tx/${txHash}` : undefined);
+  const explorerUrl = payment?.explorerUrl || (txHash ? getExplorerTxUrl(txHash) : undefined);
+  const tokenLabel = payment?.mode === 'superfluid_stream' ? SUPERFLUID_TOKEN_SYMBOL : 'cUSD';
   const status: 'settled' | 'processing' | 'pending' | 'error' | 'simulated' = payment?.isProcessing
     ? 'processing'
     : payment?.error
@@ -114,7 +111,7 @@ export function CallSummary({
       icon: <AlertCircle className="w-6 h-6 text-red-400" />,
     },
     simulated: {
-      label: 'Payment simulated (demo mode)',
+      label: 'Payment simulated (sandbox mode)',
       className: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
       icon: <CheckCircle className="w-6 h-6 text-amber-400" />,
     },
@@ -231,7 +228,7 @@ export function CallSummary({
                   </div>
                   <div className="bg-gray-800/60 rounded-lg p-3">
                     <p className="text-xs text-gray-500">Token</p>
-                    <p className="text-lg font-semibold text-white">cUSD</p>
+                    <p className="text-lg font-semibold text-white">{tokenLabel}</p>
                   </div>
                   <div className="bg-gray-800/60 rounded-lg p-3">
                     <p className="text-xs text-gray-500">Call ID</p>
@@ -370,11 +367,12 @@ export function CallSummary({
                         onClick={() => onSelectRelatedAgent(relatedAgent.id)}
                         className="w-full flex items-center gap-4 p-4 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors text-left group"
                       >
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center">
-                          <span className="text-xl">{relatedAgent.name.charAt(0)}</span>
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${relatedAgent.color || 'from-gray-600 to-gray-700'} flex items-center justify-center`}>
+                          <span className="text-xl">{relatedAgent.avatar || relatedAgent.name.charAt(0)}</span>
                         </div>
                         <div className="flex-1">
                           <p className="font-medium text-white">{relatedAgent.name}</p>
+                          <p className="text-sm text-gray-400">{relatedAgent.specialty}</p>
                           <p className="text-sm text-cyan-400">{relatedAgent.reason}</p>
                         </div>
                         <div className="text-right">
