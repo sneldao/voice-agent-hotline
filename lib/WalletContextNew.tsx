@@ -39,10 +39,6 @@ const defaultChain = isProduction ? celo : celoTestnet;
 const ethersConfig = defaultConfig({
   metadata,
   defaultChainId: defaultChain.chainId,
-  rpcUrls: {
-    [celo.chainId]: celo.rpcUrl,
-    [celoTestnet.chainId]: celoTestnet.rpcUrl,
-  },
 });
 
 // Only create Web3Modal if projectId is provided
