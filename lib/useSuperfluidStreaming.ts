@@ -20,7 +20,7 @@ import {
   StreamingPaymentState,
   monthlyUsdcToTokenUnits,
 } from './superfluid-streaming';
-import { useWallet } from './WalletContext';
+import { useWallet } from './WalletContextNew';
 import { createPublicClient, encodeFunctionData, http, type Address, type Hash } from 'viem';
 
 // Shared read-only instance (public RPC, no wallet needed).

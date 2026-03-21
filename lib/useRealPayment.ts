@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useWallet, signMessage } from './WalletContext';
+import { useWallet, signMessage } from './WalletContextNew';
 import { CELO_TOKENS } from './payment-settlement';
 import { validateAddress } from './address';
 import { getExplorerTxUrl } from './superfluid-streaming';

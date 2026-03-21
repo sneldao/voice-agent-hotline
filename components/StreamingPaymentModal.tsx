@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
-import { useWallet } from '@/lib/WalletContext';
+import { useWallet } from '@/lib/WalletContextNew';
 import { formatFlowRate, calculatePerSecondCost } from '@/lib/superfluid-streaming';
 import { Phone, PhoneOff, AlertCircle, Loader2, Zap } from 'lucide-react';
 

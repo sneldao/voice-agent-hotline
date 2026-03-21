@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Shield, ShieldCheck, ShieldOff, Loader2, AlertCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { useWallet } from '@/lib/WalletContext';
+import { useWallet } from '@/lib/WalletContextNew';
 import { AGENT_REGISTRY } from '@/lib/agent-registry';
 
 // ──────────────────────────────────────────────────────────────────────────────
