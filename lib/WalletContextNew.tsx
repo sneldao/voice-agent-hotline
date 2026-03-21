@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
-import { createWeb3Modal, defaultEthersConfig } from '@web3modal/ethers/react';
+import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 import { BrowserProvider, formatEther, Contract, ethers } from 'ethers';
 
 // Celo chain configuration
@@ -36,7 +36,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const chains = isProduction ? [celo] : [celo, celoTestnet];
 const defaultChain = isProduction ? celo : celoTestnet;
 
-const ethersConfig = defaultEthersConfig({
+const ethersConfig = defaultConfig({
   metadata,
   defaultChainId: defaultChain.chainId,
   rpcUrls: {
