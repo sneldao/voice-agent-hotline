@@ -57,7 +57,7 @@ export default function Home() {
   const launchParamsRef = useRef<{ agentId: string; paymentMode: PaymentLaunchMode; autoStart: boolean } | null>(null);
   const launchAttemptedRef = useRef(false);
 
-  const { connected, address, chainId, isConnecting, connect, formatAddress, switchChain } = useWallet();
+  const { connected, address, chainId, isConnecting, connect, disconnect, formatAddress, switchChain } = useWallet();
   const { balance: userBalance, isLoading: isLoadingBalance, mutate: mutateBalance } = useUserBalance(address);
   const { agents, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents();
   const localCallHistory = useLocalCallHistory();
@@ -282,6 +282,7 @@ export default function Home() {
           isConnecting={isConnecting}
           formatAddress={formatAddress}
           onConnect={connect}
+          onDisconnect={disconnect}
         />
         <main id="main-content" className="max-w-md mx-auto pb-28" role="main">
           {inCall && selectedAgent && callId ? (

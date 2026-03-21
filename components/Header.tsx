@@ -1,6 +1,7 @@
 'use client';
 
-import { Phone, Wallet, Bell, Info } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Phone, Wallet, Bell, LogOut, ChevronDown } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
   isConnecting: boolean;
   formatAddress: () => string;
   onConnect: () => void;
+  onDisconnect?: () => void;
 }
 
 export function Header({
@@ -17,7 +19,20 @@ export function Header({
   isConnecting,
   formatAddress,
   onConnect,
+  onDisconnect,
 }: HeaderProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   return (
     <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50" role="banner">
       <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
@@ -40,13 +55,33 @@ export function Header({
         {/* Actions */}
         <div className="flex items-center gap-2" role="group" aria-label="User wallet and notifications">
           {connected ? (
-            <Tooltip content={`Balance: $${(userBalance || 0).toFixed(2)} • First minute free on all calls`} position="bottom">
-              <div className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2 cursor-help">
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowMenu(prev => !prev)}
+                className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2 hover:bg-gray-800 transition-colors"
+                aria-label="Wallet menu"
+              >
                 <Wallet className="w-4 h-4 text-cyan-400" />
                 <span className="text-sm font-medium text-cyan-400">${(userBalance || 0).toFixed(2)}</span>
                 <span className="text-xs text-gray-500">{formatAddress()}</span>
-              </div>
-            </Tooltip>
+                <ChevronDown className="w-3 h-3 text-gray-500" />
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 mt-2 w-44 rounded-xl bg-gray-900 border border-gray-700/50 shadow-xl z-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-gray-800">
+                    <p className="text-xs text-gray-500">Balance</p>
+                    <p className="text-sm font-medium text-cyan-400">${(userBalance || 0).toFixed(2)}</p>
+                  </div>
+                  <button
+                    onClick={() => { setShowMenu(false); onDisconnect?.(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-400 hover:bg-gray-800 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Disconnect
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <button
               onClick={onConnect}
