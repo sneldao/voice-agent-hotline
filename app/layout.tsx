@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Space_Grotesk, IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
-import { Providers } from '@/lib/WalletContext';
+import { WalletProvider } from '@/lib/WalletContextNew';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
 
@@ -94,12 +94,22 @@ export default function RootLayout({
         />
       </head>
       <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
-        <Providers>
+        {/* Skip Navigation Link for Accessibility */}
+        <a 
+          href="#main-content" 
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-cyan-500 focus:text-white focus:rounded-lg focus:font-medium"
+        >
+          Skip to main content
+        </a>
+        
+        <WalletProvider>
           <ThemeProvider>
             <DarkModeToggle />
-            {children}
+            <main id="main-content">
+              {children}
+            </main>
           </ThemeProvider>
-        </Providers>
+        </WalletProvider>
       </body>
     </html>
   );

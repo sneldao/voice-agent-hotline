@@ -16,6 +16,7 @@ import {
 import { erc20Abi } from './abis/erc20';
 import { celo, celoAlfajores } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
+import { getRedis } from './redis';
 
 // ============================================
 // Celo Token Addresses
@@ -136,7 +137,6 @@ const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
 export class PaymentSettlement {
   private publicClient: any;
   private facilitatorWallet?: any;
-  private receipts: Map<string, PaymentReceipt> = new Map();
 
   constructor() {
     this.publicClient = createPublicClient({
@@ -158,6 +158,35 @@ export class PaymentSettlement {
         console.warn('[Settlement] Invalid FACILITATOR_PRIVATE_KEY, settlement disabled');
       }
     }
+  }
+
+  private serializeReceipt(receipt: PaymentReceipt): Record<string, string> {
+    return {
+      callId: receipt.callId,
+      payer: receipt.payer,
+      payee: receipt.payee,
+      amount: receipt.amount,
+      token: receipt.token,
+      txHash: receipt.txHash,
+      blockNumber: receipt.blockNumber.toString(),
+      timestamp: receipt.timestamp.toString(),
+      settled: receipt.settled.toString(),
+    };
+  }
+
+  private deserializeReceipt(data: Record<string, string>): PaymentReceipt | null {
+    if (!data || !data.callId) return null;
+    return {
+      callId: data.callId,
+      payer: data.payer as Address,
+      payee: data.payee as Address,
+      amount: data.amount,
+      token: data.token as Address,
+      txHash: data.txHash as Hash,
+      blockNumber: BigInt(data.blockNumber),
+      timestamp: parseInt(data.timestamp, 10),
+      settled: data.settled === 'true',
+    };
   }
 
   /**
@@ -337,7 +366,8 @@ export class PaymentSettlement {
         settled: true,
       };
 
-      this.receipts.set(paymentReceipt.callId, paymentReceipt);
+      const redis = getRedis();
+      await redis.hset(`payment-receipt:${paymentReceipt.callId}`, this.serializeReceipt(paymentReceipt));
 
       console.log('[Settlement] ✅ Payment settled!', {
         txHash: hash,
@@ -394,29 +424,54 @@ export class PaymentSettlement {
   /**
    * Get payment receipt by call ID
    */
-  getReceipt(callId: string): PaymentReceipt | undefined {
-    return this.receipts.get(callId);
+  async getReceipt(callId: string): Promise<PaymentReceipt | undefined> {
+    const redis = getRedis();
+    const data = await redis.hgetall(`payment-receipt:${callId}`);
+    return this.deserializeReceipt(data as Record<string, string>) ?? undefined;
   }
 
   /**
    * Get all receipts for an address (payer or payee)
    */
-  getReceiptsForAddress(address: Address): PaymentReceipt[] {
-    return Array.from(this.receipts.values()).filter(
-      r => r.payer.toLowerCase() === address.toLowerCase() ||
-           r.payee.toLowerCase() === address.toLowerCase()
-    );
+  async getReceiptsForAddress(address: Address): Promise<PaymentReceipt[]> {
+    const redis = getRedis();
+    const keys = await redis.keys('payment-receipt:*');
+    const receipts: PaymentReceipt[] = [];
+    
+    for (const key of keys) {
+      const data = await redis.hgetall(key);
+      const receipt = this.deserializeReceipt(data as Record<string, string>);
+      if (receipt && (
+        receipt.payer.toLowerCase() === address.toLowerCase() ||
+        receipt.payee.toLowerCase() === address.toLowerCase()
+      )) {
+        receipts.push(receipt);
+      }
+    }
+    
+    return receipts;
   }
 
   /**
    * Get settlement statistics
    */
-  getStats(): {
+  async getStats(): Promise<{
     totalSettled: number;
     totalVolume: string;
     averageGasUsed: string;
-  } {
-    const receipts = Array.from(this.receipts.values());
+  }> {
+    const redis = getRedis();
+    const keys = await redis.keys('payment-receipt:*');
+    const receipts: PaymentReceipt[] = [];
+    
+    for (const key of keys) {
+      const data = await redis.hgetall(key);
+      const receipt = this.deserializeReceipt(data as Record<string, string>);
+      if (receipt) {
+        receipts.push(receipt);
+      }
+    }
+    
     const settled = receipts.filter(r => r.settled);
 
     const totalVolume = settled.reduce(

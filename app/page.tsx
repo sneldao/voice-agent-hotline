@@ -4,7 +4,7 @@ import { useState, useCallback, Suspense, useEffect, useMemo, useRef } from 'rea
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ToastProvider, showError } from '@/components/ui';
-import { useWallet } from '@/lib/WalletContext';
+import { useWallet } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useWebRTCSupport } from '@/lib/useRealVoiceCall';
 import { useOnboarding } from '@/lib/useOnboarding';

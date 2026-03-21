@@ -23,7 +23,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { useWallet } from '@/lib/WalletContext';
+import { useWallet } from '@/lib/WalletContextNew';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

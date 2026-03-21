@@ -1,0 +1,20 @@
+{
+  "name": "erc8004-delegation-deploy",
+  "version": "1.0.0",
+  "description": "Deployment scripts for DelegationRegistry contract",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:celo-testnet": "hardhat run scripts/deploy.ts --network celoTestnet",
+    "deploy:celo-mainnet": "hardhat run scripts/deploy.ts --network celoMainnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "hardhat": "^2.22.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.1"
+  }
+}

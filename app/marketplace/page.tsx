@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Phone, Search, Star, Clock, Loader2, AlertCircle, SlidersHorizontal, X, Wallet } from 'lucide-react';
 import { ActiveCall } from '@/components/ActiveCall';
-import { useWallet } from '@/lib/WalletContext';
+import { useWallet } from '@/lib/WalletContextNew';
 
 interface Agent {
   id: string;

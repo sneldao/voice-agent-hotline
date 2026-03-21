@@ -21,22 +21,75 @@ export function Modal({
   size = 'md',
 }: ModalProps) {
   const [mounted, setMounted] = React.useState(false);
+  const modalRef = React.useRef<HTMLDivElement>(null);
+  const previousActiveElement = React.useRef<Element | null>(null);
 
   React.useEffect(() => {
     setMounted(true);
-    
+  }, []);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    // Store the previously focused element
+    previousActiveElement.current = document.activeElement;
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
-    
+
+    // Focus trap
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !modalRef.current) return;
+
+      const focusableElements = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0] as HTMLElement;
+      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+      if (e.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleTabKey);
+    document.body.style.overflow = 'hidden';
+
+    // Focus the first focusable element in the modal
+    setTimeout(() => {
+      if (modalRef.current) {
+        const focusableElement = modalRef.current.querySelector(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        ) as HTMLElement;
+        if (focusableElement) {
+          focusableElement.focus();
+        } else {
+          modalRef.current.focus();
+        }
+      }
+    }, 0);
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleTabKey);
       document.body.style.overflow = '';
+
+      // Restore focus to the previously focused element
+      if (previousActiveElement.current instanceof HTMLElement) {
+        previousActiveElement.current.focus();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -69,28 +122,37 @@ export function Modal({
         />
         
         {/* Modal */}
-        <div className={`
-          relative
-          w-full
-          mx-4
-          ${sizes[size]}
-          bg-gray-900/95
-          backdrop-blur-xl
-          rounded-2xl
-          border
-          border-gray-700/50
-          shadow-2xl
-          shadow-black/50
-          animate-scale-in
-        `}>
+        <div 
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={title ? "modal-title" : undefined}
+          aria-describedby={description ? "modal-description" : undefined}
+          tabIndex={-1}
+          className={`
+            relative
+            w-full
+            mx-4
+            ${sizes[size]}
+            bg-gray-900/95
+            backdrop-blur-xl
+            rounded-2xl
+            border
+            border-gray-700/50
+            shadow-2xl
+            shadow-black/50
+            animate-scale-in
+            focus:outline-none
+          `}
+        >
           {/* Header */}
           {(title || description) && (
             <div className="p-6 pb-4 border-b border-gray-800">
               {title && (
-                <h2 className="text-xl font-bold text-white">{title}</h2>
+                <h2 id="modal-title" className="text-xl font-bold text-white">{title}</h2>
               )}
               {description && (
-                <p className="mt-1 text-sm text-gray-400">{description}</p>
+                <p id="modal-description" className="mt-1 text-sm text-gray-400">{description}</p>
               )}
             </div>
           )}

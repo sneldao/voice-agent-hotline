@@ -80,6 +80,24 @@ export class ComposioService {
       research: [
         'WEB_SEARCH',
       ],
+      book: [
+        'OPENTABLE_SEARCH_RESTAURANTS',
+        'OPENTABLE_MAKE_RESERVATION',
+        'OPENTABLE_GET_AVAILABILITY',
+      ],
+      order: [
+        'UBER_REQUEST_RIDE',
+        'UBER_GET_RIDE_ESTIMATE',
+        'UBER_CANCEL_RIDE',
+        'DOORDASH_SEARCH_RESTAURANTS',
+        'DOORDASH_PLACE_ORDER',
+      ],
+      schedule: [
+        'GOOGLE_CALENDAR_CREATE_EVENT',
+        'GOOGLE_CALENDAR_LIST_EVENTS',
+        'GOOGLE_CALENDAR_UPDATE_EVENT',
+        'GOOGLE_CALENDAR_DELETE_EVENT',
+      ],
       general: [
         'WEB_SEARCH',
       ],

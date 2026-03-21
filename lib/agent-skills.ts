@@ -6,6 +6,7 @@
 
 import { Hash, Address, parseEther } from 'viem';
 import { erc8004Service, DelegationScope } from './erc8004';
+import { composioService } from './composio';
 
 // ============================================
 // Skill Types
@@ -87,7 +88,7 @@ export class BookingSkill {
   }
 
   /**
-   * Create a booking
+   * Create a booking using Composio (OpenTable integration)
    */
   async execute(params: BookingParams): Promise<SkillResult> {
     try {
@@ -100,26 +101,48 @@ export class BookingSkill {
         };
       }
 
-      // Create booking (mock implementation)
-      const bookingId = `booking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      
+      // Use Composio to make reservation via OpenTable
+      const result = await composioService.executeTool({
+        tool_slug: 'OPENTABLE_MAKE_RESERVATION',
+        arguments: {
+          restaurant_id: params.providerId,
+          date: params.dateTime,
+          time: params.dateTime,
+          party_size: 2, // Default party size
+          name: 'Voice Agent User', // Could be obtained from user profile
+          phone: '+1234567890', // Could be obtained from user profile
+          special_requests: params.notes || '',
+        },
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to make reservation',
+          timestamp: new Date(),
+        };
+      }
+
       const confirmation: BookingConfirmation = {
-        bookingId,
+        bookingId: result.data?.reservation_id || `opentable_${Date.now()}`,
         status: 'confirmed',
         serviceType: params.serviceType,
         provider: params.providerName,
         dateTime: params.dateTime,
         duration: params.duration,
-        location: params.location || { type: 'virtual' },
+        location: params.location || { type: 'in-person' },
         price: {
-          amount: '25.00',
+          amount: result.data?.price || '0.00',
           currency: 'USD',
         },
       };
 
       return {
         success: true,
-        data: { booking: confirmation },
+        data: { 
+          booking: confirmation,
+          opentable_data: result.data,
+        },
         timestamp: new Date(),
       };
     } catch (error) {
@@ -232,7 +255,7 @@ export class OrderingSkill {
   }
 
   /**
-   * Create an order
+   * Create an order using Composio (Uber/DoorDash integration)
    */
   async execute(params: OrderParams): Promise<SkillResult> {
     try {
@@ -244,33 +267,94 @@ export class OrderingSkill {
         };
       }
 
-      const orderId = `order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      
-      // Calculate totals
-      const subtotal = params.items.reduce(
-        (sum, item) => sum + Number(item.price) * item.quantity,
-        0
+      // Determine order type based on items
+      const isRide = params.items.some(item => 
+        item.name.toLowerCase().includes('ride') || 
+        item.name.toLowerCase().includes('uber')
       );
-      const tax = subtotal * 0.08; // 8% tax
-      const total = subtotal + tax;
 
-      const confirmation: OrderConfirmation = {
-        orderId,
-        status: 'confirmed',
-        vendor: params.vendorName,
-        items: params.items.map(({ name, quantity, price }) => ({ name, quantity, price })),
-        subtotal: subtotal.toFixed(2),
-        tax: tax.toFixed(2),
-        total: total.toFixed(2),
-        deliveryAddress: params.deliveryAddress,
-        estimatedDelivery: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-      };
+      if (isRide) {
+        // Request Uber ride
+        const result = await composioService.executeTool({
+          tool_slug: 'UBER_REQUEST_RIDE',
+          arguments: {
+            pickup_address: params.deliveryAddress || 'Current Location',
+            dropoff_address: params.vendorName, // Vendor name is actually destination
+            ride_type: 'uberx', // Default ride type
+          },
+        });
 
-      return {
-        success: true,
-        data: { order: confirmation },
-        timestamp: new Date(),
-      };
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to request ride',
+            timestamp: new Date(),
+          };
+        }
+
+        return {
+          success: true,
+          data: { 
+            ride: result.data,
+            confirmation_code: result.data?.confirmation_code,
+          },
+          timestamp: new Date(),
+        };
+      } else {
+        // Place food delivery order via DoorDash
+        const result = await composioService.executeTool({
+          tool_slug: 'DOORDASH_PLACE_ORDER',
+          arguments: {
+            restaurant_id: params.vendorId,
+            items: params.items.map(item => ({
+              item_id: item.name,
+              quantity: item.quantity,
+              special_instructions: '',
+            })),
+            delivery_address: params.deliveryAddress,
+            delivery_time: 'asap',
+          },
+        });
+
+        if (!result.success) {
+          return {
+            success: false,
+            error: result.error || 'Failed to place order',
+            timestamp: new Date(),
+          };
+        }
+
+        const orderId = result.data?.order_id || `doordash_${Date.now()}`;
+        
+        // Calculate totals (if not provided by DoorDash)
+        const subtotal = params.items.reduce(
+          (sum, item) => sum + Number(item.price) * item.quantity,
+          0
+        );
+        const tax = subtotal * 0.08; // 8% tax
+        const total = subtotal + tax;
+
+        const confirmation: OrderConfirmation = {
+          orderId,
+          status: 'confirmed',
+          vendor: params.vendorName,
+          items: params.items.map(({ name, quantity, price }) => ({ name, quantity, price })),
+          subtotal: result.data?.subtotal || subtotal.toFixed(2),
+          tax: result.data?.tax || tax.toFixed(2),
+          total: result.data?.total || total.toFixed(2),
+          deliveryAddress: params.deliveryAddress,
+          estimatedDelivery: result.data?.estimated_delivery || new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+        };
+
+        return {
+          success: true,
+          data: { 
+            order: confirmation,
+            doordash_data: result.data,
+          },
+          timestamp: new Date(),
+        };
+      }
     } catch (error) {
       return {
         success: false,
@@ -348,7 +432,7 @@ export class SchedulingSkill {
   }
 
   /**
-   * Create a scheduled item
+   * Create a scheduled item using Google Calendar via Composio
    */
   async execute(params: ScheduleParams): Promise<SkillResult> {
     try {
@@ -360,7 +444,40 @@ export class SchedulingSkill {
         };
       }
 
-      const scheduleId = `schedule_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      // Create event in Google Calendar
+      const result = await composioService.executeTool({
+        tool_slug: 'GOOGLE_CALENDAR_CREATE_EVENT',
+        arguments: {
+          summary: params.title,
+          description: params.description || '',
+          start: {
+            dateTime: params.dateTime,
+            timeZone: 'UTC',
+          },
+          end: {
+            dateTime: new Date(new Date(params.dateTime).getTime() + (params.duration || 30) * 60000).toISOString(),
+            timeZone: 'UTC',
+          },
+          attendees: params.attendees?.map(email => ({ email })) || [],
+          reminders: {
+            useDefault: false,
+            overrides: params.reminderBefore ? [
+              { method: 'email', minutes: params.reminderBefore },
+              { method: 'popup', minutes: params.reminderBefore },
+            ] : [],
+          },
+        },
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to create calendar event',
+          timestamp: new Date(),
+        };
+      }
+
+      const scheduleId = result.data?.id || `gcal_${Date.now()}`;
       
       const reminders: number[] = [];
       if (params.reminderBefore) {
@@ -383,7 +500,11 @@ export class SchedulingSkill {
 
       return {
         success: true,
-        data: { schedule: confirmation },
+        data: { 
+          schedule: confirmation,
+          google_calendar_event: result.data,
+          event_link: result.data?.htmlLink,
+        },
         timestamp: new Date(),
       };
     } catch (error) {
@@ -396,15 +517,35 @@ export class SchedulingSkill {
   }
 
   /**
-   * List schedules for a user
+   * List schedules for a user from Google Calendar
    */
   async list(userId: string, startDate?: string, endDate?: string): Promise<SkillResult> {
     try {
+      const result = await composioService.executeTool({
+        tool_slug: 'GOOGLE_CALENDAR_LIST_EVENTS',
+        arguments: {
+          timeMin: startDate || new Date().toISOString(),
+          timeMax: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          maxResults: 50,
+          singleEvents: true,
+          orderBy: 'startTime',
+        },
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to list calendar events',
+          timestamp: new Date(),
+        };
+      }
+
       return {
         success: true,
         data: {
-          schedules: [],
+          schedules: result.data?.items || [],
           period: { start: startDate, end: endDate },
+          total_count: result.data?.items?.length || 0,
         },
         timestamp: new Date(),
       };
@@ -418,13 +559,32 @@ export class SchedulingSkill {
   }
 
   /**
-   * Cancel/delete a scheduled item
+   * Cancel/delete a scheduled item from Google Calendar
    */
   async cancel(scheduleId: string): Promise<SkillResult> {
     try {
+      const result = await composioService.executeTool({
+        tool_slug: 'GOOGLE_CALENDAR_DELETE_EVENT',
+        arguments: {
+          eventId: scheduleId,
+        },
+      });
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to delete calendar event',
+          timestamp: new Date(),
+        };
+      }
+
       return {
         success: true,
-        data: { cancelled: true, scheduleId },
+        data: { 
+          cancelled: true, 
+          scheduleId,
+          message: 'Event deleted successfully',
+        },
         timestamp: new Date(),
       };
     } catch (error) {

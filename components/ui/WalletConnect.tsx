@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useWallet } from '@/lib/WalletContext';
+import { useWallet } from '@/lib/WalletContextNew';
 import { showSuccess, showError, showCopied } from '@/lib/useToast';
 
 interface WalletConnectProps {
@@ -10,8 +10,9 @@ interface WalletConnectProps {
 }
 
 export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
-  const { connected, address, chainId, isConnecting, connect, disconnect, formatAddress } = useWallet();
+  const { connected, address, chainId, balance, isConnecting, walletType, connect, disconnect, formatAddress } = useWallet();
   const [copied, setCopied] = useState(false);
+  const [showWalletSelector, setShowWalletSelector] = useState(false);
 
   const handleCopyAddress = useCallback(async () => {
     if (address) {
@@ -28,11 +29,43 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
   }, [disconnect, onDisconnect]);
 
   const handleConnect = useCallback(async () => {
-    await connect();
-    onConnect?.();
+    setShowWalletSelector(true);
+  }, []);
+
+  const handleWalletSelect = useCallback(async (walletId: string) => {
+    setShowWalletSelector(false);
+    try {
+      await connect();
+      onConnect?.();
+    } catch (error) {
+      console.error('Connection failed:', error);
+      showError('Failed to connect wallet');
+    }
   }, [connect, onConnect]);
 
   const isCorrectNetwork = chainId === 42220; // Celo mainnet
+
+  const getWalletIcon = (type: string | null) => {
+    switch (type) {
+      case 'metamask':
+        return '🦊';
+      case 'walletconnect':
+        return '🔗';
+      default:
+        return '👛';
+    }
+  };
+
+  const getWalletName = (type: string | null) => {
+    switch (type) {
+      case 'metamask':
+        return 'MetaMask';
+      case 'walletconnect':
+        return 'WalletConnect';
+      default:
+        return 'Wallet';
+    }
+  };
 
   if (connected && address) {
     return (
@@ -40,9 +73,7 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
         <div className="flex items-center gap-3">
           {/* Wallet Icon */}
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
+            <span className="text-2xl">{getWalletIcon(walletType)}</span>
           </div>
 
           {/* Address & Chain */}
@@ -56,7 +87,12 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
             <div className="font-mono text-sm font-medium text-white truncate">
               {formatAddress()}
             </div>
-            <div className="text-xs text-gray-500">Chain ID: {chainId || 'Unknown'}</div>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>{getWalletName(walletType)}</span>
+              {balance && (
+                <span>• {parseFloat(balance).toFixed(4)} CELO</span>
+              )}
+            </div>
           </div>
 
           {/* Actions */}
@@ -101,53 +137,48 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
   }
 
   return (
-    <div className="p-4 bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-xl border border-gray-700/50 backdrop-blur-xl">
-      <div className="flex items-center gap-3">
-        {/* Icon */}
-        <div className="w-12 h-12 rounded-xl bg-gray-800/50 flex items-center justify-center border border-gray-700/50">
-          <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    <>
+      <div className="p-4 bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-xl border border-gray-700/50 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          {/* Icon */}
+          <div className="w-12 h-12 rounded-xl bg-gray-800/50 flex items-center justify-center border border-gray-700/50">
+            <span className="text-2xl">👛</span>
+          </div>
+
+          {/* Text */}
+          <div className="flex-1">
+            <div className="font-medium text-white">Connect Wallet</div>
+            <div className="text-xs text-gray-400">MetaMask, Rainbow, Coinbase & more</div>
+          </div>
+
+          {/* Connect Button */}
+          <button
+            onClick={handleConnect}
+            disabled={isConnecting}
+            className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {isConnecting ? 'Connecting...' : 'Connect'}
+          </button>
+        </div>
+
+        {/* Security Note */}
+        <div className="mt-3 flex items-center gap-2 p-2 bg-gray-800/30 rounded-lg">
+          <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
-        </div>
-
-        {/* Text */}
-        <div className="flex-1">
-          <div className="font-medium text-white">Connect Wallet</div>
-          <div className="text-xs text-gray-400">MetaMask or inEIP-6963</div>
-        </div>
-
-        {/* Connect Button */}
-        <button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {isConnecting ? 'Connecting...' : 'Connect'}
-        </button>
-      </div>
-
-      {/* Install提示 */}
-      {!window.ethereum && (
-        <div className="mt-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-          <p className="text-xs text-yellow-400 text-center">
-            No wallet detected.{" "}
-            <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="underline">
-              Install MetaMask
-            </a>
+          <p className="text-xs text-gray-400">
+            Connected directly to your wallet. We never see your private keys.
           </p>
         </div>
-      )}
-
-      {/* Security Note */}
-      <div className="mt-3 flex items-center gap-2 p-2 bg-gray-800/30 rounded-lg">
-        <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-        <p className="text-xs text-gray-400">
-          Connected directly to your wallet. We never see your private keys.
-        </p>
       </div>
-    </div>
+
+      {/* Wallet Selector Modal */}
+      <WalletSelector
+        isOpen={showWalletSelector}
+        onClose={() => setShowWalletSelector(false)}
+        onSelect={handleWalletSelect}
+      />
+    </>
   );
 }
 
@@ -162,9 +193,10 @@ export function WalletSelector({
   onSelect: (walletId: string) => void;
 }) {
   const wallets = [
-    { id: 'metamask', name: 'MetaMask', icon: '🦊', desc: 'Most popular' },
-    { id: 'rabby', name: 'Rabby', icon: '🔵', desc: 'Multi-chain' },
-    { id: 'coinbase', name: 'Coinbase Wallet', icon: '🔵', desc: 'Easy to use' },
+    { id: 'metamask', name: 'MetaMask', icon: '🦊', desc: 'Most popular browser wallet' },
+    { id: 'rainbow', name: 'Rainbow', icon: '🌈', desc: 'Beautiful mobile wallet' },
+    { id: 'coinbase', name: 'Coinbase Wallet', icon: '🔵', desc: 'Easy to use, backed by Coinbase' },
+    { id: 'walletconnect', name: 'WalletConnect', icon: '🔗', desc: 'Scan QR code with any wallet' },
   ];
 
   if (!isOpen) return null;
@@ -192,7 +224,7 @@ export function WalletSelector({
           {wallets.map((wallet) => (
             <button
               key={wallet.id}
-              onClick={() => { onSelect(wallet.id); onClose(); }}
+              onClick={() => { onSelect(wallet.id); }}
               className="w-full flex items-center gap-4 p-4 rounded-xl bg-gray-800/30 hover:bg-gray-800/60 transition-all border border-transparent hover:border-cyan-500/30"
             >
               <span className="text-2xl">{wallet.icon}</span>
@@ -207,8 +239,16 @@ export function WalletSelector({
           ))}
         </div>
 
+        {/* Info */}
+        <div className="mt-6 p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+          <p className="text-xs text-cyan-300 text-center">
+            For the best experience, we recommend using MetaMask or Rainbow.
+            All wallets support WalletConnect protocol.
+          </p>
+        </div>
+
         {/* Terms */}
-        <p className="text-xs text-center text-gray-500 mt-6">
+        <p className="text-xs text-center text-gray-500 mt-4">
           By connecting, you agree to our Terms and Privacy Policy
         </p>
       </div>

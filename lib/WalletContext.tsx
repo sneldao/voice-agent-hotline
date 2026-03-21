@@ -216,35 +216,48 @@ export async function sendTransaction(to: string, value: string): Promise<string
 
 // ERC-8004 Delegation helper
 export async function createDelegation(
-  delegateAddress: string,
+  userAddress: string,
   scope: {
     canBook?: boolean;
     canOrder?: boolean;
     canSchedule?: boolean;
     canResearch?: boolean;
-    maxSpend?: bigint;
+    maxSpendUSD?: number;
+    expiresInDays?: number;
   }
 ): Promise<{ success: boolean; delegationId?: string; error?: string }> {
   try {
-    // In production, this would:
-    // 1. Prepare ERC-8004 delegation data
-    // 2. Get user signature
-    // 3. Submit to smart contract
+    // Call the delegations API to create a real delegation
+    const response = await fetch('/api/delegations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userAddress,
+        scope: {
+          canBook: scope.canBook ?? false,
+          canOrder: scope.canOrder ?? false,
+          canSchedule: scope.canSchedule ?? false,
+          canResearch: scope.canResearch ?? false,
+          maxSpendUSD: scope.maxSpendUSD ?? 10,
+          expiresInDays: scope.expiresInDays ?? 30,
+        },
+      }),
+    });
+
+    const result = await response.json();
     
-    const delegationData = {
-      delegate: delegateAddress,
-      scope,
-      timestamp: Date.now(),
-    };
-    
-    console.log('Creating delegation:', delegationData);
-    
-    // For demo, just return success
+    if (!response.ok || result.error) {
+      throw new Error(result.error || `Failed to create delegation: ${response.statusText}`);
+    }
+
     return {
       success: true,
-      delegationId: `delegation_${Date.now()}`,
+      delegationId: result.delegationId,
     };
   } catch (error) {
+    console.error('Error creating delegation:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

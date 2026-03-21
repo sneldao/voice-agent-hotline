@@ -443,19 +443,11 @@ export class ERC8004Service {
     delegationId: Hash,
     action: 'book' | 'order' | 'schedule' | 'research'
   ): Promise<{ valid: boolean; scope?: DelegationScope; error?: string }> {
-    // Demo / unconfigured mode – auto-authorize all actions
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !this.isConfigured) {
-      console.log(`[ERC-8004 Demo] Auto-authorizing '${action}' for ${delegationId}`);
+    // Check if contracts are configured
+    if (!this.isConfigured) {
       return {
-        valid: true,
-        scope: {
-          canBook: true,
-          canOrder: true,
-          canSchedule: true,
-          canResearch: true,
-          maxSpend: BigInt(1000) * BigInt(1e18),
-          expiresAt: BigInt(Math.floor(Date.now() / 1000) + 86400),
-        },
+        valid: false,
+        error: 'ERC-8004 contracts not configured. Please set NEXT_PUBLIC_ERC8004_*_ADDRESS environment variables.',
       };
     }
 

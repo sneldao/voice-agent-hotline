@@ -20,6 +20,7 @@ import {
   SettlementResult,
 } from '../payment-settlement';
 import { Address } from 'viem';
+import { getRedis } from '../redis';
 
 // ============================================
 // Types
@@ -61,7 +62,6 @@ export interface PaymentAuthorization {
 
 export class VoicePaymentService {
   private config: PaymentConfig;
-  private sessions: Map<string, CallSession> = new Map();
   private billingIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(config?: Partial<PaymentConfig>) {
@@ -69,6 +69,39 @@ export class VoicePaymentService {
       platformFeePercent: config?.platformFeePercent ?? 10,
       billingIntervalMs: config?.billingIntervalMs ?? 1_000,
       settlementToken: config?.settlementToken ?? 'cUSD',
+    };
+  }
+
+  private serializeSession(session: CallSession): Record<string, string> {
+    return {
+      id: session.id,
+      agentId: session.agentId,
+      userAddress: session.userAddress,
+      ratePerMinute: session.ratePerMinute.toString(),
+      maxAuthorized: session.maxAuthorized.toString(),
+      authorization: JSON.stringify(session.authorization),
+      startTime: session.startTime.toISOString(),
+      secondsBilled: session.secondsBilled.toString(),
+      totalCost: session.totalCost.toString(),
+      status: session.status,
+      settlementResult: session.settlementResult ? JSON.stringify(session.settlementResult) : '',
+    };
+  }
+
+  private deserializeSession(data: Record<string, string>): CallSession | null {
+    if (!data || !data.id) return null;
+    return {
+      id: data.id,
+      agentId: data.agentId,
+      userAddress: data.userAddress as Address,
+      ratePerMinute: parseFloat(data.ratePerMinute),
+      maxAuthorized: parseFloat(data.maxAuthorized),
+      authorization: JSON.parse(data.authorization) as SignedAuthorization,
+      startTime: new Date(data.startTime),
+      secondsBilled: parseInt(data.secondsBilled, 10),
+      totalCost: parseFloat(data.totalCost),
+      status: data.status as CallSession['status'],
+      settlementResult: data.settlementResult ? JSON.parse(data.settlementResult) : undefined,
     };
   }
 
@@ -103,7 +136,8 @@ export class VoicePaymentService {
       status: 'pending',
     };
 
-    this.sessions.set(session.id, session);
+    const redis = getRedis();
+    await redis.hset(`payment-session:${session.id}`, this.serializeSession(session));
     console.log(`[x402] Call authorized: ${session.id} | max $${(maxAuthorized / 100).toFixed(2)}`);
 
     return {
@@ -119,7 +153,10 @@ export class VoicePaymentService {
 
   /** Begin per-second cost accrual for an already-authorised session. */
   async startBilling(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
+    const redis = getRedis();
+    const data = await redis.hgetall(`payment-session:${sessionId}`);
+    const session = this.deserializeSession(data as Record<string, string>);
+    
     if (!session) throw new Error(`Session not found: ${sessionId}`);
     if (session.status !== 'pending') {
       console.warn(`[x402] Session ${sessionId} already ${session.status}`);
@@ -127,6 +164,8 @@ export class VoicePaymentService {
     }
 
     session.status = 'active';
+    await redis.hset(`payment-session:${sessionId}`, { status: 'active' });
+    
     const costPerSecondCents = (session.ratePerMinute || 0) / 60;
 
     console.log(`[x402] Billing started: ${sessionId} @ $${costPerSecondCents.toFixed(4)}/s`);
@@ -138,8 +177,11 @@ export class VoicePaymentService {
     this.billingIntervals.set(sessionId, interval);
   }
 
-  private _billSecond(sessionId: string, costPerSecondCents: number): void {
-    const session = this.sessions.get(sessionId);
+  private async _billSecond(sessionId: string, costPerSecondCents: number): Promise<void> {
+    const redis = getRedis();
+    const data = await redis.hgetall(`payment-session:${sessionId}`);
+    const session = this.deserializeSession(data as Record<string, string>);
+    
     if (!session || session.status !== 'active') {
       this._stopInterval(sessionId);
       return;
@@ -148,9 +190,14 @@ export class VoicePaymentService {
     session.secondsBilled++;
     session.totalCost += costPerSecondCents;
 
+    await redis.hset(`payment-session:${sessionId}`, {
+      secondsBilled: session.secondsBilled.toString(),
+      totalCost: session.totalCost.toString(),
+    });
+
     if (session.totalCost >= session.maxAuthorized) {
       console.log(`[x402] Max authorized reached for ${sessionId} – ending call`);
-      this.endCall(sessionId);
+      await this.endCall(sessionId);
     }
   }
 
@@ -173,7 +220,10 @@ export class VoicePaymentService {
   async endCall(sessionId: string): Promise<CallSession> {
     this._stopInterval(sessionId);
 
-    const session = this.sessions.get(sessionId);
+    const redis = getRedis();
+    const data = await redis.hgetall(`payment-session:${sessionId}`);
+    const session = this.deserializeSession(data as Record<string, string>);
+    
     if (!session) throw new Error(`Session not found: ${sessionId}`);
     if (session.status !== 'active' && session.status !== 'pending') return session;
 
@@ -195,6 +245,11 @@ export class VoicePaymentService {
     session.status = result.success ? 'settled' : 'failed';
     session.settlementResult = result;
 
+    await redis.hset(`payment-session:${sessionId}`, {
+      status: session.status,
+      settlementResult: JSON.stringify(session.settlementResult),
+    });
+
     if (result.success) {
       const platformFee = session.totalCost * (this.config.platformFeePercent / 100);
       const agentPayout = session.totalCost - platformFee;
@@ -212,20 +267,42 @@ export class VoicePaymentService {
   // Accessors
   // --------------------------------------------------
 
-  getSession(sessionId: string): CallSession | null {
-    return this.sessions.get(sessionId) ?? null;
+  async getSession(sessionId: string): Promise<CallSession | null> {
+    const redis = getRedis();
+    const data = await redis.hgetall(`payment-session:${sessionId}`);
+    return this.deserializeSession(data as Record<string, string>);
   }
 
-  getAgentHistory(agentId: string): CallSession[] {
-    return Array.from(this.sessions.values()).filter(
-      s => s.agentId === agentId && s.status === 'settled'
-    );
+  async getAgentHistory(agentId: string): Promise<CallSession[]> {
+    const redis = getRedis();
+    const keys = await redis.keys('payment-session:*');
+    const sessions: CallSession[] = [];
+    
+    for (const key of keys) {
+      const data = await redis.hgetall(key);
+      const session = this.deserializeSession(data as Record<string, string>);
+      if (session && session.agentId === agentId && session.status === 'settled') {
+        sessions.push(session);
+      }
+    }
+    
+    return sessions;
   }
 
-  getUserHistory(userAddress: Address): CallSession[] {
-    return Array.from(this.sessions.values()).filter(
-      s => s.userAddress.toLowerCase() === userAddress.toLowerCase() && s.status === 'settled'
-    );
+  async getUserHistory(userAddress: Address): Promise<CallSession[]> {
+    const redis = getRedis();
+    const keys = await redis.keys('payment-session:*');
+    const sessions: CallSession[] = [];
+    
+    for (const key of keys) {
+      const data = await redis.hgetall(key);
+      const session = this.deserializeSession(data as Record<string, string>);
+      if (session && session.userAddress.toLowerCase() === userAddress.toLowerCase() && session.status === 'settled') {
+        sessions.push(session);
+      }
+    }
+    
+    return sessions;
   }
 }
 
