@@ -55,17 +55,19 @@ User (Mobile/Web)
 
 ### 💰 Payments
 - **x402 Direct:** Pay per call segment
-- **Superfluid Streaming:** Pay per second
-- Celo + Base blockchain support
+- **User-settled:** Users sign their own transactions
+- Redis-backed session persistence
+- Celo Sepolia testnet support
 
-### 🤖 Agent Skills
-- **Book:** Appointments, reservations
-- **Order:** Purchases, services
-- **Schedule:** Events, reminders
-- **Research:** Information gathering
+### 🤖 Agent Skills (via Composio)
+- **Book:** OpenTable reservations
+- **Order:** Uber rides, DoorDash delivery
+- **Schedule:** Google Calendar events
+- **Research:** Web search via Tavily
 
 ### ⭐ Trust
-- ERC-8004 agent registry
+- ERC-8004 agent registry (deployed on Celo Sepolia)
+- On-chain delegation with user-signed transactions
 - Reputation system
 - Verified identities
 
@@ -75,10 +77,12 @@ User (Mobile/Web)
 |-------|-------------|
 | Frontend | Next.js 14 + Tailwind CSS |
 | Voice | ElevenLabs TTS + WebRTC |
-| Payments | x402 + Superfluid |
-| Identity | ERC-8004 |
+| Wallet | WalletConnect (MetaMask, Rainbow, Coinbase) |
+| Payments | x402 (user-settled) |
+| Identity | ERC-8004 (Celo Sepolia) |
+| Agent Tools | Composio (OpenTable, Uber, Google Calendar) |
 | Database | Upstash Redis |
-| Blockchain | Celo, Base |
+| Blockchain | Celo Sepolia (testnet) |
 
 ## Getting Started
 
@@ -101,10 +105,6 @@ cp .env.local.example .env.local
 Required variables:
 
 ```env
-# Thirdweb (x402 payments)
-NEXT_PUBLIC_THIRDWEB_CLIENT_ID=...
-THIRDWEB_SECRET_KEY=...
-
 # Wallet Connection
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
 
@@ -112,8 +112,17 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 
-# Voice (optional)
+# Voice
 ELEVENLABS_API_KEY=...
+
+# Agent Tools
+COMPOSIO_API_KEY=...
+
+# ERC-8004 (deployed on Celo Sepolia)
+NEXT_PUBLIC_ERC8004_ENABLED=true
+NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x8004A818BFB912233c491871b3d84c89A494BD9e
+NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS=0x8004B663056A597Dffe9eCcC1965A193B7388713
+NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00
 ```
 
 ### 3. Run Development Server
@@ -233,15 +242,25 @@ const tts = new ElevenLabsService(apiKey, defaultVoiceId);
 const { audio } = await tts.textToSpeech({ text, voiceId });
 ```
 
-### ERC-8004 Delegation
+### ERC-8004 Delegation (Celo Sepolia)
+
+Deployed contracts:
+- **IdentityRegistry:** `0x8004A818BFB912233c491871b3d84c89A494BD9e`
+- **ReputationRegistry:** `0x8004B663056A597Dffe9eCcC1965A193B7388713`
+- **DelegationRegistry:** `0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00`
+
+Users sign their own delegation transactions (user-pays-gas model):
 
 ```typescript
-import { ERC8004Service } from '@/lib/erc8004';
+// Create delegation - returns unsigned tx for user to sign
+const response = await fetch('/api/delegations', {
+  method: 'POST',
+  body: JSON.stringify({ userAddress, scope }),
+});
+const { txData } = await response.json();
 
-const erc8004 = new ERC8004Service();
-await erc8004.registerAgent(agentURI, ratePerMinuteWei, specialties);
-await erc8004.createDelegation(walletClient, delegate, scope);
-await erc8004.submitFeedback(callId, rating, facilitatorAddress);
+// User signs and submits via their wallet
+await wallet.sendTransaction(txData);
 ```
 
 ## Project Structure

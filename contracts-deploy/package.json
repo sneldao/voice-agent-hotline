@@ -2,9 +2,10 @@
   "name": "erc8004-delegation-deploy",
   "version": "1.0.0",
   "description": "Deployment scripts for DelegationRegistry contract",
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "compile": "hardhat compile",
-    "deploy:celo-testnet": "hardhat run scripts/deploy.ts --network celoTestnet",
+    "deploy:celo-sepolia": "hardhat run scripts/deploy.ts --network celoSepolia",
     "deploy:celo-mainnet": "hardhat run scripts/deploy.ts --network celoMainnet"
   },
   "devDependencies": {

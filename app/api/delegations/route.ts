@@ -1,44 +1,45 @@
 // ============================================
 // Delegations API
 // ============================================
-// Bridges the DelegationPanel UI with the ERC-8004 delegation service.
+// User-signed delegation pattern - users pay their own gas
 // GET  /api/delegations?userAddress=0x...  → active delegations for a user
-// POST /api/delegations                    → create a new delegation
+// POST /api/delegations                    → create a new delegation (off-chain)
 // DELETE /api/delegations?delegationId=... → revoke a delegation
 
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { erc8004Service } from '@/lib/erc8004';
 import {
   getActiveDelegations,
   getDelegationById,
   createDelegation,
   revokeDelegation,
 } from '@/lib/db';
-import { parseEther } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { createWalletClient, http } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { parseEther, encodeFunctionData } from 'viem';
 
 // The VOISSS platform address that acts as delegate
-function getPlatformAddress() {
-  const key = process.env.FACILITATOR_PRIVATE_KEY;
-  if (!key || !key.startsWith('0x') || key.length !== 66) return process.env.NEXT_PUBLIC_PLATFORM_ADDRESS ?? null;
-  return privateKeyToAccount(key as `0x${string}`).address;
-}
+const PLATFORM_ADDRESS = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '0x54351049081A5A64Ea93c56b666830ED5076b960';
 
-function getFacilitatorWallet() {
-  const key = process.env.FACILITATOR_PRIVATE_KEY;
-  if (!key || !key.startsWith('0x') || key.length !== 66) return null;
-  const account = privateKeyToAccount(key as `0x${string}`);
-  const chain = process.env.NODE_ENV === 'production' ? celo : celoAlfajores;
-  return createWalletClient({
-    account,
-    chain,
-    transport: http(process.env.CELO_RPC_URL || 'https://forno.celo.org'),
-  });
-}
+// DelegationRegistry ABI for encoding transaction data
+const DELEGATION_REGISTRY_ABI = [
+  {
+    name: 'createDelegation',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'delegate', type: 'address' },
+      { name: 'scope', type: 'tuple', components: [
+        { name: 'canBook', type: 'bool' },
+        { name: 'canOrder', type: 'bool' },
+        { name: 'canSchedule', type: 'bool' },
+        { name: 'canResearch', type: 'bool' },
+        { name: 'maxSpend', type: 'uint256' },
+        { name: 'expiresAt', type: 'uint256' },
+      ]},
+    ],
+    outputs: [{ name: 'delegationId', type: 'bytes32' }],
+  },
+] as const;
 
 // ── GET ──────────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ export async function GET(req: NextRequest) {
 }
 
 // ── POST ─────────────────────────────────────────────────────────────────────
+// Returns unsigned transaction data for the user to sign with their wallet
 
 export async function POST(req: NextRequest) {
   try {
@@ -99,13 +101,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'userAddress is required' }, { status: 400 });
     }
 
-    const platformAddress = getPlatformAddress();
-    if (!platformAddress) {
-      return NextResponse.json(
-        { error: 'Platform address not configured (set FACILITATOR_PRIVATE_KEY or NEXT_PUBLIC_PLATFORM_ADDRESS)' },
-        { status: 503 }
-      );
-    }
+    const delegationRegistryAddress = process.env.NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS;
+    const isConfigured = delegationRegistryAddress && 
+                         delegationRegistryAddress !== '0x0000000000000000000000000000000000000000';
 
     const maxSpend = maxSpendWei
       ? BigInt(maxSpendWei)
@@ -122,39 +120,32 @@ export async function POST(req: NextRequest) {
       expiresAt,
     };
 
-    // Check if ERC-8004 contracts are configured
-    const config = erc8004Service.checkConfiguration();
-
     let delegationId: string;
+    let txData: { to: string; data: string; value: string } | null = null;
 
-    if (config.configured) {
-      // On-chain delegation via ERC-8004 contract
-      const wallet = getFacilitatorWallet();
-      if (!wallet) {
-        return NextResponse.json(
-          { error: 'FACILITATOR_PRIVATE_KEY is required for on-chain delegation' },
-          { status: 503 }
-        );
-      }
+    if (isConfigured) {
+      // Return unsigned transaction for user to sign
+      const encodedData = encodeFunctionData({
+        abi: DELEGATION_REGISTRY_ABI,
+        functionName: 'createDelegation',
+        args: [PLATFORM_ADDRESS as `0x${string}`, delegationScope],
+      });
 
-      const result = await erc8004Service.createDelegation(
-        wallet as any,
-        platformAddress as `0x${string}`,
-        delegationScope
-      );
+      txData = {
+        to: delegationRegistryAddress,
+        data: encodedData,
+        value: '0x0',
+      };
 
-      if (!result.success) {
-        return NextResponse.json({ error: result.error }, { status: 500 });
-      }
-
-      delegationId = result.delegationId!;
+      // Generate a pending delegation ID (will be set on-chain after user signs)
+      delegationId = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     } else {
       // Off-chain (demo mode) delegation — store in Redis
       console.log('[API:Delegations] ERC-8004 not configured, using demo delegation');
       delegationId = `demo_delegation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     }
 
-    // Always persist to Redis for the app to read
+    // Store delegation in Redis
     const delegation = await createDelegation({
       id: delegationId,
       userId: userAddress,
@@ -164,7 +155,7 @@ export async function POST(req: NextRequest) {
         canOrder,
         canSchedule,
         canResearch,
-        maxSpend: Number(maxSpend) / 1e18, // store as USD equivalent
+        maxSpend: Number(maxSpend) / 1e18,
       },
       status: 'active',
       expiresAt: Date.now() + expiresInDays * 24 * 60 * 60 * 1000,
@@ -174,7 +165,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       delegationId,
       delegation,
-      onChain: config.configured,
+      onChain: isConfigured,
+      txData, // Unsigned transaction for user to sign
+      platformAddress: PLATFORM_ADDRESS,
     });
 
   } catch (error: any) {
@@ -184,6 +177,7 @@ export async function POST(req: NextRequest) {
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────────────
+// Returns unsigned revoke transaction for user to sign
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -203,22 +197,42 @@ export async function DELETE(req: NextRequest) {
       }
     }
 
-    // Revoke on-chain if ERC-8004 configured and key available
-    const config = erc8004Service.checkConfiguration();
-    const wallet = getFacilitatorWallet();
+    const delegationRegistryAddress = process.env.NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS;
+    const isConfigured = delegationRegistryAddress && 
+                         delegationRegistryAddress !== '0x0000000000000000000000000000000000000000';
 
-    if (config.configured && wallet && !delegationId.startsWith('demo_')) {
-      try {
-        await erc8004Service.revokeDelegation(wallet as any, delegationId as `0x${string}`);
-      } catch (err) {
-        console.warn('[API:Delegations:DELETE] On-chain revoke failed (non-fatal):', err);
-      }
+    let txData: { to: string; data: string; value: string } | null = null;
+
+    if (isConfigured && !delegationId.startsWith('demo_') && !delegationId.startsWith('pending_')) {
+      // Return unsigned revoke transaction for user to sign
+      const encodedData = encodeFunctionData({
+        abi: [{
+          name: 'revokeDelegation',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [{ name: 'delegationId', type: 'bytes32' }],
+          outputs: [],
+        }],
+        functionName: 'revokeDelegation',
+        args: [delegationId as `0x${string}`],
+      });
+
+      txData = {
+        to: delegationRegistryAddress,
+        data: encodedData,
+        value: '0x0',
+      };
     }
 
-    // Always revoke in Redis
+    // Revoke in Redis
     await revokeDelegation(delegationId);
 
-    return NextResponse.json({ success: true, delegationId });
+    return NextResponse.json({ 
+      success: true, 
+      delegationId,
+      onChain: isConfigured,
+      txData, // Unsigned transaction for user to sign (if needed)
+    });
 
   } catch (error: any) {
     console.error('[API:Delegations:DELETE]', error);

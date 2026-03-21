@@ -1,6 +1,10 @@
 # DelegationRegistry Contract Deployment
 
-This folder contains the deployment setup for the custom DelegationRegistry contract used by the Voice Agent Hotline project.
+This folder contains the deployment setup for the custom DelegationRegistry contract.
+
+**Note:** With the user-pays-gas model, users sign their own delegation transactions. You can either:
+1. Deploy your own DelegationRegistry contract, OR
+2. Use an existing deployed contract (if available)
 
 ## Prerequisites
 
@@ -25,10 +29,10 @@ cp .env.example .env
 
 ## Deployment
 
-### Celo Testnet (Alfajores)
+### Celo Sepolia Testnet
 
 ```bash
-npm run deploy:celo-testnet
+npm run deploy:celo-sepolia
 ```
 
 ### Celo Mainnet
@@ -50,17 +54,19 @@ NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=<deployed_contract_address>
 The deployment script automatically attempts to verify the contract on CeloScan. If verification fails, you can manually verify using:
 
 ```bash
-npx hardhat verify --network celoTestnet <CONTRACT_ADDRESS>
+npx hardhat verify --network celoSepolia <CONTRACT_ADDRESS>
 ```
 
 ## Standard ERC-8004 Contracts
 
-The standard ERC-8004 Identity and Reputation registries are already deployed on Celo testnet:
+The standard ERC-8004 Identity and Reputation registries are already deployed on Celo Sepolia:
 
 - **IdentityRegistry**: `0x8004A818BFB912233c491871b3d84c89A494BD9e`
 - **ReputationRegistry**: `0x8004B663056A597Dffe9eCcC1965A193B7388713`
 
 These are deterministic vanity addresses deployed by the ERC-8004 team.
+
+**Note:** Celo Sepolia (chain ID: 11142220) has replaced Alfajores as the Celo testnet.
 
 ## Contract Functions
 

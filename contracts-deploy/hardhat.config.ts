@@ -19,10 +19,10 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    celoTestnet: {
-      url: "https://alfajores-forno.celo-testnet.org",
+    celoSepolia: {
+      url: "https://forno.celo-sepolia.celo-testnet.org",
       accounts: [PRIVATE_KEY],
-      chainId: 44787,
+      chainId: 11142220,
     },
     celoMainnet: {
       url: "https://forno.celo.org",
@@ -32,13 +32,13 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      celoTestnet: CELOSCAN_API_KEY,
+      celoSepolia: CELOSCAN_API_KEY,
       celoMainnet: CELOSCAN_API_KEY,
     },
     customChains: [
       {
-        network: "celoTestnet",
-        chainId: 44787,
+        network: "celoSepolia",
+        chainId: 11142220,
         urls: {
           apiURL: "https://api-sepolia.celoscan.io/api",
           browserURL: "https://sepolia.celoscan.io",

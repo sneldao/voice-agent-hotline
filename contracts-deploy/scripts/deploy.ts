@@ -1,6 +1,6 @@
-import { ethers, network, run } from "hardhat";
-
 async function main() {
+  const { ethers, network, run } = require("hardhat");
+  
   console.log("Deploying DelegationRegistry contract...");
 
   // Get the contract factory
@@ -45,6 +45,7 @@ async function main() {
   console.log("\nDeployment Summary:");
   console.log("===================");
   console.log(`Network: ${network.name}`);
+  console.log(`Chain ID: ${network.config.chainId}`);
   console.log(`Contract Address: ${address}`);
   console.log(`\nAdd this to your .env.local file:`);
   console.log(`NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=${address}`);

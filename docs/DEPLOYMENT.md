@@ -55,7 +55,7 @@ CELO_RPC_URL=https://forno.celo.org
 | `NEXT_PUBLIC_PAYMENTS_ENABLED` | Enable real payments |
 | `PAYMENT_RECEIVER` | Address that receives agent payments |
 
-Payments are **user-settled** — no facilitator private key is needed. Users submit transactions directly from their wallet. See [SECURITY_ARCHITECTURE_COMPARISON.md](./SECURITY_ARCHITECTURE_COMPARISON.md).
+**User-pays-gas model:** Users sign their own transactions. No facilitator private key needed on the server. See [SECURITY_ARCHITECTURE_COMPARISON.md](./SECURITY_ARCHITECTURE_COMPARISON.md).
 
 ### WDK (Tether Wallet Development Kit)
 
@@ -78,14 +78,16 @@ For instant, gasless micropayments via state channels:
 
 ### ERC-8004 (Agent Identity & Reputation)
 
-Disabled by default. Set when contracts are deployed:
+Contracts are deployed on Celo Sepolia (chain ID: 11142220):
 
 ```bash
-NEXT_PUBLIC_ERC8004_ENABLED=false
-NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x000...
-NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS=0x000...
-NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=0x000...
+NEXT_PUBLIC_ERC8004_ENABLED=true
+NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x8004A818BFB912233c491871b3d84c89A494BD9e
+NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS=0x8004B663056A597Dffe9eCcC1965A193B7388713
+NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00
 ```
+
+For production (Celo mainnet), deploy DelegationRegistry using `contracts-deploy/`.
 
 ### Feature Flags
 
@@ -142,16 +144,17 @@ npm run build
 ## Architecture
 
 ```
-User (MetaMask) → Vercel Edge → Next.js API → Redis / Celo Blockchain
-                  ↕
-          ElevenLabs ConvAI (voice)
-                  ↕
-          Agent Webhooks (skills)
+User (MetaMask/Rainbow/Coinbase) → Vercel Edge → Next.js API → Redis / Celo Sepolia
+                      ↕                       ↕
+              WalletConnect SDK        Composio (Agent Tools)
+                      ↕                       ↕
+              ElevenLabs ConvAI (voice)   OpenTable, Uber, Google Calendar
 ```
 
 - **Frontend:** Static on Vercel CDN
-- **API:** Serverless functions
-- **Database:** Upstash Redis (global)
-- **Blockchain:** Celo (via forno.celo.org)
+- **API:** Serverless functions (Redis-backed)
+- **Database:** Upstash Redis (rate limiting, sessions, agents)
+- **Blockchain:** Celo Sepolia (chain ID: 11142220)
 - **Voice:** ElevenLabs ConvAI
-- **Payments:** User-settled EIP-3009 or Yellow state channels
+- **Payments:** User-settled (users sign their own txs)
+- **Identity:** ERC-8004 (on-chain delegation)
