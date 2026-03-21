@@ -106,14 +106,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               setWallet({
                 connected: true,
                 address,
-                chainId: chainId,
+                chainId: chainId != null ? Number(chainId) : null,
                 balance: null,
                 isConnecting: false,
                 walletType: 'walletconnect',
               });
               
               // Set up provider
-              providerRef.current = web3Modal.getWalletProvider() 
+              providerRef.current = web3Modal.getWalletProvider()
                 ? new BrowserProvider(web3Modal.getWalletProvider() as any)
                 : null;
             }
@@ -183,13 +183,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               setWallet({
                 connected: true,
                 address,
-                chainId: chainId,
+                chainId: chainId != null ? Number(chainId) : null,
                 balance: null,
                 isConnecting: false,
                 walletType: 'walletconnect',
               });
               
-              providerRef.current = web3Modal.getWalletProvider() 
+              providerRef.current = web3Modal.getWalletProvider()
                 ? new BrowserProvider(web3Modal.getWalletProvider() as any)
                 : null;
             }
