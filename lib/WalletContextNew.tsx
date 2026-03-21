@@ -261,9 +261,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const disconnect = useCallback(() => {
-    if (wallet.walletType === 'walletconnect' && web3Modal) {
-      web3Modal.disconnect();
-    }
     
     setWallet({
       connected: false,
