@@ -11,6 +11,7 @@ import {
 } from '@/lib/payment-settlement';
 import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
 import { redis } from '@/lib/redis';
+import { verifyWalletAuth, checkRateLimit } from '@/lib/api-auth';
 
 // ============================================
 // POST /api/payments/settle
@@ -18,6 +19,22 @@ import { redis } from '@/lib/redis';
 // ============================================
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit by IP
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    const allowed = await checkRateLimit(`settle:${ip}`, 30, 60);
+    if (!allowed) {
+      return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
+    }
+
+    // Verify caller owns the wallet
+    const auth = await verifyWalletAuth(req);
+    if (!auth.authenticated) {
+      return NextResponse.json(
+        { error: 'Unauthorized', details: auth.error },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
       authorization,
@@ -206,7 +223,7 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://voisss-agent-hotline.vercel.app',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },

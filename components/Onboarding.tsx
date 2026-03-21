@@ -33,8 +33,6 @@ export function Onboarding({
     switch (currentStep) {
       case 'welcome':
         return <WelcomeStep onNext={onNext} onSkip={onSkip} />;
-      case 'wallet-intro':
-        return <WalletIntroStep onNext={onNext} onSkip={onSkip} />;
       case 'wallet-connect':
         return <WalletConnectStep 
           isConnected={walletConnected} 
@@ -42,15 +40,6 @@ export function Onboarding({
           onSkip={onSkip}
           onConnect={onConnect}
         />;
-      case 'fund-wallet':
-        return <FundWalletStep 
-          isConnected={walletConnected}
-          balance={walletBalance}
-          onNext={onNext}
-          onSkip={onSkip}
-        />;
-      case 'first-call-intro':
-        return <FirstCallStep onNext={onNext} onSkip={onSkip} />;
       case 'complete':
         return <CompleteStep onClose={onClose} />;
       default:
@@ -83,8 +72,8 @@ export function Onboarding({
         {/* Progress */}
         <div className="px-6 pb-6">
           <div className="flex gap-1">
-            {['welcome', 'wallet-intro', 'wallet-connect', 'fund-wallet', 'first-call-intro', 'complete'].map((step, i) => {
-              const steps: OnboardingStep[] = ['welcome', 'wallet-intro', 'wallet-connect', 'fund-wallet', 'first-call-intro', 'complete'];
+            {['welcome', 'wallet-connect', 'complete'].map((step, i) => {
+              const steps: OnboardingStep[] = ['welcome', 'wallet-connect', 'complete'];
               const currentIndex = steps.indexOf(currentStep);
               const isActive = i <= currentIndex;
               return (

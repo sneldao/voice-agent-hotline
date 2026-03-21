@@ -7,7 +7,7 @@ import { useRealPayment, type PaymentState } from '@/lib/useRealPayment';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
 import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
-import { Mic, MicOff, Volume2, PhoneOff, Clock, Signal, AlertCircle, Phone } from 'lucide-react';
+import { Mic, MicOff, Volume2, Volume1, VolumeX, PhoneOff, Clock, Signal, AlertCircle, Phone } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 import { showError } from './ui';
@@ -72,6 +72,7 @@ export function ActiveCall({
   const [showTranscript, setShowTranscript] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [speakerVolume, setSpeakerVolume] = useState(2); // 0=mute, 1=low, 2=full
   const [savedCallId, setSavedCallId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -497,12 +498,17 @@ export function ActiveCall({
 
           {/* Speaker toggle — cycles through volume levels */}
           <button
-            onClick={() => {/* speaker volume toggle — placeholder for audio output control */}}
+            onClick={() => {
+              setSpeakerVolume(v => {
+                const next = v >= 2 ? 0 : v + 1;
+                return next;
+              });
+            }}
             disabled={isFinalizing}
             className="w-14 h-14 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Speaker volume"
+            title={['Mute speaker', 'Low volume', 'Full volume'][speakerVolume]}
           >
-            <Volume2 className="w-6 h-6" />
+            {[<VolumeX key="x" className="w-6 h-6" />, <Volume1 key="1" className="w-6 h-6" />, <Volume2 key="2" className="w-6 h-6" />][speakerVolume]}
           </button>
         </div>
 

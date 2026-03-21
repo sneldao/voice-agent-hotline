@@ -466,10 +466,10 @@ export interface ResearchResult {
 }
 
 export class ResearchSkill {
-  private wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> };
+  private apiKey: string;
 
-  constructor(wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> }) {
-    this.wallet = wallet;
+  constructor(_wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> }) {
+    this.apiKey = process.env.TAVILY_API_KEY || '';
   }
 
   /**
@@ -481,7 +481,7 @@ export class ResearchSkill {
   }
 
   /**
-   * Execute research query
+   * Execute research query via Tavily Search API
    */
   async execute(params: ResearchParams): Promise<SkillResult> {
     try {
@@ -493,26 +493,52 @@ export class ResearchSkill {
         };
       }
 
-      const maxResults = params.maxResults || 10;
-      
-      // Mock research results (in production, would call search APIs)
-      const results: ResearchResult['results'] = [
-        {
-          title: `${params.query} - Overview`,
-          url: 'https://en.wikipedia.org/wiki/Example',
-          source: 'Wikipedia',
-          snippet: 'This is a summary of the research topic...',
-          publishedDate: new Date().toISOString(),
-        },
-      ];
+      if (!this.apiKey) {
+        return {
+          success: false,
+          error: 'Tavily API key not configured. Set TAVILY_API_KEY in environment.',
+          timestamp: new Date(),
+        };
+      }
+
+      const maxResults = params.maxResults || 5;
+
+      const tavilyResponse = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: this.apiKey,
+          query: params.query,
+          max_results: maxResults,
+          search_depth: params.includeSummary ? 'advanced' : 'basic',
+          include_answer: params.includeSummary ?? false,
+        }),
+      });
+
+      if (!tavilyResponse.ok) {
+        const errorText = await tavilyResponse.text();
+        throw new Error(`Tavily API error ${tavilyResponse.status}: ${errorText}`);
+      }
+
+      const data = await tavilyResponse.json() as {
+        results: Array<{ title: string; url: string; content: string; score: number }>;
+        answer?: string;
+      };
+
+      const results: ResearchResult['results'] = data.results.map(r => ({
+        title: r.title,
+        url: r.url,
+        source: new URL(r.url).hostname,
+        snippet: r.content,
+      }));
 
       const researchResult: ResearchResult = {
         query: params.query,
         results,
         totalResults: results.length,
-        summary: params.includeSummary 
-          ? `Found ${results.length} results for "${params.query}". Key findings include...`
-          : undefined,
+        summary: data.answer ?? (params.includeSummary
+          ? `Found ${results.length} results for "${params.query}".`
+          : undefined),
       };
 
       return {

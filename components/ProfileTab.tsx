@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Wallet, Bell, Settings } from 'lucide-react';
+import { User, Wallet, Bell, Settings, LogOut, ExternalLink } from 'lucide-react';
 import { ProfileSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { Button, Card, Avatar } from '@/components/ui';
@@ -10,9 +10,10 @@ interface ProfileTabProps {
   balance: number;
   address?: string | null;
   isLoading?: boolean;
+  onDisconnect?: () => void;
 }
 
-export function ProfileTab({ balance, address, isLoading }: ProfileTabProps) {
+export function ProfileTab({ balance, address, isLoading, onDisconnect }: ProfileTabProps) {
   const displayAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : 'Not connected';
@@ -57,7 +58,13 @@ export function ProfileTab({ balance, address, isLoading }: ProfileTabProps) {
             </div>
             <div className="text-4xl font-bold text-white mb-4">${(balance || 0).toFixed(2)}</div>
             <div className="flex gap-3">
-              <Button variant="secondary" size="sm" className="flex-1 bg-white/10 border-white/20 hover:bg-white/20">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 bg-white/10 border-white/20 hover:bg-white/20"
+                onClick={() => window.open('https://app.uniswap.org/#/swap?outputCurrency=0x765DE816845861e75A25fCA122bb6898B8B1282a&chain=celo', '_blank')}
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
                 Add Funds
               </Button>
               <Button variant="secondary" size="sm" className="flex-1 bg-white/10 border-white/20 hover:bg-white/20">
@@ -76,10 +83,8 @@ export function ProfileTab({ balance, address, isLoading }: ProfileTabProps) {
         <h3 className="font-semibold text-gray-400 px-1">Settings</h3>
         {[
           { icon: <Bell className="w-5 h-5" />, label: 'Notifications', desc: 'Call & message alerts' },
-          { icon: <Settings className="w-5 h-5" />, label: 'Voice Settings', desc: 'Default voice & language' },
           { icon: <Wallet className="w-5 h-5" />, label: 'Payment Methods', desc: 'Manage wallets & cards' },
           { icon: <Settings className="w-5 h-5" />, label: 'Privacy', desc: 'Data & security' },
-          { icon: <Settings className="w-5 h-5" />, label: 'Help & Support', desc: 'FAQ & contact' },
         ].map(item => (
           <Card
             key={item.label}
@@ -96,6 +101,18 @@ export function ProfileTab({ balance, address, isLoading }: ProfileTabProps) {
           </Card>
         ))}
       </div>
+
+      {/* Disconnect */}
+      {onDisconnect && (
+        <Button
+          variant="ghost"
+          className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          onClick={onDisconnect}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Disconnect Wallet
+        </Button>
+      )}
     </div>
   );
 }

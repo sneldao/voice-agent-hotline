@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run tests
+        run: npx tsx --test tests/*.test.ts
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_DEMO_MODE: "true"
+          NEXT_PUBLIC_PAYMENTS_ENABLED: "false"
+          NEXT_PUBLIC_ERC8004_ENABLED: "false"
+          UPSTASH_REDIS_REST_URL: https://placeholder.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: placeholder
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for secrets in changed files
+        run: |
+          PATTERNS=(
+            '0x[0-9a-fA-F]{64}'
+            'sk_[a-zA-Z0-9]{20,}'
+            'ak_[a-zA-Z0-9]{20,}'
+            'tvly-[a-zA-Z0-9-]{20,}'
+            'sk_live_[a-zA-Z0-9]{24,}'
+            'AKIA[0-9A-Z]{16}'
+            'gh[pousr]_[A-Za-z0-9_]{36,}'
+          )
+
+          FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          FOUND=0
+
+          for file in $FILES; do
+            # Skip known-safe files
+            if [[ "$file" == *.example ]] || [[ "$file" == package-lock.json ]] || [[ "$file" == *.md ]]; then
+              continue
+            fi
+
+            for pattern in "${PATTERNS[@]}"; do
+              MATCHES=$(git show "HEAD:$file" 2>/dev/null | grep -nE "$pattern" || true)
+              if [ -n "$MATCHES" ]; then
+                echo "::error file=$file::Possible secret detected matching pattern: $pattern"
+                FOUND=1
+              fi
+            done
+          done
+
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::error::Secrets detected in committed files. Please remove them."
+            exit 1
+          fi
+          echo "No secrets detected."

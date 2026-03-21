@@ -177,9 +177,13 @@ export class ElevenLabsService {
     const audioBuffer = await response.arrayBuffer();
     const audio = Readable.from(Buffer.from(audioBuffer));
 
+    // Estimate duration from MP3 bitrate (~128kbps for ElevenLabs output)
+    // MP3 frame size varies, but 128kbps is the standard ElevenLabs output rate
+    const estimatedDurationSeconds = (audioBuffer.byteLength * 8) / 128000;
+
     return {
       audio,
-      duration: 0, // TODO: Calculate from audio
+      duration: Math.round(estimatedDurationSeconds * 100) / 100,
     };
   }
 

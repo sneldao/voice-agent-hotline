@@ -4,10 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 export type OnboardingStep = 
   | 'welcome'
-  | 'wallet-intro'
   | 'wallet-connect'
-  | 'fund-wallet'
-  | 'first-call-intro'
   | 'complete';
 
 interface OnboardingState {
@@ -102,7 +99,7 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
 
   const nextStep = useCallback(() => {
     setState(prev => {
-      const steps: OnboardingStep[] = ['welcome', 'wallet-intro', 'wallet-connect', 'fund-wallet', 'first-call-intro', 'complete'];
+      const steps: OnboardingStep[] = ['welcome', 'wallet-connect', 'complete'];
       const currentIndex = steps.indexOf(prev.currentStep);
       const nextStep = steps[currentIndex + 1] || 'complete';
       
