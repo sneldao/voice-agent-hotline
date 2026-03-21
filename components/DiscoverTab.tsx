@@ -66,7 +66,7 @@ export function DiscoverTab({
     return agents.filter(agent => {
       const matchesSearch = !searchQuery || 
         agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        agent.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+        (agent.specialty ?? '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
