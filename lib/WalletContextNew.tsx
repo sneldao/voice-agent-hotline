@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
+import { apiUrl } from './api';
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 import { BrowserProvider, formatEther, Contract, ethers } from 'ethers';
 
@@ -379,7 +380,7 @@ export async function createDelegation(
   }
 ): Promise<{ success: boolean; delegationId?: string; error?: string }> {
   try {
-    const response = await fetch('/api/delegations', {
+    const response = await fetch(apiUrl('/api/delegations'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

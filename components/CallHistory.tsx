@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiUrl } from '@/lib/api'
 
 interface CallRecord {
   id: string
@@ -34,7 +35,7 @@ export function CallHistory({ agentId, userAddress }: CallHistoryProps) {
       if (agentId) params.set('agentId', agentId)
       if (userAddress) params.set('userAddress', userAddress)
 
-      const res = await fetch(`/api/calls?${params}`)
+      const res = await fetch(apiUrl(`/api/calls?${params}`))
       const data = await res.json()
       setCalls(data.calls || [])
     } catch (error) {

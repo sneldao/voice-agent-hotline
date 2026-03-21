@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { apiUrl } from './api';
 import { useWallet, signMessage } from './WalletContextNew';
 import { CELO_TOKENS } from './payment-settlement';
 import { validateAddress } from './address';
@@ -168,7 +169,7 @@ export function useRealPayment(): UseRealPaymentReturn {
       });
 
       // Step 3: Notify server of settlement (for tracking only)
-      fetch('/api/payments/settle', {
+      fetch(apiUrl('/api/payments/settle'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -265,7 +266,7 @@ export function usePaymentReceipt(callId?: string) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/payments/settle?callId=${callId}`);
+      const response = await fetch(apiUrl(`/api/payments/settle?callId=${callId}`));
       
       if (!response.ok) {
         throw new Error('Failed to fetch receipt');

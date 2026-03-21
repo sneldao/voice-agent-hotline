@@ -5,6 +5,7 @@ import { Shield, ShieldCheck, ShieldOff, Loader2, AlertCircle, ChevronDown, Chev
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWallet } from '@/lib/WalletContextNew';
+import { apiUrl } from '@/lib/api';
 import { AGENT_REGISTRY } from '@/lib/agent-registry';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -116,7 +117,7 @@ export function DelegationPanel() {
     setIsLoading(true);
 
     // Check if contracts are configured
-    fetch('/api/sdk/health')
+    fetch(apiUrl('/api/sdk/health'))
       .then(r => r.json())
       .then(d => {
         const configured = d.erc8004?.configured ?? false;
@@ -125,7 +126,7 @@ export function DelegationPanel() {
       .catch(() => setErc8004Configured(false));
 
     // Load existing delegations
-    fetch(`/api/delegations?userAddress=${address}`)
+    fetch(apiUrl(`/api/delegations?userAddress=${address}`))
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d?.delegation) {
@@ -143,7 +144,7 @@ export function DelegationPanel() {
     setIsGranting(true);
 
     try {
-      const res = await fetch('/api/delegations', {
+      const res = await fetch(apiUrl('/api/delegations'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -179,7 +180,7 @@ export function DelegationPanel() {
     setIsRevoking(true);
 
     try {
-      const res = await fetch(`/api/delegations?delegationId=${activeDelegation.id}&userAddress=${address}`, {
+      const res = await fetch(apiUrl(`/api/delegations?delegationId=${activeDelegation.id}&userAddress=${address}`), {
         method: 'DELETE',
       });
       if (!res.ok) {

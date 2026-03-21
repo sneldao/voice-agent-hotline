@@ -24,6 +24,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useWallet } from '@/lib/WalletContextNew';
+import { apiUrl } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -112,7 +113,7 @@ export default function UserProfile() {
 
     // Balance
     setLoadingBalance(true);
-    fetch(`/api/users/${address}`)
+    fetch(apiUrl(`/api/users/${address}`))
       .then(r => (r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`)))
       .then(d => { if (mounted) { setBalance(d.balance ?? 0); setBalanceErr(null); } })
       .catch(e => { if (mounted) setBalanceErr(String(e)); })
@@ -120,7 +121,7 @@ export default function UserProfile() {
 
     // Call history
     setLoadingHistory(true);
-    fetch(`/api/calls?userId=${address}&limit=5`)
+    fetch(apiUrl(`/api/calls?userId=${address}&limit=5`))
       .then(r => (r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`)))
       .then(d => {
         if (!mounted) return;
@@ -140,7 +141,7 @@ export default function UserProfile() {
 
     // ERC-8004 Reputation
     setLoadingRep(true);
-    fetch(`/api/reputation?agentId=${address}`)
+    fetch(apiUrl(`/api/reputation?agentId=${address}`))
       .then(r => r.json())
       .then(d => {
         if (!mounted) return;

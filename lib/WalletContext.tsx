@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
+import { apiUrl } from './api';
 
 // Types for Ethereum
 interface EthereumProvider {
@@ -227,7 +228,7 @@ export async function createDelegation(
 ): Promise<{ success: boolean; delegationId?: string; error?: string }> {
   try {
     // Call the delegations API to create a real delegation
-    const response = await fetch('/api/delegations', {
+    const response = await fetch(apiUrl('/api/delegations'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

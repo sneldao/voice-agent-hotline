@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Phone, Search, Star, Clock, Loader2, AlertCircle, SlidersHorizontal, X, Wallet } from 'lucide-react';
 import { ActiveCall } from '@/components/ActiveCall';
 import { useWallet } from '@/lib/WalletContextNew';
+import { apiUrl } from '@/lib/api';
 
 interface Agent {
   id: string;
@@ -95,7 +96,7 @@ export default function Marketplace() {
       const params = new URLSearchParams();
       if (selectedCapability) params.set('capability', selectedCapability);
       if (maxRate) params.set('maxRate', maxRate);
-      const res = await fetch(`/api/agents?${params}`);
+      const res = await fetch(apiUrl(`/api/agents?${params}`));
       if (!res.ok) throw new Error('Failed to load agents');
       const data = await res.json();
       setAgents(data.agents || []);

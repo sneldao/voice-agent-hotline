@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { apiUrl } from './api';
 
 export interface Agent {
   id: string;
@@ -129,7 +130,7 @@ export function useRealAgents(): UseRealAgentsReturn {
 
     try {
       // Try to fetch from API
-      const response = await fetch('/api/agents');
+      const response = await fetch(apiUrl('/api/agents'));
 
       if (!response.ok) {
         throw new Error(`Failed to fetch agents: ${response.status}`);
@@ -197,7 +198,7 @@ export function useCallHistory(address?: string): UseCallHistoryReturn {
     setError(null);
 
     try {
-      const response = await fetch(`/api/users/${address}/calls`);
+      const response = await fetch(apiUrl(`/api/users/${address}/calls`));
 
       if (!response.ok) {
         throw new Error(`Failed to fetch history: ${response.status}`);

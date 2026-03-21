@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { apiUrl } from '@/lib/api'
 
 interface Rating {
   id: string
@@ -38,7 +39,7 @@ export function RatingStars({ agentId }: RatingStarsProps) {
   const fetchRating = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/ratings?agentId=${agentId}`)
+      const res = await fetch(apiUrl(`/api/ratings?agentId=${agentId}`))
       const data = await res.json()
       setRating(data)
     } catch (error) {
@@ -53,7 +54,7 @@ export function RatingStars({ agentId }: RatingStarsProps) {
     
     setSubmitting(true)
     try {
-      await fetch('/api/ratings', {
+      await fetch(apiUrl('/api/ratings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
