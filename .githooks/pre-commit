@@ -35,9 +35,8 @@ PATTERNS=(
   'tvly-[a-zA-Z0-9-]{20,}'
   # Upstash Redis tokens (base64-like, long)
   'Aec0[A-Za-z0-9+/=]{40,}'
-  # Generic base64-like secrets (mixed case + digits + special chars, 40+ chars)
-  # Excludes hex addresses (0x...) by requiring at least one uppercase + lowercase + digit mix
-  '[A-Za-z0-9+/]{20,}[A-Z][A-Za-z0-9+/]{19,}={0,2}'
+  # Generic base64-like secrets (must contain + or / to distinguish from hex)
+  '[A-Za-z0-9+/]{20,}[/+][A-Za-z0-9+/]{19,}={0,2}'
   # Stripe keys
   'sk_live_[a-zA-Z0-9]{24,}'
   'sk_test_[a-zA-Z0-9]{24,}'
