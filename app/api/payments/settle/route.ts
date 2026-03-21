@@ -1,153 +1,64 @@
 // ============================================
-// Payment Settlement API
+// Payment Settlement API (User-Settled Mode)
 // ============================================
-// Handles on-chain settlement of x402 payments
+// Tracking-only endpoint. Users settle payments directly on-chain
+// via their own wallet. This route records settlements for analytics.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  paymentSettlement, 
-  SignedAuthorization,
-  CELO_TOKENS 
-} from '@/lib/payment-settlement';
-import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
 import { redis } from '@/lib/redis';
-import { verifyWalletAuth, checkRateLimit } from '@/lib/api-auth';
+import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
 
-// ============================================
-// POST /api/payments/settle
-// Settle a payment authorization on-chain
-// ============================================
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit by IP
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const allowed = await checkRateLimit(`settle:${ip}`, 30, 60);
-    if (!allowed) {
-      return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
-    }
-
-    // Verify caller owns the wallet
-    const auth = await verifyWalletAuth(req);
-    if (!auth.authenticated) {
-      return NextResponse.json(
-        { error: 'Unauthorized', details: auth.error },
-        { status: 401 }
-      );
-    }
-
     const body = await req.json();
-    const {
-      authorization,
-      callId,
-      token = 'cUSD',
-    }: {
-      authorization: SignedAuthorization;
-      callId: string;
-      token?: 'cUSD' | 'USDC';
-    } = body;
+    const { callId, txHash, from, to, amount, token, method } = body;
 
-    // Validate required fields
-    if (!authorization || !callId) {
+    if (!callId || !txHash) {
       return NextResponse.json(
-        { error: 'Missing required fields: authorization, callId' },
+        { error: 'Missing required fields: callId, txHash' },
         { status: 400 }
       );
     }
 
-    // Validate authorization structure
-    if (!authorization.from || !authorization.to || !authorization.value) {
-      return NextResponse.json(
-        { error: 'Invalid authorization structure' },
-        { status: 400 }
-      );
-    }
-
-    console.log('[API:Settle] Processing settlement:', {
-      callId,
-      from: authorization.from,
-      to: authorization.to,
-      value: authorization.value.toString(),
-      token,
-    });
-
-    // Check if already settled
-    const existingReceipt = paymentSettlement.getReceipt(callId);
-    if (existingReceipt?.settled) {
-      return NextResponse.json({
-        success: true,
-        alreadySettled: true,
-        receipt: existingReceipt,
-      });
-    }
-
-    // Get token address
-    const tokenAddress = token === 'USDC' ? CELO_TOKENS.USDC : CELO_TOKENS.cUSD;
-
-    // Execute settlement
-    const result = await paymentSettlement.settlePayment(
-      authorization,
-      tokenAddress,
-      callId
-    );
-
-    if (!result.success) {
-      return NextResponse.json(
-        { 
-          error: 'Settlement failed',
-          details: result.error,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Store settlement in Redis for persistence
+    // Record settlement in Redis
     await redis.hset(`settlement:${callId}`, {
       callId,
-      txHash: result.txHash,
-      blockNumber: result.blockNumber?.toString(),
-      amount: result.actualAmount,
-      token,
+      txHash,
+      from: from || '',
+      to: to || '',
+      amount: amount || '',
+      token: token || 'cUSD',
+      method: method || 'user_settled',
       timestamp: Date.now().toString(),
       settled: 'true',
     });
 
     // Update agent revenue
-    const call = await redis.hgetall(`call:${callId}`);
-    if (call && call.agentId) {
-      const agentKey = `agent:${call.agentId}`;
-      const agent = await redis.hgetall(agentKey);
-      if (agent) {
-        const currentRevenue = parseFloat((agent.totalRevenue as string) || '0');
-        const newRevenue = currentRevenue + parseFloat(result.actualAmount || '0');
-        await redis.hset(agentKey, {
-          ...agent,
-          totalRevenue: newRevenue.toString(),
-        });
+    if (to) {
+      const call = await redis.hgetall(`call:${callId}`);
+      if (call && call.agentId) {
+        const agentKey = `agent:${call.agentId}`;
+        const agent = await redis.hgetall(agentKey);
+        if (agent) {
+          const currentRevenue = parseFloat((agent.totalRevenue as string) || '0');
+          const amountFloat = parseFloat(amount || '0') / 1e18;
+          await redis.hset(agentKey, {
+            ...agent,
+            totalRevenue: (currentRevenue + amountFloat).toString(),
+          });
+        }
       }
     }
 
-    console.log('[API:Settle] ✅ Settlement complete:', {
-      callId,
-      txHash: result.txHash,
-      blockNumber: result.blockNumber,
-    });
-
-    const explorerUrl = result.txHash ? getExplorerTxUrl(result.txHash) : undefined;
+    console.log('[API:Settle] Recorded user-settled payment:', { callId, txHash });
 
     return NextResponse.json({
       success: true,
-      receipt: {
-        callId,
-        txHash: result.txHash,
-        blockNumber: result.blockNumber?.toString(),
-        amount: result.actualAmount,
-        token,
-        gasUsed: result.gasUsed?.toString(),
-        timestamp: Date.now(),
-      },
-      explorerUrl,
+      receipt: { callId, txHash, settled: true },
+      explorerUrl: txHash ? getExplorerTxUrl(txHash) : undefined,
     });
-
   } catch (error: any) {
     console.error('[API:Settle] Error:', error);
     return NextResponse.json(
@@ -157,74 +68,41 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ============================================
-// GET /api/payments/settle?callId=xxx
-// Get settlement receipt for a call
-// ============================================
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const callId = searchParams.get('callId');
 
     if (!callId) {
-      return NextResponse.json(
-        { error: 'Missing callId parameter' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing callId parameter' }, { status: 400 });
     }
 
-    // Try memory first
-    const receipt = paymentSettlement.getReceipt(callId);
-    
-    if (receipt) {
-      const explorerUrl = receipt.txHash ? getExplorerTxUrl(receipt.txHash) : undefined;
-      return NextResponse.json({
-        settled: true,
-        receipt,
-        explorerUrl,
-      });
-    }
+    const receipt = await redis.hgetall(`settlement:${callId}`);
 
-    // Try Redis
-    const redisReceipt = await redis.hgetall(`settlement:${callId}`);
-    
-    if (redisReceipt && redisReceipt.settled === 'true') {
-      const redisTxHash = typeof redisReceipt.txHash === 'string' ? redisReceipt.txHash : undefined;
-      const explorerUrl = redisTxHash ? getExplorerTxUrl(redisTxHash) : undefined;
+    if (receipt && receipt.settled === 'true') {
+      const txHash = typeof receipt.txHash === 'string' ? receipt.txHash : undefined;
       return NextResponse.json({
         settled: true,
         receipt: {
-          ...redisReceipt,
-          blockNumber: parseInt(redisReceipt.blockNumber as string),
-          timestamp: parseInt(redisReceipt.timestamp as string),
+          ...receipt,
+          timestamp: parseInt(receipt.timestamp as string),
         },
-        explorerUrl,
+        explorerUrl: txHash ? getExplorerTxUrl(txHash) : undefined,
       });
     }
 
-    return NextResponse.json({
-      settled: false,
-      callId,
-    });
-
+    return NextResponse.json({ settled: false, callId });
   } catch (error: any) {
-    console.error('[API:Settle:GET] Error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
 
-// ============================================
-// OPTIONS handler for CORS
-// ============================================
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://voisss-agent-hotline.vercel.app',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });

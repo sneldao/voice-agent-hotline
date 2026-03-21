@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@elevenlabs/client": "^0.14.0",
+    "@erc7824/nitrolite": "^0.5.3",
     "@tanstack/react-query": "^5.8.4",
     "@tetherto/wdk": "^1.0.0-beta.6",
     "@tetherto/wdk-wallet-evm": "^1.0.0-beta.10",
