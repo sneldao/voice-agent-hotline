@@ -103,12 +103,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             const chainId = web3Modal.getChainId();
             
             if (address) {
-              const balance = await web3Modal.getBalance();
               setWallet({
                 connected: true,
                 address,
                 chainId: chainId,
-                balance: balance ? formatEther(balance) : null,
+                balance: null,
                 isConnecting: false,
                 walletType: 'walletconnect',
               });
@@ -181,15 +180,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             const chainId = web3Modal.getChainId();
             
             if (address) {
-              web3Modal.getBalance().then(balance => {
-                setWallet({
-                  connected: true,
-                  address,
-                  chainId: chainId,
-                  balance: balance ? formatEther(balance) : null,
-                  isConnecting: false,
-                  walletType: 'walletconnect',
-                });
+              setWallet({
+                connected: true,
+                address,
+                chainId: chainId,
+                balance: null,
+                isConnecting: false,
+                walletType: 'walletconnect',
               });
               
               providerRef.current = web3Modal.getWalletProvider() 
