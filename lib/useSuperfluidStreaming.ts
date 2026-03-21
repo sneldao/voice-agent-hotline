@@ -67,7 +67,8 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
           functionName,
           args: [SUPERFLUID_TOKEN, address as Address, recipient as Address, flowRate, '0x'],
         });
-        const txHash = await window.ethereum.request({
+        const eth = window.ethereum as unknown as { request: (args: { method: string; params?: any[] }) => Promise<any> };
+        const txHash = await eth.request({
           method: 'eth_sendTransaction',
           params: [{
             from: address,
@@ -119,7 +120,8 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
           functionName: 'deleteFlow',
           args: [SUPERFLUID_TOKEN, address as Address, recipient as Address, '0x'],
         });
-        const txHash = await window.ethereum.request({
+        const eth2 = window.ethereum as unknown as { request: (args: { method: string; params?: any[] }) => Promise<any> };
+        const txHash = await eth2.request({
           method: 'eth_sendTransaction',
           params: [{
             from: address,

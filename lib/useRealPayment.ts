@@ -133,7 +133,8 @@ export function useRealPayment(): UseRealPaymentReturn {
         nonce,
       };
 
-      const signature = await window.ethereum!.request({
+      const eth = window.ethereum as unknown as { request: (args: { method: string; params?: any[] }) => Promise<any> };
+      const signature = await eth.request({
         method: 'eth_signTypedData_v4',
         params: [address, JSON.stringify({ domain, types, primaryType: 'TransferWithAuthorization', message })],
       });
@@ -156,7 +157,7 @@ export function useRealPayment(): UseRealPaymentReturn {
         s,
       });
 
-      const txHash = await window.ethereum!.request({
+      const txHash = await eth.request({
         method: 'eth_sendTransaction',
         params: [{
           from: address,
