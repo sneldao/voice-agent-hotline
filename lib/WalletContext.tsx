@@ -186,11 +186,11 @@ export function useWallet() {
 // Helper to sign messages
 export async function signMessage(message: string): Promise<string> {
   if (!window.ethereum) throw new Error('No wallet');
-  
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  const eth = window.ethereum as unknown as EthereumProvider;
+  const accounts = await eth.request({ method: 'eth_accounts' });
   if (accounts.length === 0) throw new Error('Not connected');
   
-  return await window.ethereum.request({
+  return await eth.request({
     method: 'personal_sign',
     params: [message, accounts[0]],
   });
@@ -199,11 +199,11 @@ export async function signMessage(message: string): Promise<string> {
 // Helper to send transactions
 export async function sendTransaction(to: string, value: string): Promise<string> {
   if (!window.ethereum) throw new Error('No wallet');
-  
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  const eth = window.ethereum as unknown as EthereumProvider;
+  const accounts = await eth.request({ method: 'eth_accounts' });
   if (accounts.length === 0) throw new Error('Not connected');
   
-  return await window.ethereum.request({
+  return await eth.request({
     method: 'eth_sendTransaction',
     params: [{
       from: accounts[0],
