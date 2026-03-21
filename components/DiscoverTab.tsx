@@ -210,7 +210,7 @@ export function DiscoverTab({
                 <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
                   <Star className="w-4 h-4 text-yellow-400" /> Featured
                 </h2>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+                <div className="grid grid-cols-2 gap-3 sm:flex sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide sm:-mx-4 sm:px-4">
                   {onlineAgents.slice(0, 10).map(agent => (
                     <FeaturedCard
                       key={agent.id}

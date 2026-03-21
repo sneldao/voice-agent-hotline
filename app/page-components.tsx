@@ -89,7 +89,7 @@ export const FeaturedCard = React.memo(function FeaturedCard({
   return (
     <button
       onClick={onClick}
-      className={`flex-shrink-0 w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 ${
+      className={`w-full sm:flex-shrink-0 sm:w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 ${
         selected
           ? 'border-cyan-500 bg-gradient-to-br from-cyan-500/20 to-blue-500/20'
           : 'border-gray-800 bg-gray-900/50 hover:border-gray-700'
