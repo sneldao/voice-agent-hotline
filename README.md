@@ -306,7 +306,3 @@ MIT
 ---
 
 Built with ❤️ for the Celo AI Partner Catalyst Hackathon
-# Redis config verified
-# Fix Redis credentials
-# Trigger deploy
-# Deploy Wed 18 Feb 2026 15:39:19 EAT
