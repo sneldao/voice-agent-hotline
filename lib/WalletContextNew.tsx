@@ -4,6 +4,13 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode,
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 import { BrowserProvider, formatEther, Contract, ethers } from 'ethers';
 
+// Type for injected Ethereum provider
+type EthereumProvider = {
+  request: (args: { method: string; params?: any[] }) => Promise<any>;
+  on: (event: string, handler: (...args: any[]) => void) => void;
+  removeListener: (event: string, handler: (...args: any[]) => void) => void;
+};
+
 // Celo chain configuration
 const celo = {
   chainId: 42220,
@@ -119,8 +126,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }
           } else if (window.ethereum) {
             // Check for MetaMask/injected wallet
-            const accounts = await window.ethereum!.request({ method: 'eth_accounts' });
-            const chainId = await window.ethereum!.request({ method: 'eth_chainId' });
+            const eth = window.ethereum as unknown as EthereumProvider;
+            const accounts = await eth.request({ method: 'eth_accounts' });
+            const chainId = await eth.request({ method: 'eth_chainId' });
             
             if (accounts.length > 0) {
               setWallet({
@@ -133,7 +141,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               });
               
               // Set up provider
-              providerRef.current = new BrowserProvider(window.ethereum!);
+              providerRef.current = new BrowserProvider(window.ethereum as any);
               
               // Fetch balance
               const balance = await providerRef.current!.getBalance(accounts[0]);
@@ -149,7 +157,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       // Listen for account changes (injected wallets)
       if (window.ethereum) {
-        window.ethereum!.on('accountsChanged', (accounts: string[]) => {
+        const eth = window.ethereum as unknown as EthereumProvider;
+        eth.on('accountsChanged', (accounts: string[]) => {
           if (accounts.length === 0) {
             setWallet({
               connected: false,
@@ -165,7 +174,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           }
         });
 
-        window.ethereum!.on('chainChanged', (chainId: string) => {
+        eth.on('chainChanged', (chainId: string) => {
           setWallet(prev => ({ ...prev, chainId: parseInt(chainId, 16) }));
         });
       }
@@ -216,10 +225,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // First try to connect with injected wallet (MetaMask, etc.)
       if (window.ethereum) {
         try {
-          const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' });
-          const chainId = await window.ethereum!.request({ method: 'eth_chainId' });
+          const eth = window.ethereum as unknown as EthereumProvider;
+          const accounts = await eth.request({ method: 'eth_requestAccounts' });
+          const chainId = await eth.request({ method: 'eth_chainId' });
 
-          providerRef.current = new BrowserProvider(window.ethereum!);
+          providerRef.current = new BrowserProvider(window.ethereum as any);
           const balance = await providerRef.current.getBalance(accounts[0]);
 
           setWallet({
@@ -275,8 +285,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (wallet.walletType === 'walletconnect' && web3Modal) {
       await web3Modal.switchNetwork(chainId);
     } else if (window.ethereum) {
+      const eth = window.ethereum as unknown as EthereumProvider;
       try {
-        await window.ethereum.request({
+        await eth.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: `0x${chainId.toString(16)}` }],
         });
@@ -286,7 +297,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           const chain = chains.find(c => c.chainId === chainId);
           if (chain) {
             try {
-              await window.ethereum.request({
+              await eth.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
                   chainId: `0x${chain.chainId.toString(16)}`,
