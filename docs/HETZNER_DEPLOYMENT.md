@@ -123,8 +123,9 @@ REDIS_URL=redis://localhost:6379
 # ElevenLabs
 ELEVENLABS_API_KEY=your_api_key
 
-# Payment Settlement
-FACILITATOR_PRIVATE_KEY=0xYourPrivateKey
+# Payments are user-settled — no server-side keys needed
+# Optional: Yellow Network state channels
+NEXT_PUBLIC_YELLOW_SANDBOX_WS_URL=wss://clearnet-sandbox.yellow.com/ws
 ```
 
 ---

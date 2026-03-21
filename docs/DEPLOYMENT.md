@@ -35,8 +35,8 @@ Set these in Vercel Dashboard → Settings → Environment Variables:
 |----------|---------|
 | `ELEVENLABS_API_KEY` | Real voice synthesis |
 | `COMPOSIO_API_KEY` | Agent tools (GitHub, Solana, etc.) |
-| `FACILITATOR_PRIVATE_KEY` | On-chain payment settlement |
-| `ARBITRATOR_PRIVATE_KEY` | Dispute resolution |
+| `TAVILY_API_KEY` | Web research for agents |
+| `NEXT_PUBLIC_YELLOW_SANDBOX_WS_URL` | Yellow Network state channels |
 
 ### Feature Flags
 
@@ -72,8 +72,8 @@ npm run build
 - Check Vercel function logs
 
 ### Payment Issues
-- Ensure `FACILITATOR_PRIVATE_KEY` has CELO for gas
-- Verify contract addresses on Celo
+- Ensure user has cUSD/USDC balance for settlement
+- Verify user is on Celo chain (chain ID 42220)
 - Check CeloScan for transaction status
 
 ## Architecture

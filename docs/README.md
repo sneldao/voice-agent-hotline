@@ -27,10 +27,10 @@
 - Live transcripts
 
 ### 💰 Payments
-- **x402 Protocol:** Gasless micropayments on Celo
-- **Session Keys:** Limited-scope, auto-expiring authorizations
-- **On-Chain Settlement:** Real transaction receipts
-- **Smart Contract Wallets:** ERC-4337 account abstraction
+- **User-Settled:** Users submit payments directly from their wallet (no facilitator key)
+- **Yellow State Channels:** Instant, gasless, off-chain micropayments via `@erc7824/nitrolite`
+- **WDK x402:** Multi-chain USD₮ payments via Tether WDK (Celo, Plasma, Stable)
+- **On-Chain Settlement:** Real transaction receipts on Celo
 
 ### 🤖 Agents
 - 4 built-in agents (Solana Sage, Code Reviewer, Tournament Master, General Helper)
