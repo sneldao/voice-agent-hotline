@@ -11,11 +11,6 @@ interface EthereumProvider {
   chainId: string | null;
 }
 
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
-}
 
 interface WalletState {
   connected: boolean;
@@ -56,10 +51,11 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.ethereum && !initialized.current) {
       initialized.current = true;
+      const eth = window.ethereum as unknown as EthereumProvider;
       const checkConnection = async () => {
         try {
-          const accounts = await window.ethereum!.request({ method: 'eth_accounts' });
-          const chainId = await window.ethereum!.request({ method: 'eth_chainId' });
+          const accounts = await eth.request({ method: 'eth_accounts' });
+          const chainId = await eth.request({ method: 'eth_chainId' });
           
           if (accounts.length > 0) {
             setWallet({
@@ -77,7 +73,7 @@ export function Providers({ children }: { children: ReactNode }) {
       checkConnection();
 
       // Listen for account changes
-      window.ethereum!.on('accountsChanged', (accounts: string[]) => {
+      eth.on('accountsChanged', (accounts: string[]) => {
         if (accounts.length === 0) {
           setWallet({ connected: false, address: null, chainId: null, isConnecting: false });
         } else {
@@ -85,7 +81,7 @@ export function Providers({ children }: { children: ReactNode }) {
         }
       });
 
-      window.ethereum!.on('chainChanged', (chainId: string) => {
+      eth.on('chainChanged', (chainId: string) => {
         setWallet(prev => ({ ...prev, chainId: parseInt(chainId, 16) }));
       });
     }
@@ -100,8 +96,9 @@ export function Providers({ children }: { children: ReactNode }) {
     setWallet(prev => ({ ...prev, isConnecting: true }));
 
     try {
-      const accounts = await window.ethereum!.request({ method: 'eth_requestAccounts' });
-      const chainId = await window.ethereum!.request({ method: 'eth_chainId' });
+      const eth = window.ethereum as unknown as EthereumProvider;
+      const accounts = await eth.request({ method: 'eth_requestAccounts' });
+      const chainId = await eth.request({ method: 'eth_chainId' });
 
       setWallet({
         connected: true,
@@ -133,8 +130,9 @@ export function Providers({ children }: { children: ReactNode }) {
     if (!window.ethereum) return;
 
     try {
+      const eth = window.ethereum as unknown as EthereumProvider;
       // Try to switch
-      await window.ethereum.request({
+      await eth.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${chainId.toString(16)}` }],
       });
@@ -142,7 +140,8 @@ export function Providers({ children }: { children: ReactNode }) {
       // Chain not added, try to add it
       if (error.code === 4902 && chainId === CELO_CHAIN.id) {
         try {
-          await window.ethereum.request({
+          const eth = window.ethereum as unknown as EthereumProvider;
+          await eth.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: `0x${CELO_CHAIN.id.toString(16)}`,
