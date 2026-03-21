@@ -73,7 +73,8 @@ export default function Home() {
     }
 
     try {
-      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+      const ethereum = window.ethereum as { request: (args: { method: string }) => Promise<string> };
+      const currentChainId = await ethereum.request({ method: 'eth_chainId' });
       return parseInt(currentChainId, 16);
     } catch {
       return chainId;
