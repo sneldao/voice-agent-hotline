@@ -136,7 +136,6 @@ export interface StreamInfo {
 
 export class SuperfluidStreamingService {
   // 'any' avoids the chain-specific generic mismatch from viem's overloads.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private publicClient: any;
   private superToken: Address;
 

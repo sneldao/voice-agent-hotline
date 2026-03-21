@@ -346,25 +346,23 @@ export function useWallet() {
 
 // Helper to sign messages
 export async function signMessage(message: string): Promise<string> {
-  const provider = useWallet().getProvider();
-  if (!provider) throw new Error('No wallet connected');
-  
-  const signer = await provider.getSigner();
-  return await signer.signMessage(message);
+  if (!window.ethereum) throw new Error('No wallet');
+  const eth = window.ethereum as unknown as EthereumProvider;
+  const accounts = await eth.request({ method: 'eth_accounts' });
+  if (!accounts || accounts.length === 0) throw new Error('Not connected');
+  return await eth.request({ method: 'personal_sign', params: [message, accounts[0]] });
 }
 
 // Helper to send transactions
 export async function sendTransaction(to: string, value: string): Promise<string> {
-  const provider = useWallet().getProvider();
-  if (!provider) throw new Error('No wallet connected');
-  
-  const signer = await provider.getSigner();
-  const tx = await signer.sendTransaction({
-    to,
-    value: ethers.parseEther(value),
+  if (!window.ethereum) throw new Error('No wallet');
+  const eth = window.ethereum as unknown as EthereumProvider;
+  const accounts = await eth.request({ method: 'eth_accounts' });
+  if (!accounts || accounts.length === 0) throw new Error('Not connected');
+  return await eth.request({
+    method: 'eth_sendTransaction',
+    params: [{ from: accounts[0], to, value: ethers.parseEther(value).toString(16) }],
   });
-  
-  return tx.hash;
 }
 
 // ERC-8004 Delegation helper

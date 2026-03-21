@@ -198,7 +198,7 @@ export function PaymentFlow({
         <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
           <Shield className="w-4 h-4 text-green-400" />
           <p className="text-xs text-gray-400">
-            Payments are secured by x402 protocol. You're only charged for time used.
+            Payments are secured by x402 protocol. You&apos;re only charged for time used.
           </p>
         </div>
       </div>
