@@ -78,7 +78,10 @@ export function ActiveCall({
   const [isFinalizing, setIsFinalizing] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const streamingStartedRef = useRef(false);
-  const payoutAddress = agent.walletAddress || process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
+  const agentPayoutAddress = agent.walletAddress || '';
+  const platformAddress = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
+  // Fall back to platform address if agent has no wallet (no split in that case)
+  const payoutAddress = agentPayoutAddress || platformAddress;
   const monthlyStreamingRate = agent.rate * 60 * 24 * 30;
 
   useEffect(() => {
@@ -116,7 +119,7 @@ export function ActiveCall({
 
     streamingStartedRef.current = true;
 
-    void startStream(payoutAddress, monthlyStreamingRate).then((txHash) => {
+    void startStream(payoutAddress, monthlyStreamingRate, agentPayoutAddress ? platformAddress : undefined).then((txHash) => {
       if (!txHash) {
         streamingStartedRef.current = false;
         showError('Failed to start streaming payment. Ending call.');
@@ -152,7 +155,7 @@ export function ActiveCall({
     setSavedCallId(id);
 
     if (paymentMode === 'streaming' && payoutAddress) {
-      const stopTxHash = await stopStream(payoutAddress);
+      const stopTxHash = await stopStream(payoutAddress, agentPayoutAddress ? platformAddress : undefined);
       if (stopTxHash) {
         updateCallReceipt(id, { txHash: stopTxHash, cost: totalCost });
       }

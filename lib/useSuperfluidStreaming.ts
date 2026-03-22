@@ -32,8 +32,8 @@ const publicClient = createPublicClient({
 
 interface UseSuperfluidStreamingReturn extends StreamingPaymentState {
   connect: () => Promise<void>;
-  startStream: (recipient: string, monthlyUSDC: number) => Promise<Hash | null>;
-  stopStream: (recipient: string) => Promise<Hash | null>;
+  startStream: (recipient: string, monthlyUSDC: number, platformAddress?: string) => Promise<Hash | null>;
+  stopStream: (recipient: string, platformAddress?: string) => Promise<Hash | null>;
 }
 
 export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
@@ -45,7 +45,7 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
   // --------------------------------------------------
 
   const startStream = useCallback(
-    async (recipient: string, monthlyUSDC: number): Promise<Hash | null> => {
+    async (recipient: string, monthlyUSDC: number, platformAddress?: string): Promise<Hash | null> => {
       if (!address) {
         setState({ status: 'error', error: 'Wallet not connected' });
         return null;
@@ -58,31 +58,53 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
       setState({ status: 'pending' });
 
       try {
-        const monthlyAmount = monthlyUsdcToTokenUnits(monthlyUSDC);
-        const flowRate = SuperfluidStreamingService.calculateFlowRate(monthlyAmount);
-        const existing = await readService.checkStream(address as Address, recipient as Address);
-        const functionName = existing.exists ? 'updateFlow' : 'createFlow';
-        const data = encodeFunctionData({
-          abi: CFA_V1_FORWARDER_ABI,
-          functionName,
-          args: [SUPERFLUID_TOKEN, address as Address, recipient as Address, flowRate, '0x'],
-        });
         const eth = window.ethereum as unknown as { request: (args: { method: string; params?: any[] }) => Promise<any> };
+        const monthlyAmount = monthlyUsdcToTokenUnits(monthlyUSDC);
+        const totalFlowRate = SuperfluidStreamingService.calculateFlowRate(monthlyAmount);
+
+        // Split: 80% to agent, 20% to platform (if platform address provided)
+        const agentFlowRate = platformAddress
+          ? (totalFlowRate * 80n) / 100n
+          : totalFlowRate;
+        const platformFlowRate = platformAddress
+          ? totalFlowRate - agentFlowRate
+          : 0n;
+
+        // Start agent stream (80% or 100% if no platform address)
+        const existingAgent = await readService.checkStream(address as Address, recipient as Address);
+        const agentFn = existingAgent.exists ? 'updateFlow' : 'createFlow';
+        const agentData = encodeFunctionData({
+          abi: CFA_V1_FORWARDER_ABI,
+          functionName: agentFn,
+          args: [SUPERFLUID_TOKEN, address as Address, recipient as Address, agentFlowRate, '0x'],
+        });
         const txHash = await eth.request({
           method: 'eth_sendTransaction',
-          params: [{
-            from: address,
-            to: CFA_V1_FORWARDER,
-            data,
-          }],
+          params: [{ from: address, to: CFA_V1_FORWARDER, data: agentData }],
         }) as Hash;
         await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+
+        // Start platform stream (20%) if address provided
+        if (platformAddress && platformFlowRate > 0n) {
+          const existingPlatform = await readService.checkStream(address as Address, platformAddress as Address);
+          const platformFn = existingPlatform.exists ? 'updateFlow' : 'createFlow';
+          const platformData = encodeFunctionData({
+            abi: CFA_V1_FORWARDER_ABI,
+            functionName: platformFn,
+            args: [SUPERFLUID_TOKEN, address as Address, platformAddress as Address, platformFlowRate, '0x'],
+          });
+          // Fire-and-forget — don't block on platform stream confirmation
+          void eth.request({
+            method: 'eth_sendTransaction',
+            params: [{ from: address, to: CFA_V1_FORWARDER, data: platformData }],
+          });
+        }
 
         setState({
           status: 'streaming',
           streamId: txHash,
           txHash,
-          flowRate: flowRate.toString(),
+          flowRate: agentFlowRate.toString(),
           startedAt: new Date(),
         });
         return txHash;
@@ -96,7 +118,7 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
   );
 
   const stopStream = useCallback(
-    async (recipient: string): Promise<Hash | null> => {
+    async (recipient: string, platformAddress?: string): Promise<Hash | null> => {
       if (!address) {
         setState({ status: 'error', error: 'Wallet not connected' });
         return null;
@@ -115,21 +137,33 @@ export function useSuperfluidStreaming(): UseSuperfluidStreamingReturn {
           return null;
         }
 
-        const data = encodeFunctionData({
+        const eth2 = window.ethereum as unknown as { request: (args: { method: string; params?: any[] }) => Promise<any> };
+        const agentData = encodeFunctionData({
           abi: CFA_V1_FORWARDER_ABI,
           functionName: 'deleteFlow',
           args: [SUPERFLUID_TOKEN, address as Address, recipient as Address, '0x'],
         });
-        const eth2 = window.ethereum as unknown as { request: (args: { method: string; params?: any[] }) => Promise<any> };
         const txHash = await eth2.request({
           method: 'eth_sendTransaction',
-          params: [{
-            from: address,
-            to: CFA_V1_FORWARDER,
-            data,
-          }],
+          params: [{ from: address, to: CFA_V1_FORWARDER, data: agentData }],
         }) as Hash;
         await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
+
+        // Stop platform stream (20%) if it exists
+        if (platformAddress) {
+          const existingPlatform = await readService.checkStream(address as Address, platformAddress as Address);
+          if (existingPlatform.exists) {
+            const platformData = encodeFunctionData({
+              abi: CFA_V1_FORWARDER_ABI,
+              functionName: 'deleteFlow',
+              args: [SUPERFLUID_TOKEN, address as Address, platformAddress as Address, '0x'],
+            });
+            void eth2.request({
+              method: 'eth_sendTransaction',
+              params: [{ from: address, to: CFA_V1_FORWARDER, data: platformData }],
+            });
+          }
+        }
 
         setState({ status: 'stopped', txHash, stoppedAt: new Date() });
         return txHash;
