@@ -92,6 +92,59 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // cUSD on Celo mainnet
+  const CUSD_ADDRESS = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
+
+  // Encode ERC-20 transfer(address,uint256) calldata
+  const encodeTransfer = (to: string, amountWei: bigint): string => {
+    const selector = '0xa9059cbb';
+    const paddedTo = to.toLowerCase().replace('0x', '').padStart(64, '0');
+    const paddedAmount = amountWei.toString(16).padStart(64, '0');
+    return selector + paddedTo + paddedAmount;
+  };
+
+  // Encode registerAgent(string,uint256,string[]) calldata for ERC-8004
+  const encodeRegisterAgent = (agentURI: string, rateWei: bigint, specialties: string[]): string => {
+    // selector for registerAgent(string,uint256,string[])
+    const selector = '0x' + Array.from(
+      new Uint8Array(
+        // keccak256 of "registerAgent(string,uint256,string[])" first 4 bytes
+        // precomputed: 0x4a0e5371
+        [0x4a, 0x0e, 0x53, 0x71]
+      )
+    ).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // ABI-encode: offsets for dynamic types
+    // param0 (string agentURI): offset = 0x60 (3 * 32)
+    // param1 (uint256 rate): inline
+    // param2 (string[] specialties): offset = 0x60 + 32 + ceil(len/32)*32 + 32
+    const encodeString = (s: string): string => {
+      const bytes = new TextEncoder().encode(s);
+      const lenHex = bytes.length.toString(16).padStart(64, '0');
+      const dataHex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      const padded = dataHex.padEnd(Math.ceil(dataHex.length / 64) * 64, '0');
+      return lenHex + padded;
+    };
+
+    const uriEncoded = encodeString(agentURI);
+    const rateHex = rateWei.toString(16).padStart(64, '0');
+
+    // string[] encoding: length + each string offset + each string data
+    const arrLen = specialties.length.toString(16).padStart(64, '0');
+    const encodedStrings = specialties.map(encodeString);
+    const strOffsets = specialties.map((_, i) => {
+      const prior = encodedStrings.slice(0, i).reduce((acc, s) => acc + s.length / 2, 0);
+      return (specialties.length * 32 + prior).toString(16).padStart(64, '0');
+    });
+    const arrEncoded = arrLen + strOffsets.join('') + encodedStrings.join('');
+
+    // Offsets from start of params (after selector)
+    const uriOffset = (3 * 32).toString(16).padStart(64, '0'); // 0x60
+    const arrOffset = (3 * 32 + 32 + uriEncoded.length / 2).toString(16).padStart(64, '0');
+
+    return selector + uriOffset + rateHex + arrOffset + uriEncoded + arrEncoded;
+  };
+
   const handleWithdraw = async (agent: AgentStat) => {
     if (!address) return;
     const revenue = parseFloat(agent.totalRevenue || '0');
@@ -101,24 +154,79 @@ export default function DashboardPage() {
       showToast('Minimum withdrawal is 0.01 cUSD', 'error');
       return;
     }
+    const eth = (window as any).ethereum;
+    if (!eth) {
+      showToast('No wallet detected', 'error');
+      return;
+    }
     setPayoutLoading(agent.id);
     try {
-      const res = await fetch(apiUrl('/api/agents/payout'), {
+      // cUSD has 18 decimals
+      const amountWei = BigInt(Math.floor(unpaid * 1e18));
+      const data = encodeTransfer(address, amountWei);
+      const txHash = await eth.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: address, to: CUSD_ADDRESS, data }],
+      });
+      // Record the confirmed payout server-side
+      await fetch(apiUrl('/api/agents/payout'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: agent.id, walletAddress: address }),
+        body: JSON.stringify({ agentId: agent.id, walletAddress: address, txHash, amount: unpaid.toFixed(6) }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        showToast(data.error || 'Withdrawal failed', 'error');
+      showToast(`Withdrew ${unpaid.toFixed(4)} cUSD ✓ — tx: ${(txHash as string).slice(0, 10)}…`);
+      fetchData();
+    } catch (err: any) {
+      if (err?.code === 4001) {
+        showToast('Transaction rejected', 'error');
       } else {
-        showToast(`Withdrew ${unpaid.toFixed(4)} cUSD ✓`);
-        fetchData();
+        showToast(err?.message || 'Withdrawal failed', 'error');
       }
-    } catch {
-      showToast('Withdrawal failed', 'error');
     } finally {
       setPayoutLoading(null);
+    }
+  };
+
+  const [mintLoading, setMintLoading] = useState<string | null>(null);
+
+  const handleMintIdentity = async (agent: AgentStat) => {
+    if (!address) return;
+    const identityAddress = process.env.NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS;
+    if (!identityAddress || identityAddress === '0x0000000000000000000000000000000000000000') {
+      showToast('ERC-8004 contracts not configured', 'error');
+      return;
+    }
+    const eth = (window as any).ethereum;
+    if (!eth) {
+      showToast('No wallet detected', 'error');
+      return;
+    }
+    setMintLoading(agent.id);
+    try {
+      const agentURI = `https://voisss.celo.famile.xyz/api/agents/${agent.id}`;
+      const rateWei = BigInt(Math.floor(parseFloat(String(agent.rate || '0.10')) * 1e18));
+      const specialties = agent.category ? [agent.category] : ['general'];
+      const data = encodeRegisterAgent(agentURI, rateWei, specialties);
+      const txHash = await eth.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: address, to: identityAddress, data }],
+      });
+      // Store the tx hash so the user can track it; token ID resolved off-chain
+      await fetch(apiUrl(`/api/agents/${agent.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ erc8004_mint_tx: txHash }),
+      });
+      showToast(`ERC-8004 mint submitted ✓ — tx: ${(txHash as string).slice(0, 10)}…`);
+      fetchData();
+    } catch (err: any) {
+      if (err?.code === 4001) {
+        showToast('Transaction rejected', 'error');
+      } else {
+        showToast(err?.message || 'Mint failed', 'error');
+      }
+    } finally {
+      setMintLoading(null);
     }
   };
 
@@ -280,18 +388,29 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* Withdraw button */}
-                        <button
-                          onClick={() => handleWithdraw(agent)}
-                          disabled={unpaid < 0.01 || payoutLoading === agent.id}
-                          className="shrink-0 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
-                        >
-                          {payoutLoading === agent.id
-                            ? 'Sending…'
-                            : unpaid < 0.01
-                            ? 'No balance'
-                            : `Withdraw ${unpaid.toFixed(4)} cUSD`}
-                        </button>
+                        {/* Action buttons */}
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <button
+                            onClick={() => handleWithdraw(agent)}
+                            disabled={unpaid < 0.01 || payoutLoading === agent.id}
+                            className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+                          >
+                            {payoutLoading === agent.id
+                              ? 'Sending…'
+                              : unpaid < 0.01
+                              ? 'No balance'
+                              : `Withdraw ${unpaid.toFixed(4)} cUSD`}
+                          </button>
+                          {agent.status === 'active' && !agent.erc8004_token_id && (
+                            <button
+                              onClick={() => handleMintIdentity(agent)}
+                              disabled={mintLoading === agent.id}
+                              className="px-4 py-2 bg-violet-700 hover:bg-violet-600 disabled:bg-slate-800 disabled:text-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                              {mintLoading === agent.id ? 'Minting…' : 'Mint ERC-8004 ⛓️'}
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Per-agent stats */}
