@@ -163,7 +163,9 @@ export function AgentDetailModal({
       </div>
       <div className="space-y-4">
         <div>
-          <label className="text-sm font-medium text-gray-300 mb-2 block">Estimated Call Duration</label>
+          <label className="text-sm font-medium text-gray-300 mb-2 block">
+            {paymentMode === 'streaming' ? 'Max Call Duration' : 'Estimated Call Duration'}
+          </label>
           <div className="flex gap-2">
             {[1, 5, 10, 15].map(mins => (
               <button
@@ -184,40 +186,52 @@ export function AgentDetailModal({
             <span className="text-white font-medium">${agent.rate}/min</span>
           </div>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">Duration</span>
+            <span className="text-gray-400">{paymentMode === 'streaming' ? 'Max duration' : 'Duration'}</span>
             <span className="text-white">{estimatedMins} minutes</span>
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-gray-700">
-            <span className="text-gray-400">Estimated Cost</span>
+            <span className="text-gray-400">{paymentMode === 'streaming' ? 'Max cost' : 'Estimated Cost'}</span>
             <span className="text-cyan-400 font-bold text-lg">${estimatedCost}</span>
           </div>
         </div>
         {onPaymentModeChange && (
           <div>
             <label className="text-sm font-medium text-gray-300 mb-2 block">Payment Method</label>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => onPaymentModeChange('x402')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                  paymentMode === 'x402' ? 'bg-cyan-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                className={`py-3 px-3 rounded-xl text-sm font-medium transition-all border ${
+                  paymentMode === 'x402'
+                    ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
                 }`}
               >
-                x402 Pay-per-call
+                <div className="text-base mb-0.5">💳</div>
+                <div className="font-semibold">Pay upfront</div>
+                <div className="text-xs opacity-70 mt-0.5">Fixed amount, settled on-chain</div>
               </button>
               <button
                 onClick={() => onPaymentModeChange('streaming')}
                 disabled={!agent.wallet_address && !agent.walletAddress}
-                title={!agent.wallet_address && !agent.walletAddress ? 'Agent has no payout address configured' : undefined}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                  paymentMode === 'streaming' ? 'bg-cyan-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                title={!agent.wallet_address && !agent.walletAddress ? 'This agent has not configured a payout wallet' : undefined}
+                className={`py-3 px-3 rounded-xl text-sm font-medium transition-all border disabled:opacity-40 disabled:cursor-not-allowed ${
+                  paymentMode === 'streaming'
+                    ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
                 }`}
               >
-                ⚡ Superfluid Stream
+                <div className="text-base mb-0.5">⚡</div>
+                <div className="font-semibold">Stream per second</div>
+                <div className="text-xs opacity-70 mt-0.5">Pay only for time used</div>
               </button>
             </div>
-            {paymentMode === 'streaming' && (
-              <p className="text-xs text-cyan-400/70 mt-1.5">Real-time cUSDCx stream on Celo — stops the moment you hang up</p>
-            )}
+            <p className={`text-xs mt-2 ${
+              paymentMode === 'streaming' ? 'text-cyan-400/80' : 'text-gray-500'
+            }`}>
+              {paymentMode === 'streaming'
+                ? '⚡ cUSD streams directly to the agent in real-time — stops the moment you hang up'
+                : '💳 A fixed payment is authorised before the call starts'}
+            </p>
           </div>
         )}
         <div className="flex gap-3">
