@@ -29,7 +29,7 @@ interface StatsSummary {
 }
 
 export default function DashboardPage() {
-  const { address, isConnected, connect } = useWallet();
+  const { address, connected, connect } = useWallet();
   const [myAgents, setMyAgents] = useState<AgentStat[]>([]);
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +71,7 @@ export default function DashboardPage() {
       ? myAgents.reduce((sum, a) => sum + (a.rating || 0), 0) / myAgents.length
       : 0;
 
-  if (!isConnected) {
+  if (!connected) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center space-y-4">

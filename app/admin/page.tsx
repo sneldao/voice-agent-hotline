@@ -33,7 +33,7 @@ function isAdmin(address: string | null): boolean {
 }
 
 export default function AdminPage() {
-  const { address, isConnected, connect } = useWallet();
+  const { address, connected, connect } = useWallet();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -113,7 +113,7 @@ export default function AdminPage() {
     all: agents.length,
   };
 
-  if (!isConnected) {
+  if (!connected) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -131,7 +131,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAdmin(address)) {
+  if (connected && !isAdmin(address)) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center space-y-3">
