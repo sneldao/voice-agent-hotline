@@ -142,6 +142,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Rate-limit self-registrations: max 3 per IP per hour
+    if (register) {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+      const rateLimitKey = `ratelimit:register:${ip}`;
+      const count = await redis.incr(rateLimitKey);
+      if (count === 1) await redis.expire(rateLimitKey, 3600);
+      if (count > 3) {
+        return NextResponse.json(
+          { error: 'Too many registration attempts. Please try again later.' },
+          { status: 429 }
+        );
+      }
+    }
+
     // Generate agent ID
     const agentId = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 

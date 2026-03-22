@@ -103,6 +103,10 @@ export async function PATCH(
         ...(erc8004TokenId ? { erc8004_token_id: erc8004TokenId } : {}),
       });
       console.log('[Agents API] Approved agent:', params.id);
+
+      // Notify via webhook if configured
+      await sendNotification('approved', agent, params.id, erc8004TokenId);
+
       return NextResponse.json({ message: 'Agent approved', id: params.id, erc8004TokenId });
     }
 
@@ -114,6 +118,10 @@ export async function PATCH(
         rejected_at: new Date().toISOString(),
       });
       console.log('[Agents API] Rejected agent:', params.id);
+
+      // Notify via webhook if configured
+      await sendNotification('rejected', agent, params.id, null, reason);
+
       return NextResponse.json({ message: 'Agent rejected', id: params.id });
     }
 
@@ -125,6 +133,40 @@ export async function PATCH(
     return NextResponse.json({ agent: updated });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// ── Notification helper ──────────────────────────────────────────────────────
+// Fires a webhook to AGENT_NOTIFICATION_WEBHOOK_URL (if set) when an agent
+// is approved or rejected. Payload is compatible with OpenClaw and generic
+// webhook receivers (Slack, Discord, n8n, etc.).
+async function sendNotification(
+  event: 'approved' | 'rejected',
+  agent: Record<string, unknown>,
+  agentId: string,
+  erc8004TokenId?: string | null,
+  reason?: string
+) {
+  const webhookUrl = process.env.AGENT_NOTIFICATION_WEBHOOK_URL;
+  if (!webhookUrl) return;
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: `agent.${event}`,
+        agentId,
+        name: agent.name,
+        category: agent.category,
+        wallet_address: agent.wallet_address,
+        erc8004TokenId: erc8004TokenId || null,
+        reason: reason || null,
+        timestamp: new Date().toISOString(),
+        platform: 'voisss',
+      }),
+    });
+  } catch (err: any) {
+    console.warn('[Agents API] Notification webhook failed (non-fatal):', err.message);
   }
 }
 
