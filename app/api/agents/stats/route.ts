@@ -14,7 +14,7 @@ export async function GET() {
     const agentKeys = await redis.keys('agent:*');
     const agents = await Promise.all(agentKeys.map(key => redis.hgetall(key)));
 
-    const activeAgents = agents.filter(a => a && a.active === 'true');
+    const activeAgents = agents.filter(a => a && (a.active === 'true' || a.active === true || String(a.active).toLowerCase() === 'true'));
 
     const totalCalls = activeAgents.reduce((sum, a) => sum + (parseInt(String(a?.totalCalls ?? '0')) || 0), 0);
     const totalAgents = activeAgents.length;
