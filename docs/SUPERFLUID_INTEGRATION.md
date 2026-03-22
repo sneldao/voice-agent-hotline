@@ -1,100 +1,27 @@
 # Superfluid Streaming Payments
 
-## Overview
+> **Status:** Partially integrated. The streaming infrastructure exists in `lib/superfluid-streaming.ts` and `lib/useSuperfluidStreaming.ts` but the primary payment model is now **Yellow Network state channels** for per-minute billing. Superfluid may be used for future subscription or continuous-stream use cases.
 
-Superfluid streaming is implemented as a real wallet-signed flow on Celo.
-Users start and stop streams directly from their connected wallet while on-chain flow state is read from public RPC.
+## What's Implemented
 
-## Architecture
+- `lib/superfluid-streaming.ts` — flow creation/deletion helpers using CFAv1Forwarder on Celo
+- `lib/useSuperfluidStreaming.ts` — React hook wrapping the streaming helpers
+- `components/StreamingPaymentModal.tsx` — UI for starting/stopping a Superfluid stream
 
-```text
+## Architecture (when active)
+
+```
 User Wallet (signs tx)
-   -> CFAv1Forwarder (create/update/delete flow)
-   -> Super Token balance updates in real time
+   → CFAv1Forwarder (create/update/delete flow)
+   → Super Token balance updates in real time
 
 UI + Hook
-   -> reads flow state via public RPC
-   -> shows tx hash + explorer receipt
+   → reads flow state via public RPC
+   → shows tx hash + explorer receipt
 ```
 
-Key properties:
+## Current Payment Model
 
-1. No server-side facilitator key is required for streaming operations.
-2. Stream start auto-detects existing flow and uses `updateFlow` when needed.
-3. Stream stop calls `deleteFlow` and returns an on-chain transaction hash.
+Per-minute billing is handled via **Yellow Network state channels** — see `app/api/payments/wdk/route.ts` and `lib/wdk-wallet.ts`. This avoids on-chain tx fees for every minute of a call.
 
-## Source of Truth
-
-1. Streaming config and ABI: `lib/superfluid-streaming.ts`
-2. Wallet-signed client hook: `lib/useSuperfluidStreaming.ts`
-3. Preflight checks before call connect: `lib/streaming-preflight.ts`
-4. In-call lifecycle integration: `components/ActiveCall.tsx`
-
-## Hook Usage
-
-```typescript
-import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
-
-const {
-  status,
-  txHash,
-  flowRate,
-  error,
-  startStream,
-  stopStream,
-} = useSuperfluidStreaming();
-
-const monthlyUsd = 4.32; // e.g. $0.10/min * 60 * 24 * 30
-
-// Start (create or update)
-const startTx = await startStream(agentPayoutAddress, monthlyUsd);
-
-// Stop
-const stopTx = await stopStream(agentPayoutAddress);
-```
-
-## Environment Variables
-
-```bash
-# Optional: override token + label
-NEXT_PUBLIC_SUPERFLUID_TOKEN=0x...
-NEXT_PUBLIC_SUPERFLUID_TOKEN_SYMBOL=cUSDCx
-
-# Optional: fallback payout address when an agent record has no wallet
-NEXT_PUBLIC_PLATFORM_ADDRESS=0x...
-
-# Optional RPC override
-CELO_RPC_URL=https://forno.celo.org
-```
-
-## Readiness and Preflight
-
-Before launching a streaming call, preflight checks verify:
-
-1. Selected agent has a payout address.
-2. Wallet is connected to the required Celo chain.
-3. Super token contract exists on the active chain.
-4. Wallet has enough super token balance for the initial reserve window.
-
-Current preflight implementation: `lib/streaming-preflight.ts`.
-
-## Error Handling
-
-Common user-visible failure classes:
-
-1. Wrong chain: prompt wallet network switch.
-2. Missing payout address: block launch and show configuration issue.
-3. Missing super token on chain: treat streaming as unavailable.
-4. Insufficient balance: show top-up flow using reserve amount guidance.
-
-## Notes
-
-1. Streaming and x402 are both supported; choose at call launch.
-2. Receipts use transaction hashes and explorer links from shared helper logic.
-
-## Resources
-
-1. [Superfluid Docs](https://docs.superfluid.finance/)
-2. [Celo Network Support](https://docs.superfluid.finance/superfluid/networks/celo)
-3. [Protocol Monorepo / CFAv1Forwarder](https://github.com/superfluid-finance/protocol-monorepo)
-4. [viem](https://viem.sh/)
+Superfluid remains available as an alternative for use cases requiring continuous streaming (e.g. long-running agent subscriptions).
