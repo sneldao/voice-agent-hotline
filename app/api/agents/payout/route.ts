@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the requesting wallet owns this agent
-    if (agent.wallet_address?.toLowerCase() !== walletAddress.toLowerCase()) {
+    const agentWallet = (agent.wallet_address as string) || '';
+    if (agentWallet.toLowerCase() !== walletAddress.toLowerCase()) {
       return NextResponse.json({ error: 'Unauthorized: wallet does not own this agent' }, { status: 403 });
     }
 
