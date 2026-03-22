@@ -13,25 +13,26 @@ import {
   Address,
   Hash,
 } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { celo } from 'viem/chains';
 
 // ============================================
 // Configuration
 // ============================================
 
 // CFAv1Forwarder is deployed at the same address on every Superfluid-enabled chain.
-export const CFA_V1_FORWARDER = '0xcfA132E353cB4E3180835bd80aA1126F87b751Ee' as Address;
+export const CFA_V1_FORWARDER = '0xcfA132E353cB4E398080B9700609bb008eceB125' as Address;
 
 // Super-token used for voice-call streaming.
-// Override with NEXT_PUBLIC_SUPERFLUID_TOKEN env var for testnet/custom tokens.
-// Default: cUSDCx on Celo mainnet (Superfluid-wrapped USDC)
+// Override with NEXT_PUBLIC_SUPERFLUID_TOKEN env var for custom tokens.
+// Default: cUSDx on Celo mainnet (Superfluid-wrapped cUSD)
 export const SUPERFLUID_TOKEN: Address = (
   process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN ||
-  '0x1BA8603DA702602A8657980e825A6DAa03Dee93a' // cUSDCx – Celo mainnet
+  '0x3acb9a08697b6db4cd977e8ab42b6f24722e6d6e' // cUSDx – Celo mainnet
 ) as Address;
-export const SUPERFLUID_TOKEN_SYMBOL = process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN_SYMBOL || 'cUSDCx';
+export const SUPERFLUID_TOKEN_SYMBOL = process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN_SYMBOL || 'cUSDx';
 
-export const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoAlfajores;
+// Always use Celo mainnet for Superfluid (deployed and live)
+export const ACTIVE_CHAIN = celo;
 export const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
 
 // ============================================
