@@ -30,6 +30,8 @@ interface DiscoverTabProps {
   onRefresh: () => Promise<void>;
   showSmartFinder: boolean;
   onToggleSmartFinder: () => void;
+  paymentMode?: 'x402' | 'streaming';
+  onPaymentModeChange?: (mode: 'x402' | 'streaming') => void;
 }
 
 export function DiscoverTab({
@@ -46,6 +48,8 @@ export function DiscoverTab({
   onRefresh,
   showSmartFinder,
   onToggleSmartFinder,
+  paymentMode,
+  onPaymentModeChange,
 }: DiscoverTabProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20); // Pagination
@@ -256,6 +260,8 @@ export function DiscoverTab({
           agent={selectedAgent}
           onClose={() => onSelect(null)}
           onCall={onCall}
+          paymentMode={paymentMode}
+          onPaymentModeChange={onPaymentModeChange}
         />
       </div>
     </PullToRefresh>

@@ -112,10 +112,14 @@ export function AgentDetailModal({
   agent,
   onClose,
   onCall,
+  paymentMode = 'x402',
+  onPaymentModeChange,
 }: {
   agent: any | null;
   onClose: () => void;
   onCall: () => void;
+  paymentMode?: 'x402' | 'streaming';
+  onPaymentModeChange?: (mode: 'x402' | 'streaming') => void;
 }) {
   const [calling, setCalling] = useState(false);
   const [estimatedMins, setEstimatedMins] = useState(5);
@@ -188,6 +192,34 @@ export function AgentDetailModal({
             <span className="text-cyan-400 font-bold text-lg">${estimatedCost}</span>
           </div>
         </div>
+        {onPaymentModeChange && (
+          <div>
+            <label className="text-sm font-medium text-gray-300 mb-2 block">Payment Method</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onPaymentModeChange('x402')}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  paymentMode === 'x402' ? 'bg-cyan-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                x402 Pay-per-call
+              </button>
+              <button
+                onClick={() => onPaymentModeChange('streaming')}
+                disabled={!agent.wallet_address && !agent.walletAddress}
+                title={!agent.wallet_address && !agent.walletAddress ? 'Agent has no payout address configured' : undefined}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  paymentMode === 'streaming' ? 'bg-cyan-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                ⚡ Superfluid Stream
+              </button>
+            </div>
+            {paymentMode === 'streaming' && (
+              <p className="text-xs text-cyan-400/70 mt-1.5">Real-time cUSDCx stream on Celo — stops the moment you hang up</p>
+            )}
+          </div>
+        )}
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
           <Button

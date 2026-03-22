@@ -322,6 +322,8 @@ export default function Home() {
                     onRefresh={mutateAgents}
                     showSmartFinder={showSmartFinder}
                     onToggleSmartFinder={() => setShowSmartFinder(!showSmartFinder)}
+                    paymentMode={selectedPaymentMode}
+                    onPaymentModeChange={setSelectedPaymentMode}
                   />
                 </Suspense>
               )}
