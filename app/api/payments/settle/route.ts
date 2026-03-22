@@ -35,19 +35,23 @@ export async function POST(req: NextRequest) {
       settled: 'true',
     });
 
-    // Update agent revenue
+    // Update agent revenue with 80/20 split (80% agent, 20% platform)
     if (to) {
       const call = await redis.hgetall(`call:${callId}`);
       if (call && call.agentId) {
         const agentKey = `agent:${call.agentId}`;
         const agent = await redis.hgetall(agentKey);
         if (agent) {
-          const currentRevenue = parseFloat((agent.totalRevenue as string) || '0');
           const amountFloat = parseFloat(amount || '0') / 1e18;
+          const agentShare = amountFloat * 0.8;
+          const platformShare = amountFloat * 0.2;
+          const currentRevenue = parseFloat((agent.totalRevenue as string) || '0');
+          const currentPlatformRevenue = parseFloat((agent.platformRevenue as string) || '0');
           await redis.hset(agentKey, {
-            ...agent,
-            totalRevenue: (currentRevenue + amountFloat).toString(),
+            totalRevenue: (currentRevenue + agentShare).toFixed(6),
+            platformRevenue: (currentPlatformRevenue + platformShare).toFixed(6),
           });
+          console.log(`[API:Settle] Split: agent=${agentShare.toFixed(6)} cUSD (80%), platform=${platformShare.toFixed(6)} cUSD (20%)`);
         }
       }
     }

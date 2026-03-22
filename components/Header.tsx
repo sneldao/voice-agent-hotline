@@ -78,9 +78,23 @@ export function Header({
                     <p className="text-xs text-gray-500">Balance</p>
                     <p className="text-sm font-medium text-cyan-400">${(userBalance || 0).toFixed(2)}</p>
                   </div>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setShowMenu(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 transition-colors"
+                  >
+                    📊 Dashboard
+                  </Link>
+                  <Link
+                    href="/admin"
+                    onClick={() => setShowMenu(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 transition-colors"
+                  >
+                    🛠 Admin
+                  </Link>
                   <button
                     onClick={() => { setShowMenu(false); onDisconnect?.(); }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-400 hover:bg-gray-800 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-400 hover:bg-gray-800 transition-colors border-t border-gray-800"
                   >
                     <LogOut className="w-4 h-4" />
                     Disconnect
