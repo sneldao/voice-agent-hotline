@@ -62,7 +62,7 @@ export async function PATCH(
       console.log('[Agents API] Rejected agent:', params.id);
 
       // Notify via webhook if configured
-      await sendNotification('rejected', agent, params.id, null, reason);
+      await sendNotification('rejected', agent, params.id, reason);
 
       return NextResponse.json({ message: 'Agent rejected', id: params.id });
     }
