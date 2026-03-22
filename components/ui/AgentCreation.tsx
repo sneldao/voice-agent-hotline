@@ -18,6 +18,8 @@ import {
   Zap
 } from './Toast';
 import { showSuccess, showError } from '@/lib/useToast';
+import { apiUrl } from '@/lib/api';
+import type { AgentSubmission } from '@/lib/types';
 
 interface AgentCreationModalProps {
   isOpen: boolean;
@@ -358,5 +360,196 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Self-Registration Form ───────────────────────────────────────────────────
+// Used on /list-your-agent — external developers submit their ElevenLabs agent
+// for review. Stores as status: "pending" until approved by an admin.
+
+const CATEGORIES = [
+  { id: 'code', label: '💻 Code' },
+  { id: 'finance', label: '💰 Finance' },
+  { id: 'blockchain', label: '⛓️ Blockchain' },
+  { id: 'health', label: '🏥 Health' },
+  { id: 'education', label: '📚 Education' },
+  { id: 'legal', label: '⚖️ Legal' },
+  { id: 'creative', label: '🎨 Creative' },
+  { id: 'other', label: '✨ Other' },
+];
+
+const EMPTY_SUBMISSION: AgentSubmission = {
+  name: '',
+  description: '',
+  specialty: '',
+  category: '',
+  elevenlabs_agent_id: '',
+  voice_id: '',
+  system_prompt: '',
+  rate: 0.10,
+  wallet_address: '',
+  contact_email: '',
+};
+
+export function AgentRegistrationForm() {
+  const [form, setForm] = useState<AgentSubmission>(EMPTY_SUBMISSION);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const set = (field: keyof AgentSubmission, value: string | number) =>
+    setForm(prev => ({ ...prev, [field]: value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.elevenlabs_agent_id || !form.system_prompt || !form.wallet_address) {
+      showError('Please fill in all required fields');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(apiUrl('/api/agents'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, register: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Submission failed');
+      }
+      setSubmitted(true);
+      showSuccess('Agent submitted for review!');
+    } catch (err: any) {
+      showError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-16 space-y-4">
+        <div className="text-5xl">🎉</div>
+        <h2 className="text-2xl font-bold text-white">Submission received!</h2>
+        <p className="text-gray-400">
+          Your agent is under review. We will reach out to <span className="text-cyan-400">{form.contact_email}</span> once approved.
+        </p>
+        <Button onClick={() => { setForm(EMPTY_SUBMISSION); setSubmitted(false); }} variant="secondary">
+          Submit another agent
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6">
+      {/* Agent identity */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Agent identity</h3>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Agent name <span className="text-red-400">*</span></label>
+          <Input placeholder="e.g. Tax Advisor" value={form.name} onChange={e => set('name', e.target.value)} icon="🤖" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Short description <span className="text-red-400">*</span></label>
+          <Input placeholder="One-line description for the marketplace" value={form.description} onChange={e => set('description', e.target.value)} icon="📝" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Specialty</label>
+          <Input placeholder="e.g. US tax law, crypto accounting" value={form.specialty} onChange={e => set('specialty', e.target.value)} icon="🎯" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Category</label>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => set('category', cat.id)}
+                className={`p-2 rounded-xl text-xs text-center transition-all ${
+                  form.category === cat.id
+                    ? 'bg-cyan-500/20 border border-cyan-500/50 text-cyan-300'
+                    : 'bg-gray-800/40 border border-transparent text-gray-400 hover:bg-gray-800/70'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ElevenLabs integration */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">ElevenLabs integration</h3>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">ElevenLabs Agent ID <span className="text-red-400">*</span></label>
+          <Input placeholder="agent_xxxxxxxxxxxxxxxx" value={form.elevenlabs_agent_id} onChange={e => set('elevenlabs_agent_id', e.target.value)} icon="🔑" />
+          <p className="text-xs text-gray-500">Found in your ElevenLabs dashboard under Conversational AI → Agents.</p>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Voice ID</label>
+          <Input placeholder="ElevenLabs voice ID (optional)" value={form.voice_id} onChange={e => set('voice_id', e.target.value)} icon="🎙️" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">System prompt <span className="text-red-400">*</span></label>
+          <textarea
+            placeholder="Describe what your agent does and how it behaves..."
+            value={form.system_prompt}
+            onChange={e => set('system_prompt', e.target.value)}
+            rows={4}
+            className="w-full bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:border-cyan-500/50 transition-colors"
+          />
+        </div>
+      </div>
+
+      {/* Earnings & contact */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Earnings & contact</h3>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Rate per minute (cUSD) <span className="text-red-400">*</span></label>
+          <div className="flex items-center gap-4">
+            <input
+              type="range" min="5" max="100" step="1"
+              value={Math.round(form.rate * 100)}
+              onChange={e => set('rate', Number(e.target.value) / 100)}
+              className="flex-1 accent-cyan-500"
+            />
+            <div className="flex items-center gap-1 bg-gray-800/50 px-3 py-2 rounded-lg min-w-[80px] justify-center">
+              <CreditCard className="w-4 h-4 text-cyan-400" />
+              <span className="font-bold text-cyan-400">${form.rate.toFixed(2)}</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">Platform takes 20%. You earn ${(form.rate * 0.8).toFixed(2)}/min.</p>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Celo wallet address <span className="text-red-400">*</span></label>
+          <Input placeholder="0x..." value={form.wallet_address} onChange={e => set('wallet_address', e.target.value)} icon="💳" />
+          <p className="text-xs text-gray-500">Earnings paid in cUSD to this address.</p>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300">Contact email</label>
+          <Input placeholder="you@example.com" value={form.contact_email} onChange={e => set('contact_email', e.target.value)} icon="✉️" />
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+        <Clock className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+        <p className="text-sm text-yellow-300">
+          Submissions are reviewed within 48 hours. Your agent will appear as pending until approved.
+        </p>
+      </div>
+
+      <Button
+        type="submit"
+        disabled={submitting}
+        className="w-full bg-gradient-to-r from-cyan-500 to-blue-500"
+      >
+        {submitting ? (
+          <span className="flex items-center gap-2"><Zap className="w-4 h-4 animate-spin" /> Submitting...</span>
+        ) : (
+          <span className="flex items-center gap-2"><Check className="w-4 h-4" /> Submit for review</span>
+        )}
+      </Button>
+    </form>
   );
 }

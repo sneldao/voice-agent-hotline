@@ -1,82 +1,85 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
+import { redis } from '@/lib/redis';
 
-// Export the agent type for use in other files
-export interface AgentProfile {
-  id: string
-  address: string
-  name: string
-  description: string
-  voiceId: string
-  capabilities: string[]
-  ratePerMinute: number
-  rating: number
-  ratingsCount: number
-  callsCompleted: number
-  createdAt: string
-}
+export const dynamic = 'force-dynamic';
 
-// In-memory store (shared with route.ts - in production, use database)
-const getAgents = (): Map<string, AgentProfile> => {
-  // @ts-ignore - accessing the global store from route.ts
-  if (!global.__agents) {
-    // @ts-ignore
-    global.__agents = new Map()
-  }
-  // @ts-ignore
-  return global.__agents
-}
-
-// GET /api/agents/[id] - Get agent profile
+// GET /api/agents/[id]
 export async function GET(
-  request: NextRequest,
+  _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const agents = getAgents()
-  const agent = agents.get(params.id)
-
-  if (!agent) {
-    return NextResponse.json(
-      { error: 'Agent not found' },
-      { status: 404 }
-    )
+  try {
+    const agent = await redis.hgetall(`agent:${params.id}`);
+    if (!agent || Object.keys(agent).length === 0) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+    return NextResponse.json({ agent });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ agent })
 }
 
-// PUT /api/agents/[id] - Update agent profile
-export async function PUT(
-  request: NextRequest,
+// PATCH /api/agents/[id] — approve, reject, or general field updates
+// Approve:  { action: 'approve' }
+// Reject:   { action: 'reject', reason?: string }
+// Update:   { field: value, ... }
+export async function PATCH(
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const agents = getAgents()
-  const agent = agents.get(params.id)
-
-  if (!agent) {
-    return NextResponse.json(
-      { error: 'Agent not found' },
-      { status: 404 }
-    )
-  }
-
   try {
-    const body = await request.json()
-    
-    // Update allowed fields
-    if (body.name) agent.name = body.name
-    if (body.description !== undefined) agent.description = body.description
-    if (body.voiceId) agent.voiceId = body.voiceId
-    if (body.capabilities) agent.capabilities = body.capabilities
-    if (body.ratePerMinute) agent.ratePerMinute = parseFloat(body.ratePerMinute)
+    const agent = await redis.hgetall(`agent:${params.id}`);
+    if (!agent || Object.keys(agent).length === 0) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
 
-    agents.set(params.id, agent)
+    const body = await req.json();
+    const { action, reason, ...fields } = body;
 
-    return NextResponse.json({ agent })
+    if (action === 'approve') {
+      await redis.hset(`agent:${params.id}`, {
+        status: 'active',
+        active: 'true',
+        approved_at: new Date().toISOString(),
+      });
+      console.log('[Agents API] Approved agent:', params.id);
+      return NextResponse.json({ message: 'Agent approved', id: params.id });
+    }
 
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Invalid request body' },
-      { status: 400 }
-    )
+    if (action === 'reject') {
+      await redis.hset(`agent:${params.id}`, {
+        status: 'rejected',
+        active: 'false',
+        rejection_reason: reason || '',
+        rejected_at: new Date().toISOString(),
+      });
+      console.log('[Agents API] Rejected agent:', params.id);
+      return NextResponse.json({ message: 'Agent rejected', id: params.id });
+    }
+
+    if (Object.keys(fields).length > 0) {
+      await redis.hset(`agent:${params.id}`, fields);
+    }
+
+    const updated = await redis.hgetall(`agent:${params.id}`);
+    return NextResponse.json({ agent: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// DELETE /api/agents/[id]
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const deleted = await redis.del(`agent:${params.id}`);
+    if (!deleted) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+    return NextResponse.json({ message: 'Agent deleted', id: params.id });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

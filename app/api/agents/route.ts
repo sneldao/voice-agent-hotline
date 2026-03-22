@@ -114,12 +114,30 @@ export async function POST(req: NextRequest) {
       conversational_enabled = true,
       wallet_address = '',
       erc8004_id = '',
+      // Self-registration fields
+      register = false,
+      elevenlabs_agent_id: submitted_elevenlabs_id = '',
+      specialty = '',
+      category = '',
+      contact_email = '',
     } = body;
 
     // Validation
-    if (!name || !voice_id || !system_prompt) {
+    if (!name || !system_prompt) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, voice_id, system_prompt' },
+        { error: 'Missing required fields: name, system_prompt' },
+        { status: 400 }
+      );
+    }
+    if (!register && !voice_id) {
+      return NextResponse.json(
+        { error: 'Missing required field: voice_id' },
+        { status: 400 }
+      );
+    }
+    if (register && !submitted_elevenlabs_id) {
+      return NextResponse.json(
+        { error: 'Missing required field: elevenlabs_agent_id for self-registration' },
         { status: 400 }
       );
     }
@@ -127,45 +145,60 @@ export async function POST(req: NextRequest) {
     // Generate agent ID
     const agentId = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    // Self-registration: store as pending, skip ElevenLabs creation
+    if (register) {
+      const agent = {
+        id: agentId,
+        name,
+        description: description || '',
+        specialty: specialty || category || '',
+        category: category || '',
+        voice_id: voice_id || '',
+        system_prompt,
+        skills: JSON.stringify(skills),
+        price_per_minute: price_per_minute || 0.1,
+        elevenlabs_agent_id: submitted_elevenlabs_id,
+        wallet_address,
+        contact_email,
+        erc8004_id: '',
+        conversational_enabled: 'true',
+        status: 'pending',
+        active: 'false',
+        created_at: new Date().toISOString(),
+        rating: '0',
+        total_calls: '0',
+        total_revenue: '0',
+      };
+      await redis.hset(`agent:${agentId}`, agent);
+      console.log('[Agents API] Self-registration submitted:', agentId, name);
+      return NextResponse.json({ agent, message: 'Registration submitted for review' }, { status: 201 });
+    }
+
     // Create ElevenLabs conversational agent (if enabled)
     let elevenlabs_agent_id = null;
     if (conversational_enabled && process.env.ELEVENLABS_CONVERSATIONAL_ENABLED === 'true') {
       try {
-        // 1. Resolve workspace tools
         console.log('[Agents API] Resolving workspace tools...');
         const workspaceTools = await elevenLabsService.listTools();
 
-        // Map skills to tool IDs
+        const toolMap: Record<string, string> = {
+          'research': 'search_web',
+          'book': 'book_appointment',
+          'order': 'create_order',
+          'schedule': 'set_reminder'
+        };
         const toolIds: string[] = [];
         skills.forEach((skill: string) => {
-          // Map local skill name to potential workspace tool name
-          const toolMap: Record<string, string> = {
-            'research': 'search_web',
-            'book': 'book_appointment',
-            'order': 'create_order',
-            'schedule': 'set_reminder'
-          };
-
           const toolName = toolMap[skill] || skill;
           const tool = workspaceTools.find((t: any) => t.name === toolName);
-          if (tool) {
-            toolIds.push(tool.tool_id);
-          }
+          if (tool) toolIds.push(tool.tool_id);
         });
 
-        const agentConfig = {
-          name,
-          system_prompt,
-          voice_id,
-          model: 'gpt-4',
-          language: 'en',
-          tool_ids: toolIds,
-        };
-
-        const result = await elevenLabsService.createAgent(agentConfig);
+        const result = await elevenLabsService.createAgent({
+          name, system_prompt, voice_id, model: 'gpt-4', language: 'en', tool_ids: toolIds,
+        });
         elevenlabs_agent_id = result.agent_id;
-
-        console.log('[Agents API] Created ElevenLabs agent with tool_ids:', elevenlabs_agent_id, toolIds);
+        console.log('[Agents API] Created ElevenLabs agent:', elevenlabs_agent_id);
       } catch (error: any) {
         console.error('[Agents API] ElevenLabs creation failed:', error);
       }
@@ -176,6 +209,7 @@ export async function POST(req: NextRequest) {
       id: agentId,
       name,
       description: description || '',
+      specialty: specialty || '',
       voice_id,
       system_prompt,
       skills: JSON.stringify(skills),
@@ -184,6 +218,8 @@ export async function POST(req: NextRequest) {
       wallet_address,
       erc8004_id,
       conversational_enabled: conversational_enabled.toString(),
+      status: 'active',
+      active: 'true',
       created_at: new Date().toISOString(),
       rating: '0',
       total_calls: '0',

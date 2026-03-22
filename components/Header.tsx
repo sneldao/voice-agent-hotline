@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Phone, Wallet, Bell, LogOut, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
 import { Tooltip } from './Tooltip';
 
 interface HeaderProps {
@@ -48,7 +49,12 @@ export function Header({
                 💰 REAL-WORLD PAYMENTS
               </span>
             </div>
-            <p className="text-xs text-gray-500">AI-Powered Voice Agents</p>
+            <p className="text-xs text-gray-500">
+              AI-Powered Voice Agents{' '}
+              <Link href="/list-your-agent" className="text-cyan-500 hover:text-cyan-400 transition-colors">
+                · List your agent
+              </Link>
+            </p>
           </div>
         </div>
 
