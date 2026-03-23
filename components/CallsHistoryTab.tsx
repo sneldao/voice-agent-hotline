@@ -141,7 +141,11 @@ export function CallsHistoryTab({
           ))}
         </div>
       ) : (
-        <EmptyHistoryState />
+        <EmptyHistoryState 
+          onBrowseAgents={() => {
+            window.dispatchEvent(new CustomEvent('switch-tab', { detail: 'discover' }));
+          }}
+        />
       )}
 
       {/* Modals */}

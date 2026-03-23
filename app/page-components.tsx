@@ -130,7 +130,7 @@ export function AgentDetailModal({
 
   const handleCall = () => {
     setCalling(true);
-    setTimeout(() => { onCall(); }, 1200);
+    onCall();
   };
 
   return (

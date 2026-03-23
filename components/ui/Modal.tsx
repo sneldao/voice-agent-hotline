@@ -143,11 +143,15 @@ export function Modal({
             shadow-black/50
             animate-scale-in
             focus:outline-none
+            overflow-hidden
+            flex
+            flex-col
+            max-h-[85vh]
           `}
         >
           {/* Header */}
           {(title || description) && (
-            <div className="p-6 pb-4 border-b border-gray-800">
+            <div className="p-6 pb-4 border-b border-gray-800 flex-shrink-0">
               {title && (
                 <h2 id="modal-title" className="text-xl font-bold text-white">{title}</h2>
               )}
@@ -158,7 +162,7 @@ export function Modal({
           )}
           
           {/* Content - scrollable */}
-          <div className="p-6 overflow-y-auto max-h-[70vh]">
+          <div className="p-6 overflow-y-auto flex-1 min-h-0">
             {children}
           </div>
         </div>

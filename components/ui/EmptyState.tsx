@@ -77,12 +77,13 @@ export function EmptySearchState({ onClear }: { onClear?: () => void }) {
   );
 }
 
-export function EmptyHistoryState() {
+export function EmptyHistoryState({ onBrowseAgents }: { onBrowseAgents?: () => void }) {
   return (
     <EmptyState
       variant="history"
       title="No calls yet"
       description="Your call history will appear here after you make your first call."
+      action={onBrowseAgents ? { label: 'Browse Agents', onClick: onBrowseAgents } : undefined}
     />
   );
 }

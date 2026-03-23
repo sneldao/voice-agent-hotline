@@ -217,6 +217,16 @@ export default function Home() {
     router.replace('/', { scroll: false });
   }, [router, searchParams]);
 
+  // Listen for tab switch events from child components
+  useEffect(() => {
+    const handleSwitchTab = (e: CustomEvent) => {
+      const tab = e.detail as 'discover' | 'calls' | 'profile';
+      setActiveTab(tab);
+    };
+    window.addEventListener('switch-tab', handleSwitchTab as EventListener);
+    return () => window.removeEventListener('switch-tab', handleSwitchTab as EventListener);
+  }, []);
+
   useEffect(() => {
     const launchParams = launchParamsRef.current;
     if (!launchParams || selectedAgent || agents.length === 0) {
