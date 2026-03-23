@@ -63,7 +63,7 @@ export function getRelatedAgentRecommendations(
         score += 2;
       } else if (Number(agent.rate) < Number(selectedAgent.rate)) {
         score += 1;
-        reason = `Lower-cost option for ${agent.specialty.toLowerCase()}`;
+        reason = `Lower-cost option for ${(agent.specialty || "").toLowerCase()}`;
       }
 
       score += Math.min(Number(agent.rating || 0), 5);
@@ -94,8 +94,8 @@ function normalizeList(values?: string[]) {
     .filter(Boolean);
 }
 
-function tokenize(value: string) {
-  return value
+function tokenize(value: string | undefined | null) {
+  return (value || "")
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter((token) => token.length > 3);

@@ -191,7 +191,10 @@ export default function Home() {
   }, [agents, clearLaunchState]);
 
   const filteredAgents = agents.filter((agent: any) => {
-    const matchesSearch = !searchQuery || agent.name.toLowerCase().includes(searchQuery.toLowerCase()) || (agent.specialty ?? '').toLowerCase().includes(searchQuery.toLowerCase());
+    const name = (agent.name || "").toLowerCase();
+    const specialty = (agent.specialty || "").toLowerCase();
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || name.includes(q) || specialty.includes(q);
     const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
