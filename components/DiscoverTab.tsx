@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, memo, useEffect } from 'react';
+import { useState, useCallback, useMemo, memo, useEffect, useRef } from 'react';
 import { ArrowRight, Search, Sparkles, Star } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
@@ -54,6 +54,24 @@ export function DiscoverTab({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20); // Pagination
 
+  // PERFORMANT: Debounced search with 300ms delay
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [searchQuery]);
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await onRefresh();
@@ -61,26 +79,26 @@ export function DiscoverTab({
     showSuccess('Agents refreshed');
   }, [onRefresh]);
 
-  const hasSearchQuery = searchQuery.trim().length > 0;
+  const hasSearchQuery = debouncedQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
   const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
 
-  // Memoize filtered agents with dependency tracking
+  // PERFORMANT: Memoized filtered agents using debounced query
   const filteredAgents = useMemo(() => {
     return agents.filter(agent => {
       const name = (agent.name || "").toLowerCase();
       const specialty = (agent.specialty || "").toLowerCase();
-      const q = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || name.includes(q) || specialty.includes(q);
+      const q = debouncedQuery.toLowerCase();
+      const matchesSearch = !debouncedQuery || name.includes(q) || specialty.includes(q);
       const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [agents, searchQuery, selectedCategory]);
+  }, [agents, debouncedQuery, selectedCategory]);
 
   // Reset pagination when filters change
   useEffect(() => {
     setVisibleCount(20);
-  }, [searchQuery, selectedCategory]);
+  }, [debouncedQuery, selectedCategory]);
 
   const onlineAgents = useMemo(() => filteredAgents.filter(a => a.online), [filteredAgents]);
   const visibleAgents = filteredAgents.slice(0, visibleCount);
@@ -228,26 +246,37 @@ export function DiscoverTab({
               </section>
             )}
 
-            {/* All Agents - Paginated */}
-            <section>
+            {/* All Agents - Optimized rendering */}
+            <section aria-label="Agent list">
               <h2 className="text-sm font-semibold text-gray-400 mb-3">
                 {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
                 <span className="ml-2 text-xs text-gray-500">({filteredAgents.length})</span>
               </h2>
-              <div className="space-y-3">
+              <div 
+                className="space-y-3"
+                role="listbox"
+                aria-label="Available agents"
+                aria-activedescendant={selectedAgent ? `agent-${selectedAgent.id}` : undefined}
+              >
                 {visibleAgents.map(agent => (
-                  <AgentCard
+                  <div 
                     key={agent.id}
-                    agent={agent}
-                    onClick={() => onSelect(agent)}
-                    selected={selectedAgent?.id === agent.id}
-                  />
+                    role="option"
+                    aria-selected={selectedAgent?.id === agent.id}
+                  >
+                    <AgentCard
+                      agent={agent}
+                      onClick={() => onSelect(agent)}
+                      selected={selectedAgent?.id === agent.id}
+                    />
+                  </div>
                 ))}
               </div>
               {hasMore && (
                 <button
                   onClick={handleLoadMore}
                   className="w-full mt-4 py-3 text-sm font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl transition-colors"
+                  aria-label={`Load ${filteredAgents.length - visibleCount} more agents`}
                 >
                   Load More ({filteredAgents.length - visibleCount} remaining)
                 </button>

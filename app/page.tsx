@@ -15,6 +15,7 @@ import { WalletConnectGate } from '@/components/WalletConnectGate';
 import { LowBalanceWarning } from '@/components/LowBalanceWarning';
 import { Header } from '@/components/Header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
 import { readCallLaunchParams, type PaymentLaunchMode } from '@/lib/product-launch';
 import { runStreamingPreflight, STREAMING_BALANCE_ESTIMATE_MINUTES } from '@/lib/streaming-preflight';
@@ -190,14 +191,18 @@ export default function Home() {
     }
   }, [agents, clearLaunchState]);
 
-  const filteredAgents = agents.filter((agent: any) => {
-    const name = (agent.name || "").toLowerCase();
-    const specialty = (agent.specialty || "").toLowerCase();
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !searchQuery || name.includes(q) || specialty.includes(q);
-    const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // DRY: Single source of truth for filtering logic
+  const filteredAgents = useMemo(() => {
+    return agents.filter((agent: any) => {
+      const name = (agent.name || "").toLowerCase();
+      const specialty = (agent.specialty || "").toLowerCase();
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || name.includes(q) || specialty.includes(q);
+      const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [agents, searchQuery, selectedCategory]);
+
   const relatedAgents = useMemo(
     () => getRelatedAgentRecommendations(selectedAgent, agents, 3),
     [agents, selectedAgent]
@@ -259,6 +264,7 @@ export default function Home() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-950 text-white font-sans">
+        <OfflineBanner />
         <ToastProvider />
         <Onboarding
           isOpen={onboarding.isOpen}

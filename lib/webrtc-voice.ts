@@ -85,11 +85,11 @@ export class WebRTCVoiceService extends EventEmitter {
    */
   async initializeAudio(): Promise<void> {
     if (typeof window === 'undefined') return;
-    
+
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    
+
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
@@ -297,23 +297,39 @@ export class WebRTCVoiceService extends EventEmitter {
   }
 
   /**
-   * Send signal to server
+   * Send signal to server with retry logic
+   * RELIABILITY: Exponential backoff with 3 retries
    */
-  private async sendSignal(endpoint: string, data: any): Promise<void> {
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+  private async sendSignal(endpoint: string, data: any, retries = 3): Promise<void> {
+    const maxRetries = retries;
+    let lastError: Error | null = null;
 
-      if (!res.ok) {
-        throw new Error(`Signal failed: ${res.status}`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Signal failed: ${res.status}`);
+        }
+
+        return; // Success
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`[WebRTC] Signal error (attempt ${attempt}/${maxRetries}):`, lastError.message);
+
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s with jitter
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1) + Math.random() * 500, 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-    } catch (error) {
-      console.error('[WebRTC] Signal error:', error);
-      throw error;
     }
+
+    throw lastError || new Error('Signal failed after retries');
   }
 
   /**
@@ -382,8 +398,8 @@ export class WebRTCVoiceService extends EventEmitter {
 
     this.stopMetricsCollection(session);
 
-    this.emit('callEnded', { 
-      callId, 
+    this.emit('callEnded', {
+      callId,
       duration: session.endTime - session.startTime,
       metrics: session.metrics,
     });
@@ -416,16 +432,16 @@ export class WebRTCVoiceService extends EventEmitter {
     const interval = setInterval(async () => {
       try {
         const stats = await session.peerConnection.getStats();
-        
+
         stats.forEach(report => {
           if (report.type === 'inbound-rtp' && report.kind === 'audio') {
             session.metrics.bytesReceived = report.bytesReceived || 0;
-            session.metrics.packetLoss = report.packetsLost 
-              ? (report.packetsLost / (report.packetsReceived + report.packetsLost)) * 100 
+            session.metrics.packetLoss = report.packetsLost
+              ? (report.packetsLost / (report.packetsReceived + report.packetsLost)) * 100
               : 0;
             session.metrics.jitter = report.jitter || 0;
           }
-          
+
           if (report.type === 'outbound-rtp' && report.kind === 'audio') {
             session.metrics.bytesSent = report.bytesSent || 0;
           }
@@ -502,8 +518,8 @@ export class WebRTCVoiceService extends EventEmitter {
 // ============================================
 // Singleton Instance
 // ============================================
-export const webRTCService = typeof window !== 'undefined' 
-  ? new WebRTCVoiceService() 
+export const webRTCService = typeof window !== 'undefined'
+  ? new WebRTCVoiceService()
   : null;
 
 // ============================================

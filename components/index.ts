@@ -11,3 +11,4 @@ export { AgentCardSkeleton, CallHistorySkeleton, ProfileSkeleton } from './Skele
 export { EmptyState } from './EmptyState';
 export { DarkModeToggle } from './DarkModeToggle';
 export { ThemeProvider, useTheme } from './ThemeProvider';
+export { OfflineBanner } from './OfflineBanner';

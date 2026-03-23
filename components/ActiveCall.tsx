@@ -464,21 +464,44 @@ export function ActiveCall({
           </div>
         )}
 
-        <div className="flex gap-6 text-center">
+        <div 
+          className="flex gap-6 text-center"
+          role="status"
+          aria-live="polite"
+          aria-label="Call metrics"
+        >
           <div>
             <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
               <Clock className="w-3 h-3" />
-              Duration
+              <span id="duration-label">Duration</span>
             </div>
-            <p className="text-2xl font-mono text-white">{formatDuration(call.duration)}</p>
+            <p 
+              className="text-2xl font-mono text-white"
+              aria-labelledby="duration-label"
+              aria-atomic="true"
+            >
+              {formatDuration(call.duration)}
+            </p>
           </div>
           <div>
-            <div className="text-gray-400 text-xs mb-1">Latency</div>
-            <p className="text-2xl font-mono text-white">{Math.round(call.metrics.latency)}ms</p>
+            <div className="text-gray-400 text-xs mb-1" id="latency-label">Latency</div>
+            <p 
+              className="text-2xl font-mono text-white"
+              aria-labelledby="latency-label"
+              aria-atomic="true"
+            >
+              {Math.round(call.metrics.latency)}ms
+            </p>
           </div>
           <div>
-            <div className="text-gray-400 text-xs mb-1">Audio</div>
-            <p className="text-2xl font-mono text-white">{Math.round(call.metrics.audioLevel * 100)}%</p>
+            <div className="text-gray-400 text-xs mb-1" id="audio-label">Audio</div>
+            <p 
+              className="text-2xl font-mono text-white"
+              aria-labelledby="audio-label"
+              aria-atomic="true"
+            >
+              {Math.round(call.metrics.audioLevel * 100)}%
+            </p>
           </div>
         </div>
       </div>
@@ -527,22 +550,42 @@ export function ActiveCall({
           </button>
         </div>
 
-        {/* Budget progress bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span>{isMuted ? '🔇 Muted' : '🎤 Mic active'}</span>
-            <span className="tabular-nums">${(call.cost || 0).toFixed(4)} spent</span>
+          {/* Budget progress bar */}
+          <div 
+            className="mt-4"
+            role="status"
+            aria-live="polite"
+            aria-label="Call cost"
+          >
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span aria-label={isMuted ? 'Microphone muted' : 'Microphone active'}>
+                {isMuted ? '🔇 Muted' : '🎤 Mic active'}
+              </span>
+              <span 
+                className="tabular-nums"
+                aria-atomic="true"
+                aria-label={`Cost: ${(call.cost || 0).toFixed(4)} dollars`}
+              >
+                ${(call.cost || 0).toFixed(4)} spent
+              </span>
+            </div>
+            <div 
+              className="h-1 bg-gray-800 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-valuenow={Math.min(100, (call.cost / (agent.rate * 10)) * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Budget usage"
+            >
+              <div
+                className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
+                style={{ width: `${Math.min(100, (call.cost / (agent.rate * 10)) * 100)}%` }}
+              />
+            </div>
+            <p className="text-center text-xs text-gray-600 mt-1">
+              {permissions.microphone === 'granted' ? '✓ Mic permission granted' : '⚠ Mic permission needed'}
+            </p>
           </div>
-          <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
-              style={{ width: `${Math.min(100, (call.cost / (agent.rate * 10)) * 100)}%` }}
-            />
-          </div>
-          <p className="text-center text-xs text-gray-600 mt-1">
-            {permissions.microphone === 'granted' ? '✓ Mic permission granted' : '⚠ Mic permission needed'}
-          </p>
-        </div>
       </div>
 
       {/* Call Summary Modal */}
