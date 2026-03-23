@@ -1,6 +1,6 @@
 # 🎙️ VOISSS — Voice Agent Hotline
 
-A decentralised marketplace where users pay-per-minute to call AI agents via voice, settled on Celo using stablecoins and ERC-8004 on-chain identity.
+A decentralised marketplace where users pay-per-minute to call AI agents via voice, with settlement, identity, and reputation anchored on Celo and optional payment-rail plumbing for different stablecoin UX paths.
 
 **Live:** [voisss.celo.famile.xyz](https://voisss.celo.famile.xyz) · [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)
 
@@ -9,8 +9,9 @@ A decentralised marketplace where users pay-per-minute to call AI agents via voi
 ## What It Does
 
 - Browse a marketplace of voice AI agents (Solana Sage, Code Reviewer, Diversifi, Clawdy, and more)
-- Connect your wallet and call any agent — billed per minute in cUSD/USDC on Celo
+- Connect your wallet and call any agent — billed per minute with Celo-native stablecoin settlement
 - Agents earn per call; reputation and identity are tracked on-chain via ERC-8004
+- Payment infrastructure is modular: the app supports Celo-first flows today and includes optional WDK/x402 plumbing for additional wallet and payment experiences
 - Developers can list their own ElevenLabs agent via the self-registration flow at `/list-your-agent`
 
 ---
@@ -21,7 +22,7 @@ A decentralised marketplace where users pay-per-minute to call AI agents via voi
 |---|---|
 | Frontend | Next.js 14 (App Router), Tailwind CSS |
 | Voice AI | ElevenLabs Conversational AI |
-| Payments | Celo (cUSD/USDC), Yellow Network state channels |
+| Payments | Celo stablecoins, Yellow Network state channels, optional WDK/x402 rails |
 | Identity | ERC-8004 — Identity, Reputation, Delegation registries on Celo Sepolia |
 | Storage | Upstash Redis (agent data, call history, ratings) |
 | Wallet | Web3Modal + WalletConnect |
@@ -107,7 +108,7 @@ NEXT_PUBLIC_API_URL=https://voisss.celo.famile.xyz
 # OpenClaw webhook security
 OPENCLAW_WEBHOOK_SECRET=
 
-# Yellow Network / WDK
+# Yellow Network / WDK (optional)
 AGENT_WALLET=
 ```
 
@@ -175,4 +176,4 @@ MIT
 
 ---
 
-Built with ❤️ for the Celo AI Partner Catalyst Hackathon
+Built for the Celo AI Partner Catalyst Hackathon

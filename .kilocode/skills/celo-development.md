@@ -19,11 +19,11 @@ const CELO_MAINNET = {
   explorer: 'https://celoscan.io'
 };
 
-// Celo Alfajores (Testnet)
+// Celo Sepolia (Testnet)
 const CELO_TESTNET = {
-  chainId: 44787,
-  rpc: 'https://alfajores-forno.celo-testnet.org',
-  explorer: 'https://alfajores.celoscan.io'
+  chainId: 11142220,
+  rpc: 'https://forno.celo-sepolia.celo-testnet.org',
+  explorer: 'https://sepolia.celoscan.io'
 };
 ```
 
@@ -71,8 +71,8 @@ function transferWithAuthorization(
 
 ### 1. Local Testing
 ```bash
-# Use Alfajores testnet
-export CELO_RPC_URL=https://alfajores-forno.celo-testnet.org
+# Use Celo Sepolia testnet
+export CELO_RPC_URL=https://forno.celo-sepolia.celo-testnet.org
 
 # Get testnet CELO from faucet
 # https://faucet.celo.org

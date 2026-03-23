@@ -23,7 +23,23 @@ import {
   Address,
   Hash,
 } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { celo } from 'viem/chains';
+
+// Celo Sepolia chain definition (viem doesn't export it yet)
+const celoSepolia = {
+  id: 11142220,
+  name: 'Celo Sepolia',
+  network: 'celo-sepolia',
+  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
+    public: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
+  },
+  blockExplorers: {
+    default: { name: 'Celoscan', url: 'https://sepolia.celoscan.io' },
+  },
+  testnet: true,
+};
 
 // ============================================
 // Celo Token Addresses
@@ -114,7 +130,7 @@ export interface PendingPayment {
 // ============================================
 // Configuration
 // ============================================
-const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoAlfajores;
+const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoSepolia;
 const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
 
 // ============================================

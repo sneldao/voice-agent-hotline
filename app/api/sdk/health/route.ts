@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { agentSDK } from '@/lib/agent-sdk';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const apiKey = req.headers.get('X-API-Key') || req.headers.get('x-api-key');

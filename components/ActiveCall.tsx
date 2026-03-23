@@ -127,7 +127,17 @@ export function ActiveCall({
         onEnd();
       }
     });
-  }, [call.isConnected, endCall, monthlyStreamingRate, onEnd, paymentMode, payoutAddress, startStream]);
+  }, [
+    agentPayoutAddress,
+    call.isConnected,
+    endCall,
+    monthlyStreamingRate,
+    onEnd,
+    paymentMode,
+    payoutAddress,
+    platformAddress,
+    startStream,
+  ]);
 
   // Haptic feedback helper — safe no-op when browser doesn't support it
   const vibrate = (pattern: number | number[]) => {
@@ -177,6 +187,7 @@ export function ActiveCall({
     setIsFinalizing(false);
   }, [
     agent,
+    agentPayoutAddress,
     call.cost,
     call.duration,
     callId,
@@ -186,6 +197,7 @@ export function ActiveCall({
     payment.isProcessing,
     payment.isSettled,
     payoutAddress,
+    platformAddress,
     saveCall,
     settlePayment,
     stopStream,

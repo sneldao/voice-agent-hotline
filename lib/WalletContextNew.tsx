@@ -22,11 +22,11 @@ const celo = {
 };
 
 const celoTestnet = {
-  chainId: 44787,
-  name: 'Celo Testnet',
+  chainId: 11142220,
+  name: 'Celo Sepolia',
   currency: 'CELO',
   explorerUrl: 'https://sepolia.celoscan.io',
-  rpcUrl: 'https://alfajores-forno.celo-testnet.org',
+  rpcUrl: 'https://forno.celo-sepolia.celo-testnet.org',
 };
 
 // Initialize Web3Modal
@@ -272,7 +272,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       walletType: null,
     });
     providerRef.current = null;
-  }, [wallet.walletType]);
+  }, []);
 
   const formatAddress = useCallback(() => {
     if (!wallet.address) return '';

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { apiUrl } from '@/lib/api'
 
 interface Rating {
@@ -32,11 +32,7 @@ export function RatingStars({ agentId }: RatingStarsProps) {
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    fetchRating()
-  }, [agentId])
-
-  const fetchRating = async () => {
+  const fetchRating = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(apiUrl(`/api/ratings?agentId=${agentId}`))
@@ -47,7 +43,11 @@ export function RatingStars({ agentId }: RatingStarsProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [agentId])
+
+  useEffect(() => {
+    void fetchRating()
+  }, [fetchRating])
 
   const submitRating = async () => {
     if (userRating === 0) return
@@ -67,7 +67,7 @@ export function RatingStars({ agentId }: RatingStarsProps) {
       })
       setUserRating(0)
       setComment('')
-      fetchRating() // Refresh
+      await fetchRating()
     } catch (error) {
       console.error('Failed to submit rating:', error)
     } finally {

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import Image from 'next/image';
 
 interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string;
@@ -54,7 +55,7 @@ export function Avatar({
         `}
       >
         {src ? (
-          <img src={src} alt={alt} className="w-full h-full object-cover" />
+          <Image src={src} alt={alt} fill unoptimized sizes="96px" className="object-cover" />
         ) : (
           <span className="select-none">{children}</span>
         )}

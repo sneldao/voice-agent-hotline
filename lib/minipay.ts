@@ -69,7 +69,7 @@ export interface MiniPayPaymentParams {
 
 // cUSD contract address on Celo mainnet
 const CUSD_MAINNET = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
-// cUSD contract address on Alfajores testnet
+// cUSD contract address on Celo Sepolia testnet
 const CUSD_TESTNET = '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1';
 
 function getCUSDAddress(): string {

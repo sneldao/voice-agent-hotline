@@ -61,8 +61,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
  * Async data hook with loading and error states
  */
 export function useAsyncData<T>(
-  fetcher: () => Promise<T>,
-  deps: React.DependencyList = []
+  fetcher: () => Promise<T>
 ) {
   const [data, setData] = React.useState<T | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -95,7 +94,7 @@ export function useAsyncData<T>(
     return () => {
       cancelled = true;
     };
-  }, deps);
+  }, [fetcher]);
 
   return { data, loading, error };
 }

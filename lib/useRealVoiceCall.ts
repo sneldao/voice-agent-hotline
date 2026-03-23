@@ -70,6 +70,37 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
     }
   }, [call.duration, call.isConnected, ratePerMinute]);
 
+  const endCall = useCallback(() => {
+    if (callIdRef.current && webRTCService) {
+      webRTCService.endCall(callIdRef.current);
+    }
+
+    // Clear intervals
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    if (metricsIntervalRef.current) {
+      clearInterval(metricsIntervalRef.current);
+      metricsIntervalRef.current = null;
+    }
+
+    // Keep txHash for summary display
+    setCall(prev => ({
+      isConnected: false,
+      isConnecting: false,
+      duration: prev.duration,
+      cost: prev.cost,
+      error: null,
+      txHash: prev.txHash,
+      metrics: {
+        latency: 0,
+        packetLoss: 0,
+        audioLevel: 0,
+      },
+    }));
+  }, []);
+
   const startCall = useCallback(async ({
     agentId,
     callId,
@@ -96,15 +127,13 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
     callIdRef.current = callId;
 
     try {
-      // Start WebRTC call
-      const session = await webRTCService.startCall(
+      await webRTCService.startCall(
         callId,
         agentId,
         userId,
         '/api/webrtc/signal'
       );
 
-      // Set up event listeners
       webRTCService.on('connected', () => {
         setCall(prev => ({
           ...prev,
@@ -112,12 +141,10 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
           isConnecting: false,
         }));
 
-        // Start duration timer
         durationIntervalRef.current = setInterval(() => {
           setCall(prev => ({ ...prev, duration: prev.duration + 1 }));
         }, 1000);
 
-        // Start metrics collection
         metricsIntervalRef.current = setInterval(() => {
           if (!webRTCService) return;
           const session = webRTCService.getSession(callId);
@@ -166,38 +193,7 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
       }));
       return false;
     }
-  }, []);
-
-  const endCall = useCallback(() => {
-    if (callIdRef.current && webRTCService) {
-      webRTCService.endCall(callIdRef.current);
-    }
-
-    // Clear intervals
-    if (durationIntervalRef.current) {
-      clearInterval(durationIntervalRef.current);
-      durationIntervalRef.current = null;
-    }
-    if (metricsIntervalRef.current) {
-      clearInterval(metricsIntervalRef.current);
-      metricsIntervalRef.current = null;
-    }
-
-    // Keep txHash for summary display
-    setCall(prev => ({
-      isConnected: false,
-      isConnecting: false,
-      duration: prev.duration,
-      cost: prev.cost,
-      error: null,
-      txHash: prev.txHash,
-      metrics: {
-        latency: 0,
-        packetLoss: 0,
-        audioLevel: 0,
-      },
-    }));
-  }, []);
+  }, [endCall]);
 
   const interrupt = useCallback(() => {
     if (callIdRef.current && webRTCService) {

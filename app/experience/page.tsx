@@ -45,14 +45,14 @@ const PAYMENT_MODES = [
   {
     id: 'x402',
     label: 'x402 Direct',
-    description: 'Pay per call segment',
+    description: 'Pay-as-you-go call segments on the default flow',
     highlight: 'Recommended',
   },
   {
     id: 'streaming',
     label: 'Superfluid Streaming',
-    description: 'Pay per second',
-    highlight: 'Continuous',
+    description: 'Continuous payment rail for longer sessions',
+    highlight: 'Optional',
   },
 ] as const;
 
@@ -247,7 +247,7 @@ export default function VoiceAgentExperiencePage() {
             <span className="step-index">2</span>
             <div>
               <h3>Select payment mode</h3>
-              <p>Switch between x402 direct and Superfluid streaming.</p>
+              <p>Choose the payment rail that matches the call experience you want.</p>
             </div>
           </div>
 
@@ -394,8 +394,8 @@ export default function VoiceAgentExperiencePage() {
           <div className="eyebrow">Celo-native voice agents</div>
           <h1>Voice Agent Hotline</h1>
           <p>
-            Talk to verified AI agents. Pay per second with Celo stablecoins.
-            Build real-world actions with on-chain trust.
+            Talk to verified AI agents. Settle on Celo and choose the payment flow
+            that fits the session. Build real-world actions with on-chain trust.
           </p>
           <div className="hero-actions">
             <button className="primary" onClick={launchProductCall} disabled={launchDisabled}>

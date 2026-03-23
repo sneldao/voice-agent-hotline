@@ -13,7 +13,7 @@ import {
   Address,
   Hash
 } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { celo } from 'viem/chains';
 
 // ============================================
 // Configuration
@@ -27,11 +27,18 @@ const CELO_MAINNET = {
 };
 
 const CELO_TESTNET = {
-  ...celoAlfajores,
+  id: 11142220,
+  name: 'Celo Sepolia',
+  network: 'celo-sepolia',
+  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://alfajores-forno.celo-testnet.org'] },
-    public: { http: ['https://alfajores-forno.celo-testnet.org'] },
+    default: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
+    public: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
   },
+  blockExplorers: {
+    default: { name: 'Celoscan', url: 'https://sepolia.celoscan.io' },
+  },
+  testnet: true,
 };
 
 const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? CELO_MAINNET : CELO_TESTNET;

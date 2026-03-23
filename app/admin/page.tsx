@@ -239,6 +239,11 @@ export default function AdminPage() {
                   <div className="flex flex-col gap-2 shrink-0">
                     {(agent.status === 'pending' || !agent.status) && (
                       <>
+                        {agent.erc8004_token_id && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-violet-900 text-violet-300">
+                            ERC-8004 #{agent.erc8004_token_id}
+                          </span>
+                        )}
                         <button
                           onClick={() => handleAction(agent.id, 'approve')}
                           disabled={actionLoading === agent.id + 'approve'}

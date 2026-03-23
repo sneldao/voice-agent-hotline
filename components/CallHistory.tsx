@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { apiUrl } from '@/lib/api'
 
 interface CallRecord {
@@ -24,11 +24,7 @@ export function CallHistory({ agentId, userAddress }: CallHistoryProps) {
   const [calls, setCalls] = useState<CallRecord[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchCalls()
-  }, [agentId, userAddress])
-
-  const fetchCalls = async () => {
+  const fetchCalls = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -43,7 +39,11 @@ export function CallHistory({ agentId, userAddress }: CallHistoryProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [agentId, userAddress])
+
+  useEffect(() => {
+    void fetchCalls()
+  }, [fetchCalls])
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60)

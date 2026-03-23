@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Link2, Twitter, Facebook, Linkedin, Mail, Check, Copy, Download, Share2 } from 'lucide-react';
 import { Button } from './ui/Button';
 
@@ -32,32 +33,7 @@ export function ShareModal({
   const [shareImage, setShareImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && callData) {
-      generateShareImage();
-    }
-  }, [isOpen, callData]);
-
-  if (!isOpen) return null;
-
-  const shareLinks = {
-    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(description)}&url=${encodeURIComponent(url)}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
-    email: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(description + '\n\n' + url)}`,
-  };
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
-  const generateShareImage = async () => {
+  const generateShareImage = useCallback(async () => {
     if (!callData) return;
     
     setIsGeneratingImage(true);
@@ -117,6 +93,31 @@ export function ShareModal({
     const dataUrl = canvas.toDataURL('image/png');
     setShareImage(dataUrl);
     setIsGeneratingImage(false);
+  }, [callData]);
+
+  useEffect(() => {
+    if (isOpen && callData) {
+      void generateShareImage();
+    }
+  }, [callData, generateShareImage, isOpen]);
+
+  if (!isOpen) return null;
+
+  const shareLinks = {
+    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(description)}&url=${encodeURIComponent(url)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+    email: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(description + '\n\n' + url)}`,
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const handleDownloadImage = () => {
@@ -165,9 +166,12 @@ export function ShareModal({
           <div className="p-4 border-b border-gray-800">
             <p className="text-sm text-gray-400 mb-3">Preview</p>
             <div className="relative rounded-lg overflow-hidden">
-              <img 
-                src={shareImage} 
-                alt="Share preview" 
+              <Image
+                src={shareImage}
+                alt="Share preview"
+                width={1200}
+                height={630}
+                unoptimized
                 className="w-full h-auto"
               />
               <button

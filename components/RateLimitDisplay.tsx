@@ -29,7 +29,7 @@ export function RateLimitDisplay({ config, currentUsage }: RateLimitDisplayProps
       const timer = setTimeout(() => setIsAnimating(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [currentUsage.callsThisMinute]);
+  }, [isNearLimit]);
 
   return (
     <div className={`rate-limit-container ${isNearLimit ? 'warning' : ''} ${isAtLimit ? 'error' : ''}`}>
