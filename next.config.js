@@ -34,6 +34,46 @@ const nextConfig = {
       },
     ];
   },
+
+  // Webpack configuration to suppress third-party warnings
+  webpack: (config, { isServer, dev }) => {
+    // Suppress pino-pretty warning from WalletConnect
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        'pino-pretty': false,
+        'pino/file': false,
+      };
+    }
+
+    // Ignore native module warnings from sodium-native/WDK
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      {
+        module: /node_modules\/@tetherto\/wdk/,
+        message: /Can't resolve 'sodium-native'/,
+      },
+      {
+        module: /node_modules\/sodium-native/,
+        message: /Critical dependency/,
+      },
+      {
+        module: /node_modules\/require-addon/,
+        message: /Critical dependency/,
+      },
+      {
+        module: /node_modules\/@walletconnect/,
+        message: /Module not found: Can't resolve 'pino-pretty'/,
+      },
+      // Suppress all "Module not found" warnings for optional dependencies
+      /Can't resolve '(pino-pretty|sodium-native)'/,
+      // Suppress Critical dependency warnings from native modules
+      /Critical dependency: require function is used/,
+      /Critical dependency: the request of a dependency is an expression/,
+    ];
+
+    return config;
+  },
 };
 
 module.exports = nextConfig;

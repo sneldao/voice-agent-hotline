@@ -1,20 +1,48 @@
 import type { Metadata, Viewport } from 'next';
-import { Space_Grotesk, IBM_Plex_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { WalletProvider } from '@/lib/WalletContextNew';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { DarkModeToggle } from '@/components/DarkModeToggle';
 
-const displayFont = Space_Grotesk({
-  subsets: ['latin'],
+// Local fonts - Download font files to public/fonts/ for sandboxed/offline builds
+// If files don't exist, fallback fonts are used automatically
+const displayFont = localFont({
+  src: [
+    {
+      path: '../public/fonts/SpaceGrotesk-Regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/SpaceGrotesk-Bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
   variable: '--font-display',
-  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  fallback: ['system-ui', '-apple-system', 'sans-serif'],
+  adjustFontFallback: false,
 });
 
-const bodyFont = IBM_Plex_Sans({
-  subsets: ['latin'],
+const bodyFont = localFont({
+  src: [
+    {
+      path: '../public/fonts/IBMPlexSans-Regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/IBMPlexSans-Bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
   variable: '--font-body',
-  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  fallback: ['system-ui', '-apple-system', 'sans-serif'],
+  adjustFontFallback: false,
 });
 
 export const viewport: Viewport = {

@@ -52,18 +52,32 @@ const ethersConfig = defaultConfig({
 // Only create Web3Modal if projectId is provided
 let web3Modal: ReturnType<typeof createWeb3Modal> | null = null;
 
-if (projectId) {
-  web3Modal = createWeb3Modal({
-    ethersConfig,
-    chains,
-    projectId,
-    enableAnalytics: false,
-    themeMode: 'dark',
-    themeVariables: {
-      '--w3m-accent': '#06b6d4', // cyan-500
-      '--w3m-border-radius-master': '12px',
-    },
-  });
+// Wrap Web3Modal creation to handle window.ethereum conflicts gracefully
+if (projectId && typeof window !== 'undefined') {
+  try {
+    // Save original ethereum descriptor before Web3Modal tries to override it
+    const ethereumDescriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
+    
+    web3Modal = createWeb3Modal({
+      ethersConfig,
+      chains,
+      projectId,
+      enableAnalytics: false,
+      themeMode: 'dark',
+      themeVariables: {
+        '--w3m-accent': '#06b6d4', // cyan-500
+        '--w3m-border-radius-master': '12px',
+      },
+    });
+  } catch (error: any) {
+    // Silently ignore the "Cannot set property ethereum" error
+    // This happens when MetaMask has already defined window.ethereum as read-only
+    if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
+      console.warn('Web3Modal: window.ethereum conflict handled gracefully');
+    } else {
+      console.error('Web3Modal initialization error:', error);
+    }
+  }
 }
 
 interface WalletState {

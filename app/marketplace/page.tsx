@@ -35,7 +35,8 @@ const CAPABILITY_ICONS: Record<string, string> = {
   research: '🔬',
 };
 
-function capabilityIcon(cap: string): string {
+function capabilityIcon(cap: string | undefined | null): string {
+  if (!cap) return '✨';
   return CAPABILITY_ICONS[cap.toLowerCase()] ?? '✨';
 }
 
@@ -117,9 +118,9 @@ export default function Marketplace() {
     const q = searchQuery.toLowerCase();
     return (
       !q ||
-      a.name.toLowerCase().includes(q) ||
-      a.description.toLowerCase().includes(q) ||
-      a.capabilities.some(c => c.toLowerCase().includes(q))
+      (a.name || '').toLowerCase().includes(q) ||
+      (a.description || '').toLowerCase().includes(q) ||
+      a.capabilities.some(c => (c || '').toLowerCase().includes(q))
     );
   });
 
