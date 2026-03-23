@@ -1,136 +1,174 @@
 // WebRTC Signaling Endpoint
-// Handles SDP offer/answer exchange and ICE candidate relay
+// Bridges frontend to ElevenLabs Conversational AI
 
 export const dynamic = 'force-dynamic';
 
+import { AGENT_REGISTRY, findByElevenLabsId } from '@/lib/agent-registry';
+
+const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
+
 interface SignalMessage {
-  type: 'offer' | 'answer' | 'ice-candidate';
+  type: 'offer' | 'get-token' | 'ice-candidate';
   callId: string;
   agentId?: string;
-  sdp?: string;
-  candidate?: RTCIceCandidateInit;
+  userId?: string;
 }
 
 // In-memory session store for development (use Redis in production)
 const sessions = new Map<string, {
   agentId: string;
-  offer?: string;
-  answer?: string;
-  iceCandidates: RTCIceCandidateInit[];
+  elevenLabsAgentId: string | null;
+  conversationId?: string;
+  startTime: number;
 }>();
 
 /**
+ * Get ElevenLabs conversation token for WebRTC
+ * This is the proper integration - client uses @elevenlabs/client SDK
+ */
+async function getConversationToken(elevenLabsAgentId: string): Promise<string> {
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('ELEVENLABS_API_KEY not configured');
+  }
+
+  const response = await fetch(
+    `${ELEVENLABS_API_URL}/convai/conversation/token?agent_id=${elevenLabsAgentId}`,
+    {
+      headers: {
+        'xi-api-key': apiKey,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get conversation token: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.token;
+}
+
+/**
+ * Get signed URL for WebSocket connection (alternative to WebRTC token)
+ */
+async function getSignedUrl(elevenLabsAgentId: string): Promise<string> {
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('ELEVENLABS_API_KEY not configured');
+  }
+
+  const response = await fetch(
+    `${ELEVENLABS_API_URL}/convai/conversation/get-signed-url?agent_id=${elevenLabsAgentId}`,
+    {
+      headers: {
+        'xi-api-key': apiKey,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get signed URL: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.signed_url;
+}
+
+/**
  * POST /api/webrtc/signal
- * Handles WebRTC signaling: offer, answer, ice-candidate
+ * Main entry point - returns ElevenLabs conversation token for voice calls
  */
 export async function POST(request: Request) {
   try {
     const body: SignalMessage = await request.json();
-    const { type, callId, agentId, sdp, candidate } = body;
+    const { type, callId, agentId, userId } = body;
 
-    if (!callId || !type) {
-      return Response.json(
-        { error: 'Missing required fields: callId, type' },
-        { status: 400 }
-      );
-    }
+    console.log(`[Signal] ${type} for call ${callId}, agent ${agentId}`);
 
-    console.log(`[Signal] ${type} for call ${callId}`);
-
-    switch (type) {
-      case 'offer': {
-        // Store offer and create session
-        if (!agentId || !sdp) {
-          return Response.json(
-            { error: 'Missing agentId or sdp for offer' },
-            { status: 400 }
-          );
-        }
-
-        sessions.set(callId, {
-          agentId,
-          offer: sdp,
-          iceCandidates: [],
-        });
-
-        // In production: forward offer to AI agent backend (ElevenLabs, OpenClaw, etc.)
-        // For now, simulate acceptance with a mock answer
-        // TODO: Integrate with real voice agent infrastructure
-        
-        const mockAnswer = `v=0
-o=- ${Date.now()} 2 IN IP4 127.0.0.1
-s=-
-t=0 0
-a=group:BUNDLE 0
-m=audio 9 UDP/TLS/RTP/SAVPF 111
-a=rtcp:9 IN IP4 0.0.0.0
-a=ice-ufrag:mock
-a=ice-pwd:mockpassword123456
-a=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
-a=setup:active
-a=mid:0
-a=recvonly
-a=rtcp-mux
-a=rtpmap:111 opus/48000/2
-a=fmtp:111 minptime=10;useinbandfec=1`;
-
-        // Update session with answer
-        const session = sessions.get(callId);
-        if (session) {
-          session.answer = mockAnswer;
-        }
-
-        return Response.json({
-          type: 'answer',
-          callId,
-          sdp: mockAnswer,
-          message: 'Mock answer - integrate with real voice agent backend',
-        });
-      }
-
-      case 'ice-candidate': {
-        // Store ICE candidate for relay
-        const session = sessions.get(callId);
-        if (!session) {
-          return Response.json(
-            { error: 'Session not found' },
-            { status: 404 }
-          );
-        }
-
-        if (candidate) {
-          session.iceCandidates.push(candidate);
-        }
-
-        return Response.json({ 
-          received: true,
-          candidateCount: session.iceCandidates.length,
-        });
-      }
-
-      case 'answer': {
-        // Handle answer from callee (for future bidirectional calls)
-        const session = sessions.get(callId);
-        if (!session) {
-          return Response.json(
-            { error: 'Session not found' },
-            { status: 404 }
-          );
-        }
-
-        if (sdp) {
-          session.answer = sdp;
-        }
-
-        return Response.json({ received: true });
-      }
-
-      default:
+    // Handle token request (primary flow for ElevenLabs integration)
+    if (type === 'get-token' || type === 'offer') {
+      if (!agentId) {
         return Response.json(
-          { error: `Unknown signal type: ${type}` },
+          { error: 'Missing agentId' },
           { status: 400 }
         );
+      }
+
+      // Look up agent in registry to get ElevenLabs agent ID
+      const registryEntry = AGENT_REGISTRY[agentId];
+      
+      if (!registryEntry) {
+        return Response.json(
+          { error: `Agent ${agentId} not found in registry` },
+          { status: 404 }
+        );
+      }
+
+      const elevenLabsAgentId = registryEntry.elevenLabsAgentId;
+
+      if (!elevenLabsAgentId) {
+        // Agent not seeded in ElevenLabs yet
+        return Response.json({
+          error: 'Agent not configured in ElevenLabs',
+          hint: 'Run `npx tsx scripts/seed-elevenlabs.ts` to seed agents',
+          agentId,
+        }, { status: 503 });
+      }
+
+      // Create session
+      sessions.set(callId, {
+        agentId,
+        elevenLabsAgentId,
+        startTime: Date.now(),
+      });
+
+      try {
+        // Get conversation token for WebRTC
+        const token = await getConversationToken(elevenLabsAgentId);
+
+        // Also get signed URL as fallback
+        const signedUrl = await getSignedUrl(elevenLabsAgentId);
+
+        return Response.json({
+          type: 'token',
+          callId,
+          token,
+          signedUrl,
+          elevenLabsAgentId,
+          connectionType: 'webrtc', // Client can use 'websocket' with signedUrl
+          voiceId: registryEntry.voiceId,
+          agentName: registryEntry.name,
+        });
+      } catch (error) {
+        console.error('[Signal] Failed to get ElevenLabs token:', error);
+        return Response.json({
+          error: 'Failed to initialize voice session',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        }, { status: 500 });
+      }
     }
+
+    // ICE candidate handling (for future direct WebRTC if needed)
+    if (type === 'ice-candidate') {
+      const session = sessions.get(callId);
+      if (!session) {
+        return Response.json(
+          { error: 'Session not found' },
+          { status: 404 }
+        );
+      }
+      return Response.json({ received: true });
+    }
+
+    return Response.json(
+      { error: `Unknown signal type: ${type}` },
+      { status: 400 }
+    );
   } catch (error) {
     console.error('[Signal] Error:', error);
     return Response.json(
@@ -142,17 +180,24 @@ a=fmtp:111 minptime=10;useinbandfec=1`;
 
 /**
  * GET /api/webrtc/signal?callId=xxx
- * Poll for pending signals (ICE candidates, answers)
+ * Get session status
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const callId = url.searchParams.get('callId');
 
   if (!callId) {
-    return Response.json(
-      { error: 'Missing callId parameter' },
-      { status: 400 }
-    );
+    // Health check - return registry status
+    const registryStatus = Object.values(AGENT_REGISTRY).map(e => ({
+      key: e.key,
+      name: e.name,
+      elevenLabsConfigured: !!e.elevenLabsAgentId,
+    }));
+    
+    return Response.json({
+      status: 'ok',
+      agents: registryStatus,
+    });
   }
 
   const session = sessions.get(callId);
@@ -163,13 +208,10 @@ export async function GET(request: Request) {
     );
   }
 
-  // Return pending ICE candidates
-  const candidates = session.iceCandidates.splice(0);
-
   return Response.json({
     callId,
-    answer: session.answer,
-    candidates,
+    agentId: session.agentId,
+    duration: Math.floor((Date.now() - session.startTime) / 1000),
   });
 }
 
@@ -181,9 +223,10 @@ export async function DELETE(request: Request) {
   const url = new URL(request.url);
   const callId = url.searchParams.get('callId');
 
-  if (callId) {
+  if (callId && sessions.has(callId)) {
+    const session = sessions.get(callId);
     sessions.delete(callId);
-    console.log(`[Signal] Session ${callId} deleted`);
+    console.log(`[Signal] Session ${callId} ended (agent: ${session?.agentId})`);
   }
 
   return Response.json({ deleted: true });

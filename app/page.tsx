@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ToastProvider, showError } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
-import { useWebRTCSupport } from '@/lib/useRealVoiceCall';
+import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
 import { useOnboarding } from '@/lib/useOnboarding';
 import { useUserBalance, useAgents } from '@/lib/useSWR';
 import { ActiveCall } from '@/components/ActiveCall';

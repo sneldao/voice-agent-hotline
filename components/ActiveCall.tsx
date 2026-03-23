@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRealVoiceCall, useWebRTCSupport } from '@/lib/useRealVoiceCall';
+import { useElevenLabsConversation, useWebRTCSupport } from '@/lib/useElevenLabsConversation';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useRealPayment, type PaymentState } from '@/lib/useRealPayment';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
@@ -51,13 +51,22 @@ export function ActiveCall({
   onSelectRelatedAgent,
 }: ActiveCallProps) {
   const { 
-    call, 
-    startCall, 
-    endCall, 
+    state: call, 
+    startConversation, 
+    endConversation, 
     isMuted, 
     toggleMute, 
-    transcripts 
-  } = useRealVoiceCall(agent.rate);
+    transcripts,
+    setVolume,
+  } = useElevenLabsConversation({
+    agentId: agent.id,
+    userId,
+    ratePerMinute: agent.rate,
+  });
+  
+  // Aliases for compatibility
+  const startCall = startConversation;
+  const endCall = endConversation;
   const { payment, settlePayment, resetPayment } = useRealPayment();
   const {
     status: streamingStatus,
@@ -93,17 +102,17 @@ export function ActiveCall({
   useEffect(() => {
     if (!hasStarted && isSupported) {
       resetPayment();
-      startCall({ agentId: agent.id, callId, userId });
+      startCall();
       setHasStarted(true);
     }
-  }, [hasStarted, isSupported, agent.id, callId, userId, startCall, resetPayment]);
+  }, [hasStarted, isSupported, startCall, resetPayment]);
 
   // Update connecting state when call is active
   useEffect(() => {
-    if (call.isConnected || call.duration > 0) {
+    if (call.isConnected || call.duration > 0 || call.status === 'connected') {
       setIsConnecting(false);
     }
-  }, [call.isConnected, call.duration]);
+  }, [call.isConnected, call.duration, call.status]);
 
   useEffect(() => {
     if (paymentMode !== 'streaming' || !call.isConnected || streamingStartedRef.current) {
@@ -254,9 +263,10 @@ export function ActiveCall({
   };
 
   const getQualityIndicator = () => {
-    const { latency, packetLoss } = call.metrics;
-    if (latency < 150 && packetLoss < 1) return { icon: '🟢', label: 'Excellent', color: 'text-green-400' };
-    if (latency < 300 && packetLoss < 3) return { icon: '🟡', label: 'Good', color: 'text-yellow-400' };
+    const { latency, audioLevel } = call.metrics;
+    // Quality based on latency (ElevenLabs SDK doesn't expose packetLoss)
+    if (latency < 150 && audioLevel > 0.1) return { icon: '🟢', label: 'Excellent', color: 'text-green-400' };
+    if (latency < 300) return { icon: '🟡', label: 'Good', color: 'text-yellow-400' };
     return { icon: '🔴', label: 'Poor', color: 'text-red-400' };
   };
 
@@ -539,6 +549,9 @@ export function ActiveCall({
             onClick={() => {
               setSpeakerVolume(v => {
                 const next = v >= 2 ? 0 : v + 1;
+                // Map volume levels: 0=0%, 1=50%, 2=100%
+                const volumeLevels = [0, 0.5, 1];
+                setVolume(volumeLevels[next]);
                 return next;
               });
             }}
@@ -602,7 +615,7 @@ export function ActiveCall({
         duration={call.duration}
         cost={call.cost}
         transcripts={transcripts}
-        txHash={activePayment.txHash || call.txHash}
+        txHash={activePayment.txHash}
         payment={activePayment}
         onClose={handleCloseSummary}
         onRate={handleRate}
