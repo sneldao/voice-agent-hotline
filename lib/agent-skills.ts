@@ -629,7 +629,7 @@ export class ResearchSkill {
   private apiKey: string;
 
   constructor(_wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> }) {
-    this.apiKey = process.env.TAVILY_API_KEY || '';
+    this.apiKey = process.env.FIRECRAWL_API_KEY || process.env.TAVILY_API_KEY || '';
   }
 
   /**
@@ -641,7 +641,7 @@ export class ResearchSkill {
   }
 
   /**
-   * Execute research query via Tavily Search API
+   * Execute research query via Firecrawl Search API (falls back to Tavily)
    */
   async execute(params: ResearchParams): Promise<SkillResult> {
     try {
@@ -656,56 +656,16 @@ export class ResearchSkill {
       if (!this.apiKey) {
         return {
           success: false,
-          error: 'Tavily API key not configured. Set TAVILY_API_KEY in environment.',
+          error: 'No search API key configured. Set FIRECRAWL_API_KEY or TAVILY_API_KEY in environment.',
           timestamp: new Date(),
         };
       }
 
-      const maxResults = params.maxResults || 5;
-
-      const tavilyResponse = await fetch('https://api.tavily.com/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: this.apiKey,
-          query: params.query,
-          max_results: maxResults,
-          search_depth: params.includeSummary ? 'advanced' : 'basic',
-          include_answer: params.includeSummary ?? false,
-        }),
-      });
-
-      if (!tavilyResponse.ok) {
-        const errorText = await tavilyResponse.text();
-        throw new Error(`Tavily API error ${tavilyResponse.status}: ${errorText}`);
+      // Use Firecrawl if available, otherwise fall back to Tavily
+      if (process.env.FIRECRAWL_API_KEY) {
+        return this.executeFirecrawl(params);
       }
-
-      const data = await tavilyResponse.json() as {
-        results: Array<{ title: string; url: string; content: string; score: number }>;
-        answer?: string;
-      };
-
-      const results: ResearchResult['results'] = data.results.map(r => ({
-        title: r.title,
-        url: r.url,
-        source: new URL(r.url).hostname,
-        snippet: r.content,
-      }));
-
-      const researchResult: ResearchResult = {
-        query: params.query,
-        results,
-        totalResults: results.length,
-        summary: data.answer ?? (params.includeSummary
-          ? `Found ${results.length} results for "${params.query}".`
-          : undefined),
-      };
-
-      return {
-        success: true,
-        data: researchResult as unknown as Record<string, unknown>,
-        timestamp: new Date(),
-      };
+      return this.executeTavily(params);
     } catch (error) {
       return {
         success: false,
@@ -713,6 +673,91 @@ export class ResearchSkill {
         timestamp: new Date(),
       };
     }
+  }
+
+  /**
+   * Research via Firecrawl Search API
+   */
+  private async executeFirecrawl(params: ResearchParams): Promise<SkillResult> {
+    const { firecrawlSearch } = await import('./firecrawl');
+
+    const response = await firecrawlSearch(params.query, {
+      limit: params.maxResults || 5,
+      scrapeContent: params.includeSummary ?? false,
+    });
+
+    const results: ResearchResult['results'] = response.results.map(r => ({
+      title: r.title,
+      url: r.url,
+      source: r.source,
+      snippet: r.snippet,
+    }));
+
+    const summary = params.includeSummary
+      ? `Found ${results.length} results for "${params.query}". ${results.slice(0, 2).map(r => r.snippet).join(' ')}`
+      : undefined;
+
+    return {
+      success: true,
+      data: {
+        query: params.query,
+        results,
+        totalResults: results.length,
+        summary,
+      } as unknown as Record<string, unknown>,
+      timestamp: new Date(),
+    };
+  }
+
+  /**
+   * Research via Tavily Search API (legacy fallback)
+   */
+  private async executeTavily(params: ResearchParams): Promise<SkillResult> {
+    const maxResults = params.maxResults || 5;
+
+    const tavilyResponse = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: this.apiKey,
+        query: params.query,
+        max_results: maxResults,
+        search_depth: params.includeSummary ? 'advanced' : 'basic',
+        include_answer: params.includeSummary ?? false,
+      }),
+    });
+
+    if (!tavilyResponse.ok) {
+      const errorText = await tavilyResponse.text();
+      throw new Error(`Tavily API error ${tavilyResponse.status}: ${errorText}`);
+    }
+
+    const data = await tavilyResponse.json() as {
+      results: Array<{ title: string; url: string; content: string; score: number }>;
+      answer?: string;
+    };
+
+    const results: ResearchResult['results'] = data.results.map(r => ({
+      title: r.title,
+      url: r.url,
+      source: new URL(r.url).hostname,
+      snippet: r.content,
+    }));
+
+    const researchResult: ResearchResult = {
+      query: params.query,
+      results,
+      totalResults: results.length,
+      summary: data.answer ?? (params.includeSummary
+        ? `Found ${results.length} results for "${params.query}".`
+        : undefined),
+    };
+
+    return {
+      success: true,
+      data: researchResult as unknown as Record<string, unknown>,
+      timestamp: new Date(),
+    };
   }
 }
 

@@ -10,6 +10,7 @@ import {
   agentCanUseSkill,
   type SkillType,
 } from '@/lib/agent-registry';
+import { firecrawlScrape } from '@/lib/firecrawl';
 import { Address, Hash, createWalletClient, http } from 'viem';
 import { celo, celoAlfajores } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -37,6 +38,8 @@ const TOOL_SKILL: Record<string, SkillType> = {
   create_order:             'order',
   set_reminder:             'schedule',
   search_web:               'research',
+  firecrawl_search:         'research',
+  firecrawl_scrape:         'research',
   check_solana_balance:     'research',
   get_github_repos:         'research',
   get_github_repo_content:  'research',
@@ -47,6 +50,10 @@ const TOOL_SKILL: Record<string, SkillType> = {
 /**
  * Tools that route to Composio instead of the native skills framework.
  * Key = tool_name, value = Composio action slug.
+ *
+ * NOTE: search_web is here as a fallback when Firecrawl is not configured.
+ *       The handler checks FIRECRAWL_API_KEY first and routes through native
+ *       ResearchSkill (Firecrawl) when available, otherwise falls back to Composio.
  */
 const COMPOSIO_TOOLS: Record<string, string> = {
   check_solana_balance:     'SOLANA_GET_BALANCE',
@@ -81,13 +88,19 @@ function formatNarration(toolName: string, data: unknown): string {
         if (!s) return 'Your reminder has been set.';
         return `Got it! I've scheduled "${s.title}" for ${new Date(s.dateTime).toLocaleString()}. I'll remind you ${s.reminders[0] ? `${s.reminders[0]} minutes before.` : 'at the scheduled time.'}`;
       }
-      case 'search_web': {
+      case 'search_web':
+      case 'firecrawl_search': {
         if (Array.isArray(d?.results)) {
           const top = d.results.slice(0, 2).map((r: any) => r.title ?? r.snippet).join('. ');
           return `Here's what I found: ${top}${d.results.length > 2 ? ` And ${d.results.length - 2} more results.` : ''}`;
         }
         if (d?.summary) return d.summary;
         return 'I found some results. Would you like me to go deeper on any of them?';
+      }
+      case 'firecrawl_scrape': {
+        if (d?.title) return `I scraped the page "${d.title}". It has ${d.markdown ? (d.markdown as string).split('\n').length : 0} lines of content. Would you like me to summarize it?`;
+        if (d?.markdown) return `I retrieved the page content. It's ${(d.markdown as string).split('\n').length} lines long. Want me to summarize?`;
+        return 'I scraped the page. Would you like me to summarize the content?';
       }
       case 'check_solana_balance': {
         if (d?.balance !== undefined) return `The wallet balance is ${d.balance} ${d.token ?? 'SOL'}.`;
@@ -252,7 +265,32 @@ export async function POST(req: NextRequest) {
     // ── 6. Execute tool ──────────────────────────────────────────────────────
     let result: { success: boolean; data?: unknown; error?: string };
 
-    if (COMPOSIO_TOOLS[tool_name]) {
+    if (tool_name === 'firecrawl_scrape') {
+      // Direct Firecrawl scrape — bypass skills framework
+      const url = parameters.url as string;
+      if (!url) {
+        result = { success: false, error: 'Missing required parameter: url' };
+      } else {
+        try {
+          const scraped = await firecrawlScrape(url);
+          result = { success: true, data: scraped };
+        } catch (err: any) {
+          result = { success: false, error: err.message ?? 'Firecrawl scrape failed' };
+        }
+      }
+    } else if (tool_name === 'search_web' && process.env.FIRECRAWL_API_KEY) {
+      // Prefer Firecrawl for search_web when configured
+      console.log(`[Webhook] search_web → Firecrawl (native)`);
+      const executionWallet = {
+        account: {
+          address: (userAddress || process.env.AGENT_WALLET || '0x0000000000000000000000000000000000000000') as Address,
+        },
+        writeContract: async () => '0xmockhash' as Hash,
+      };
+      const framework = createSkillsFramework(executionWallet);
+      const skillResult = await framework.executeSkill(skillType, parameters, delegationId);
+      result = { success: skillResult.success, data: skillResult.data, error: skillResult.error };
+    } else if (COMPOSIO_TOOLS[tool_name]) {
       const slug = COMPOSIO_TOOLS[tool_name];
       console.log(`[Webhook] Composio → ${slug}`);
       result = await composioService.executeTool({ tool_slug: slug, arguments: parameters });

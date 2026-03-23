@@ -6,14 +6,15 @@ import assert from 'node:assert/strict';
 // ============================================
 
 describe('Agent Registry', () => {
-  it('should export AGENT_REGISTRY with 4 agents', async () => {
+  it('should export AGENT_REGISTRY with 5 agents', async () => {
     const { AGENT_REGISTRY } = await import('../lib/agent-registry');
     const keys = Object.keys(AGENT_REGISTRY);
-    assert.equal(keys.length, 4, 'Should have 4 canonical agents');
+    assert.equal(keys.length, 5, 'Should have 5 canonical agents');
     assert.ok(keys.includes('solana_sage'));
     assert.ok(keys.includes('code_reviewer'));
     assert.ok(keys.includes('general_helper'));
     assert.ok(keys.includes('tour_master'));
+    assert.ok(keys.includes('web_researcher'));
   });
 
   it('each agent should have required fields', async () => {
@@ -49,5 +50,7 @@ describe('Agent Registry', () => {
     assert.ok(!agentCanUseSkill('solana_sage', 'book'), 'Solana Sage should not be able to book');
     assert.ok(agentCanUseSkill('code_reviewer', 'schedule'));
     assert.ok(!agentCanUseSkill('tour_master', 'order'), 'Tour Master should not be able to order');
+    assert.ok(agentCanUseSkill('web_researcher', 'research'), 'Web Researcher should be able to research');
+    assert.ok(!agentCanUseSkill('web_researcher', 'book'), 'Web Researcher should not be able to book');
   });
 });

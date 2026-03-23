@@ -127,6 +127,24 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
       ? BigInt(process.env.ERC8004_TOKEN_TOUR_MASTER)
       : null,
   },
+
+  web_researcher: {
+    key: 'web_researcher',
+    name: 'Web Researcher',
+    emoji: '🔍',
+    tagline: 'Deep web research powered by Firecrawl',
+    color: 'from-red-500 to-rose-600',
+    elevenLabsAgentId: process.env.ELEVENLABS_AGENT_WEB_RESEARCHER ?? null,
+    voiceId: process.env.ELEVENLABS_VOICE_WEB_RESEARCHER ?? 'pqHfZKP75CvOlQylNhV4', // Steve
+    systemPrompt: `You are Web Researcher, an AI agent specialized in deep web research and content extraction. You use Firecrawl to search the web in real-time and extract clean, structured content from any URL. When a user asks a question that requires current information, call firecrawl_search immediately to find relevant sources. When a user wants detailed content from a specific page, call firecrawl_scrape with the URL. Be thorough, cite your sources, and always provide the URLs you found. You can research any topic — news, technical docs, market data, academic papers, and more.`,
+    elevenLabsTools: ['firecrawl_search', 'firecrawl_scrape', 'search_web'],
+    specialties: ['research', 'web', 'news', 'technical', 'analysis'],
+    allowedSkills: ['research'],
+    composioTools: [],
+    tokenId: process.env.ERC8004_TOKEN_WEB_RESEARCHER
+      ? BigInt(process.env.ERC8004_TOKEN_WEB_RESEARCHER)
+      : null,
+  },
 };
 
 // ============================================

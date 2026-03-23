@@ -15,6 +15,7 @@
   "dependencies": {
     "@elevenlabs/client": "^0.14.0",
     "@erc7824/nitrolite": "^0.5.3",
+    "@mendable/firecrawl-js": "^4.16.0",
     "@tanstack/react-query": "^5.8.4",
     "@tetherto/wdk": "^1.0.0-beta.6",
     "@tetherto/wdk-wallet-evm": "^1.0.0-beta.10",
@@ -38,6 +39,7 @@
     "swr": "^2.4.0",
     "tailwindcss": "^3.4.19",
     "typescript": "^5",
+    "undici": "^7.24.5",
     "viem": "^1.19.11",
     "zod": "^3.25.76"
   },

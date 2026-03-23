@@ -94,6 +94,23 @@ export const SEED_AGENTS: AgentSeed[] = [
     online: true,
     rating: 4.9,
     totalCalls: 0
+  },
+  {
+    id: "agent_web_researcher",
+    name: "Web Researcher",
+    description: "Deep web research agent powered by Firecrawl. Searches the web in real-time and extracts clean content from any URL during voice calls.",
+    voice: "Steve",
+    voiceId: "pqHfZKP75CvOlQylNhV4",
+    elevenlabs_agent_id: process.env.ELEVENLABS_AGENT_WEB_RESEARCHER || "",
+    rate: 0.10,
+    avatar: "🔍",
+    category: "research",
+    skills: ["research"],
+    system_prompt: "You are Web Researcher, an AI agent specialized in deep web research and content extraction. You use Firecrawl to search the web in real-time and extract clean, structured content from any URL. When a user asks a question that requires current information, call firecrawl_search immediately. When they want content from a specific page, call firecrawl_scrape. Be thorough, cite sources, and always provide URLs.",
+    active: true,
+    online: true,
+    rating: 5.0,
+    totalCalls: 0
   }
 ];
 
