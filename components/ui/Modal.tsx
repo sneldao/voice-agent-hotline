@@ -157,8 +157,8 @@ export function Modal({
             </div>
           )}
           
-          {/* Content */}
-          <div className="p-6">
+          {/* Content - scrollable */}
+          <div className="p-6 overflow-y-auto max-h-[70vh]">
             {children}
           </div>
         </div>

@@ -20,6 +20,7 @@ SKIP_PATTERNS=(
   "package-lock.json"
   ".githooks/"
   "contracts-deploy/"
+  "tsconfig.tsbuildinfo"
 )
 
 # ─────────────────────────────────────────────
