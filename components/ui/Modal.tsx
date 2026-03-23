@@ -161,8 +161,8 @@ export function Modal({
             </div>
           )}
           
-          {/* Content - scrollable */}
-          <div className="p-6 overflow-y-auto flex-1 min-h-0">
+          {/* Content - scrollable, no padding to allow full-width headers */}
+          <div className="overflow-y-auto flex-1 min-h-0">
             {children}
           </div>
         </div>
