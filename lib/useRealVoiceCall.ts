@@ -60,6 +60,7 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
   const callIdRef = useRef<string | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const metricsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update cost based on duration
   useEffect(() => {
@@ -75,7 +76,7 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
       webRTCService.endCall(callIdRef.current);
     }
 
-    // Clear intervals
+    // Clear all timers
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = null;
@@ -83,6 +84,10 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
     if (metricsIntervalRef.current) {
       clearInterval(metricsIntervalRef.current);
       metricsIntervalRef.current = null;
+    }
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
     }
 
     // Keep txHash for summary display
@@ -126,6 +131,20 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
 
     callIdRef.current = callId;
 
+    // Connection timeout - fail gracefully if signaling server unavailable
+    connectionTimeoutRef.current = setTimeout(() => {
+      setCall(prev => {
+        if (prev.isConnecting && !prev.isConnected) {
+          return {
+            ...prev,
+            isConnecting: false,
+            error: 'Connection timeout - signaling server unavailable. Check if /api/webrtc/signal endpoint exists.',
+          };
+        }
+        return prev;
+      });
+    }, 15000);
+
     try {
       await webRTCService.startCall(
         callId,
@@ -135,6 +154,12 @@ export function useRealVoiceCall(ratePerMinute: number = 0.1): UseRealVoiceCallR
       );
 
       webRTCService.on('connected', () => {
+        // Clear connection timeout on success
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
+        
         setCall(prev => ({
           ...prev,
           isConnected: true,

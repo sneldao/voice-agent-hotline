@@ -297,20 +297,27 @@ export class WebRTCVoiceService extends EventEmitter {
   }
 
   /**
-   * Send signal to server with retry logic
-   * RELIABILITY: Exponential backoff with 3 retries
+   * Send signal to server with retry logic and timeout
+   * RELIABILITY: Exponential backoff with 3 retries, 10s timeout per attempt
    */
   private async sendSignal(endpoint: string, data: any, retries = 3): Promise<void> {
     const maxRetries = retries;
+    const timeoutMs = 10000;
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
 
         if (!res.ok) {
           throw new Error(`Signal failed: ${res.status}`);
@@ -318,7 +325,16 @@ export class WebRTCVoiceService extends EventEmitter {
 
         return; // Success
       } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
+        clearTimeout(timeoutId);
+        lastError = error instanceof Error 
+          ? error 
+          : new Error(String(error));
+        
+        // Specific message for timeout/abort
+        if (lastError.name === 'AbortError') {
+          lastError = new Error(`Signal timeout after ${timeoutMs}ms`);
+        }
+        
         console.error(`[WebRTC] Signal error (attempt ${attempt}/${maxRetries}):`, lastError.message);
 
         if (attempt < maxRetries) {
