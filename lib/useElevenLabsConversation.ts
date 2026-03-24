@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { signMessage } from './WalletContextNew';
 
 export interface ConversationState {
   isConnected: boolean;
@@ -71,6 +72,9 @@ export function useElevenLabsConversation(options: ConversationOptions) {
   const conversationRef = useRef<any>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
+  const intentionalDisconnectRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 1;
 
   /**
    * Start conversation with ElevenLabs agent
@@ -100,10 +104,28 @@ export function useElevenLabsConversation(options: ConversationOptions) {
       
       // Get conversation token from our signaling endpoint
       const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+
+      // Sign the call request with the connected wallet
+      let authHeaders: Record<string, string> = {};
+      try {
+        const message = `voice-call:${callId}:${agentId}:${timestamp}`;
+        const signature = await signMessage(message);
+        const accounts = await (window as any).ethereum?.request({ method: 'eth_accounts' });
+        if (accounts?.[0] && signature) {
+          authHeaders = {
+            'X-Wallet-Address': accounts[0],
+            'X-Signature': signature,
+            'X-Timestamp': timestamp,
+          };
+        }
+      } catch {
+        // Signing failed or user rejected — proceed without auth (rate-limited)
+      }
+
       const response = await fetch('/api/webrtc/signal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           type: 'get-token',
           callId,
@@ -127,9 +149,10 @@ export function useElevenLabsConversation(options: ConversationOptions) {
         connectionType: 'webrtc',
         
         // Callbacks
-        onConnect: () => {
-          console.log('[ElevenLabs] Connected');
-          startTimeRef.current = Date.now();
+          onConnect: () => {
+            console.log('[ElevenLabs] Connected');
+            startTimeRef.current = Date.now();
+            reconnectAttemptsRef.current = 0;
           
           setState(prev => ({
             ...prev,
@@ -156,11 +179,35 @@ export function useElevenLabsConversation(options: ConversationOptions) {
 
         onDisconnect: () => {
           console.log('[ElevenLabs] Disconnected');
-          
+
           if (durationIntervalRef.current) {
             clearInterval(durationIntervalRef.current);
             durationIntervalRef.current = null;
           }
+
+          conversationRef.current = null;
+
+          // Auto-reconnect on unexpected disconnect
+          if (!intentionalDisconnectRef.current && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttemptsRef.current++;
+            console.log(`[ElevenLabs] Reconnecting (attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})...`);
+
+            setState(prev => ({
+              ...prev,
+              isConnected: false,
+              isConnecting: true,
+              status: 'connecting',
+              error: 'Reconnecting...',
+            }));
+
+            setTimeout(() => {
+              startConversation();
+            }, 3000);
+            return;
+          }
+
+          reconnectAttemptsRef.current = 0;
+          intentionalDisconnectRef.current = false;
 
           setState(prev => ({
             ...prev,
@@ -243,6 +290,9 @@ export function useElevenLabsConversation(options: ConversationOptions) {
    * End conversation
    */
   const endConversation = useCallback(async () => {
+    intentionalDisconnectRef.current = true;
+    reconnectAttemptsRef.current = 0;
+
     if (conversationRef.current) {
       try {
         await conversationRef.current.endSession();

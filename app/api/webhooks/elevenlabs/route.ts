@@ -194,7 +194,51 @@ async function recordTaskCompletion(
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify webhook secret
+    const { verifyElevenLabsWebhook } = await import('@/lib/api-auth');
+    if (!verifyElevenLabsWebhook(req)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
+
+    // Handle conversation_ended events — persist transcripts
+    if (body.type === 'conversation_ended' || body.event === 'conversation_ended') {
+      const { conversation_id, transcript, agent_id, user_address, duration_seconds } = body;
+
+      if (conversation_id && transcript) {
+        const callId = `el_${conversation_id}`;
+        const callData: Record<string, string> = {
+          id: callId,
+          agent_id: agent_id || '',
+          agent_name: '',
+          agent_specialty: '',
+          caller_address: (user_address || 'anonymous').toLowerCase(),
+          status: 'completed',
+          duration_seconds: String(duration_seconds || 0),
+          total_cost: '0',
+          transcripts: JSON.stringify(
+            Array.isArray(transcript)
+              ? transcript
+              : [{ text: String(transcript), speaker: 'agent', timestamp: Date.now(), isFinal: true }]
+          ),
+          ended_at: new Date().toISOString(),
+          source: 'webhook',
+        };
+
+        const { redis } = await import('@/lib/redis');
+        await redis.hset(`call:${callId}`, callData);
+        if (callData.caller_address !== 'anonymous') {
+          await redis.sadd(`call_index:${callData.caller_address}`, callId);
+        }
+
+        console.log(`[ElevenLabs Webhook] Saved transcript for conversation ${conversation_id}`);
+      }
+
+      return NextResponse.json({ received: true });
+    }
+
+    // Handle tool calls (existing flow)
     const { tool_name, parameters, metadata = {} } = body;
 
     console.log('[ElevenLabs Webhook] Tool call:', {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Phone, Clock, Wallet, Bookmark, Star } from 'lucide-react';
 import { CallHistorySkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
@@ -9,7 +9,7 @@ import { RefreshButton, Card, Avatar, TranscriptModal, ShareModal, ExportModal, 
 
 interface CallsHistoryTabProps {
   localHistory: ReturnType<typeof useLocalCallHistory>;
-  serverHistory: any[];
+  address?: string | null;
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => Promise<void>;
@@ -19,6 +19,7 @@ interface CallsHistoryTabProps {
 
 export function CallsHistoryTab({
   localHistory,
+  address,
   isLoading,
   error,
   onRefresh,
@@ -31,8 +32,43 @@ export function CallsHistoryTab({
   const [shareCall, setShareCall] = useState<CallRecord | null>(null);
   const [exportCall, setExportCall] = useState<CallRecord | null>(null);
   const [showBulkExport, setShowBulkExport] = useState(false);
+  const [serverCalls, setServerCalls] = useState<CallRecord[]>([]);
 
-  const displayCalls = filter === 'saved' ? localHistory.getSavedCalls() : localHistory.calls;
+  // Fetch server history on mount
+  useEffect(() => {
+    if (!address) return;
+    fetch(`/api/calls?caller_address=${encodeURIComponent(address)}`)
+      .then(r => r.ok ? r.json() : { calls: [] })
+      .then(data => {
+        const calls: CallRecord[] = (data.calls || [])
+          .filter((c: any) => c.status === 'completed')
+          .map((c: any) => ({
+            id: c.id,
+            agentId: c.agent_id,
+            agentName: c.agent_name || c.agent_id,
+            agentSpecialty: c.agent_specialty || '',
+            duration: parseInt(c.duration_seconds) || 0,
+            cost: parseFloat(c.total_cost) || 0,
+            timestamp: new Date(c.ended_at || c.started_at).getTime(),
+            transcripts: Array.isArray(c.transcripts) ? c.transcripts : [],
+            isSaved: false,
+          }));
+        setServerCalls(calls);
+      })
+      .catch(() => {});
+  }, [address]);
+
+  // Merge: local calls are source of truth, server fills gaps
+  const allCalls = useMemo(() => {
+    const localIds = new Set(localHistory.calls.map(c => c.id));
+    const merged = [...localHistory.calls];
+    for (const sc of serverCalls) {
+      if (!localIds.has(sc.id)) merged.push(sc);
+    }
+    return merged.sort((a, b) => b.timestamp - a.timestamp);
+  }, [localHistory.calls, serverCalls]);
+
+  const displayCalls = filter === 'saved' ? localHistory.getSavedCalls() : allCalls;
 
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -71,7 +107,7 @@ export function CallsHistoryTab({
   }
 
   // Empty state
-  if (localHistory.calls.length === 0) {
+  if (allCalls.length === 0) {
     return (
       <EmptyState
         type="calls"
@@ -92,7 +128,7 @@ export function CallsHistoryTab({
         <div>
           <h2 className="text-xl font-bold">Call History</h2>
           <p className="text-sm text-gray-400">
-            {localHistory.totalCalls} calls • {formatDuration(localHistory.totalDuration)} total
+            {allCalls.length} calls • {formatDuration(allCalls.reduce((s, c) => s + c.duration, 0))} total
           </p>
         </div>
         <RefreshButton variant="full" onRefresh={onRefresh || (async () => {})} />
@@ -100,9 +136,9 @@ export function CallsHistoryTab({
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard icon={<Phone className="w-4 h-4" />} value={localHistory.totalCalls.toString()} label="Calls" />
-        <StatCard icon={<Clock className="w-4 h-4" />} value={formatDuration(localHistory.totalDuration)} label="Duration" />
-        <StatCard icon={<Wallet className="w-4 h-4" />} value={`$${(localHistory.totalSpent || 0).toFixed(2)}`} label="Spent" />
+        <StatCard icon={<Phone className="w-4 h-4" />} value={allCalls.length.toString()} label="Calls" />
+        <StatCard icon={<Clock className="w-4 h-4" />} value={formatDuration(allCalls.reduce((s, c) => s + c.duration, 0))} label="Duration" />
+        <StatCard icon={<Wallet className="w-4 h-4" />} value={`$${allCalls.reduce((s, c) => s + c.cost, 0).toFixed(2)}`} label="Spent" />
       </div>
 
       {/* Filters */}

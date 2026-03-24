@@ -83,6 +83,47 @@ export function verifyApiKey(req: NextRequest): boolean {
 }
 
 /**
+ * Verify wallet signature for voice call token requests.
+ * Signed message: "voice-call:{callId}:{agentId}:{timestamp}"
+ */
+export async function verifyVoiceCallAuth(
+  headers: Headers,
+  callId: string,
+  agentId: string
+): Promise<{ authenticated: boolean; address?: string; error?: string }> {
+  const address = headers.get('x-wallet-address');
+  const signature = headers.get('x-signature');
+  const timestamp = headers.get('x-timestamp');
+
+  if (!address || !signature || !timestamp) {
+    return { authenticated: false, error: 'Missing auth headers' };
+  }
+
+  const ts = parseInt(timestamp, 10);
+  const now = Math.floor(Date.now() / 1000);
+  if (isNaN(ts) || Math.abs(now - ts) > 300) {
+    return { authenticated: false, error: 'Auth timestamp expired' };
+  }
+
+  try {
+    const message = `voice-call:${callId}:${agentId}:${timestamp}`;
+    const valid = await verifyMessage({
+      address: address as `0x${string}`,
+      message,
+      signature: signature as `0x${string}`,
+    });
+    return valid
+      ? { authenticated: true, address: address.toLowerCase() }
+      : { authenticated: false, error: 'Invalid signature' };
+  } catch (error) {
+    return {
+      authenticated: false,
+      error: error instanceof Error ? error.message : 'Verification error',
+    };
+  }
+}
+
+/**
  * Rate limit check using Redis.
  * Returns true if allowed, false if rate limited.
  */

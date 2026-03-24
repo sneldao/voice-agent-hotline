@@ -31,7 +31,7 @@ const ADMIN_WALLETS = (process.env.NEXT_PUBLIC_ADMIN_WALLETS || '').toLowerCase(
 
 function isAdmin(address: string | null): boolean {
   if (!address) return false;
-  if (ADMIN_WALLETS.length === 0) return true; // open if not configured
+  if (ADMIN_WALLETS.length === 0) return false; // locked if not configured
   return ADMIN_WALLETS.includes(address.toLowerCase());
 }
 

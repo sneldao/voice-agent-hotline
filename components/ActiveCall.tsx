@@ -173,6 +173,22 @@ export function ActiveCall({
     });
     setSavedCallId(id);
 
+    // Save to server (fire-and-forget, local is source of truth)
+    fetch('/api/calls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        agent_id: agent.id,
+        agent_name: agent.name,
+        agent_specialty: agent.specialty,
+        caller_address: userId,
+        duration: call.duration,
+        cost: call.cost,
+        transcripts,
+      }),
+    }).catch(() => {}); // best-effort
+
     if (paymentMode === 'streaming' && payoutAddress) {
       const stopTxHash = await stopStream(payoutAddress, agentPayoutAddress ? platformAddress : undefined);
       if (stopTxHash) {
@@ -212,6 +228,7 @@ export function ActiveCall({
     stopStream,
     transcripts,
     updateCallReceipt,
+    userId,
   ]);
 
   const handleCloseSummary = useCallback(() => {

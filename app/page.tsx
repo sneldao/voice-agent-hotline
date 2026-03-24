@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ToastProvider, showError } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
+import { signMessage } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
 import { useOnboarding } from '@/lib/useOnboarding';
@@ -275,7 +276,7 @@ export default function Home() {
                 <Suspense fallback={<TabLoading />}>
                   <CallsHistoryTab
                     localHistory={localCallHistory}
-                    serverHistory={[]}
+                    address={address}
                     isLoading={false}
                     error={null}
                     onRefresh={async () => {}}

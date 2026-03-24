@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import { AGENT_REGISTRY } from '@/lib/agent-registry';
 import { redis } from '@/lib/redis';
+import { verifyVoiceCallAuth } from '@/lib/api-auth';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
@@ -131,6 +132,14 @@ export async function POST(request: Request) {
 
     const body: SignalMessage = await request.json();
     const { type, callId, agentId, userId } = body;
+
+    // Verify wallet signature when auth headers are present
+    if (request.headers.get('x-wallet-address') && callId && agentId) {
+      const auth = await verifyVoiceCallAuth(request.headers, callId, agentId);
+      if (!auth.authenticated) {
+        return Response.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
+      }
+    }
 
     console.log(`[Signal] ${type} for call ${callId}, agent ${agentId}`);
 

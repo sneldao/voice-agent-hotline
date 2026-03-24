@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Wallet, Bell, Settings, LogOut, ExternalLink } from 'lucide-react';
+import { User, Wallet, LogOut, ExternalLink } from 'lucide-react';
 import { ProfileSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { Button, Card, Avatar } from '@/components/ui';
@@ -67,9 +67,6 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect }: Profil
                 <ExternalLink className="w-3 h-3 mr-1" />
                 Add Funds
               </Button>
-              <Button variant="secondary" size="sm" className="flex-1 bg-white/10 border-white/20 hover:bg-white/20">
-                Withdraw
-              </Button>
             </div>
           </div>
         </div>
@@ -77,30 +74,6 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect }: Profil
 
       {/* Delegation Panel */}
       <DelegationPanel />
-
-      {/* Settings */}
-      <div className="space-y-2">
-        <h3 className="font-semibold text-gray-400 px-1">Settings</h3>
-        {[
-          { icon: <Bell className="w-5 h-5" />, label: 'Notifications', desc: 'Call & message alerts' },
-          { icon: <Wallet className="w-5 h-5" />, label: 'Payment Methods', desc: 'Manage wallets & cards' },
-          { icon: <Settings className="w-5 h-5" />, label: 'Privacy', desc: 'Data & security' },
-        ].map(item => (
-          <Card
-            key={item.label}
-            interactive
-            variant="default"
-            className="flex items-center gap-3 p-4"
-          >
-            <span className="text-gray-400">{item.icon}</span>
-            <div className="flex-1 text-left">
-              <div className="font-medium">{item.label}</div>
-              <div className="text-xs text-gray-500">{item.desc}</div>
-            </div>
-            <span className="text-gray-600">→</span>
-          </Card>
-        ))}
-      </div>
 
       {/* Disconnect */}
       {onDisconnect && (

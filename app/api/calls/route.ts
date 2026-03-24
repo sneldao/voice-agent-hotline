@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     const sessionId = searchParams.get('session_id');
+    const callerAddress = searchParams.get('caller_address');
 
     if (sessionId) {
       const session = await redis.hgetall(`call:${sessionId}`);
@@ -21,10 +22,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ session });
     }
 
-    // List recent calls
+    // Filter by caller address
+    if (callerAddress) {
+      const callIds = await redis.smembers(`call_index:${callerAddress.toLowerCase()}`);
+      if (callIds.length === 0) return NextResponse.json({ calls: [] });
+
+      const calls = await Promise.all(
+        callIds.map(async (id) => {
+          const data = await redis.hgetall(`call:${id}`);
+          if (!data || Object.keys(data).length === 0) return null;
+          if (data.transcripts && typeof data.transcripts === 'string') {
+            try { data.transcripts = JSON.parse(data.transcripts); } catch { data.transcripts = []; }
+          }
+          return data;
+        })
+      );
+      return NextResponse.json({ calls: calls.filter(Boolean).slice(0, 50) });
+    }
+
+    // List recent calls (admin)
     const callKeys = await redis.keys('call:*');
     const calls = await Promise.all(
-      callKeys.slice(0, 50).map(key => redis.hgetall(key))
+      callKeys.filter(k => !k.includes('index')).slice(0, 50).map(key => redis.hgetall(key))
     );
 
     return NextResponse.json({ calls });
@@ -37,12 +56,43 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { agent_id, caller_address, metadata = {} } = body;
+    const { agent_id, caller_address, transcripts, duration, cost, agent_name, agent_specialty, metadata = {} } = body;
 
     if (!agent_id) {
       return NextResponse.json({ error: 'agent_id required' }, { status: 400 });
     }
 
+    // Completed call save (from client on hang-up)
+    if (transcripts) {
+      const callId = body.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const callData: Record<string, string> = {
+        id: callId,
+        agent_id,
+        agent_name: agent_name || '',
+        agent_specialty: agent_specialty || '',
+        caller_address: (caller_address || 'anonymous').toLowerCase(),
+        status: 'completed',
+        duration_seconds: String(duration || 0),
+        total_cost: String(cost || 0),
+        transcripts: JSON.stringify(transcripts),
+        ended_at: new Date().toISOString(),
+        started_at: new Date(Date.now() - (duration || 0) * 1000).toISOString(),
+      };
+
+      await redis.hset(`call:${callId}`, callData);
+
+      // Maintain caller index for efficient per-user queries
+      if (callData.caller_address !== 'anonymous') {
+        await redis.sadd(`call_index:${callData.caller_address}`, callId);
+      }
+
+      // Increment agent stats
+      await redis.hincrby(`agent:${agent_id}`, 'total_calls', 1);
+
+      return NextResponse.json({ call: callData }, { status: 201 });
+    }
+
+    // New session creation (existing flow)
     // Get agent details
     const agent = await redis.hgetall(`agent:${agent_id}`);
     if (!agent || Object.keys(agent).length === 0) {
