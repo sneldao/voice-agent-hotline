@@ -49,15 +49,18 @@ const ethersConfig = defaultConfig({
   defaultChainId: defaultChain.chainId,
 });
 
-// Only create Web3Modal if projectId is provided
+// Lazy-init Web3Modal — only created when WalletProvider mounts, not at module scope.
+// Module-scope creation can block the main thread and create MutationObserver conflicts.
 let web3Modal: ReturnType<typeof createWeb3Modal> | null = null;
+let web3ModalInitAttempted = false;
 
-// Wrap Web3Modal creation to handle window.ethereum conflicts gracefully
-if (projectId && typeof window !== 'undefined') {
+function ensureWeb3Modal() {
+  if (web3ModalInitAttempted) return web3Modal;
+  web3ModalInitAttempted = true;
+
+  if (!projectId || typeof window === 'undefined') return null;
+
   try {
-    // Save original ethereum descriptor before Web3Modal tries to override it
-    const ethereumDescriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
-    
     web3Modal = createWeb3Modal({
       ethersConfig,
       chains,
@@ -65,19 +68,19 @@ if (projectId && typeof window !== 'undefined') {
       enableAnalytics: false,
       themeMode: 'dark',
       themeVariables: {
-        '--w3m-accent': '#06b6d4', // cyan-500
+        '--w3m-accent': '#06b6d4',
         '--w3m-border-radius-master': '12px',
       },
     });
   } catch (error: any) {
-    // Silently ignore the "Cannot set property ethereum" error
-    // This happens when MetaMask has already defined window.ethereum as read-only
     if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
       console.warn('Web3Modal: window.ethereum conflict handled gracefully');
     } else {
       console.error('Web3Modal initialization error:', error);
     }
   }
+
+  return web3Modal;
 }
 
 interface WalletState {
@@ -116,13 +119,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined' && !initialized.current) {
       initialized.current = true;
+
+      // Lazy-init Web3Modal on first mount instead of module scope
+      const modal = ensureWeb3Modal();
       
       const checkConnection = async () => {
         try {
           // Check if Web3Modal is initialized and has an existing connection
-          if (web3Modal && web3Modal.getIsConnected()) {
-            const address = web3Modal.getAddress();
-            const chainId = web3Modal.getChainId();
+          if (modal && modal.getIsConnected()) {
+            const address = modal.getAddress();
+            const chainId = modal.getChainId();
             
             if (address) {
               setWallet({
@@ -135,8 +141,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               });
               
               // Set up provider
-              providerRef.current = web3Modal.getWalletProvider()
-                ? new BrowserProvider(web3Modal.getWalletProvider() as any)
+              providerRef.current = modal.getWalletProvider()
+                ? new BrowserProvider(modal.getWalletProvider() as any)
                 : null;
             }
           } else if (window.ethereum) {
@@ -194,37 +200,47 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      // Listen for Web3Modal events
-      if (web3Modal) {
-        web3Modal.subscribeEvents((event) => {
+      // Listen for Web3Modal events — guard against spurious updates that cascade re-renders
+      if (modal) {
+        modal.subscribeEvents((event) => {
           if (event.data.event === 'MODAL_CLOSE') {
-            setWallet(prev => ({ ...prev, isConnecting: false }));
+            setWallet(prev => {
+              if (!prev.isConnecting) return prev; // no-op if already false
+              return { ...prev, isConnecting: false };
+            });
           } else if (event.data.event === 'CONNECT_SUCCESS') {
-            const address = web3Modal.getAddress();
-            const chainId = web3Modal.getChainId();
+            const address = modal.getAddress();
+            const chainId = modal.getChainId();
             
             if (address) {
-              setWallet({
-                connected: true,
-                address,
-                chainId: chainId != null ? Number(chainId) : null,
-                balance: null,
-                isConnecting: false,
-                walletType: 'walletconnect',
+              setWallet(prev => {
+                // Skip if already connected to same address
+                if (prev.connected && prev.address === address) return prev;
+                return {
+                  connected: true,
+                  address,
+                  chainId: chainId != null ? Number(chainId) : null,
+                  balance: null,
+                  isConnecting: false,
+                  walletType: 'walletconnect',
+                };
               });
               
-              providerRef.current = web3Modal.getWalletProvider()
-                ? new BrowserProvider(web3Modal.getWalletProvider() as any)
+              providerRef.current = modal.getWalletProvider()
+                ? new BrowserProvider(modal.getWalletProvider() as any)
                 : null;
             }
           } else if (event.data.event === 'DISCONNECT_SUCCESS') {
-            setWallet({
-              connected: false,
-              address: null,
-              chainId: null,
-              balance: null,
-              isConnecting: false,
-              walletType: null,
+            setWallet(prev => {
+              if (!prev.connected) return prev; // no-op if already disconnected
+              return {
+                connected: false,
+                address: null,
+                chainId: null,
+                balance: null,
+                isConnecting: false,
+                walletType: null,
+              };
             });
             providerRef.current = null;
           }
@@ -262,8 +278,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       // If no injected wallet or connection failed, use WalletConnect
-      if (web3Modal) {
-        await web3Modal.open();
+      const modal = ensureWeb3Modal();
+      if (modal) {
+        await modal.open();
         // Connection will be handled by the event listener
       } else {
         throw new Error('No wallet provider available. Please install MetaMask or configure WalletConnect.');
@@ -294,8 +311,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [wallet.address]);
 
   const switchChain = useCallback(async (chainId: number) => {
-    if (wallet.walletType === 'walletconnect' && web3Modal) {
-      await web3Modal.switchNetwork(chainId);
+    if (wallet.walletType === 'walletconnect') {
+      const modal = ensureWeb3Modal();
+      if (modal) {
+        await modal.switchNetwork(chainId);
+      }
     } else if (window.ethereum) {
       const eth = window.ethereum as unknown as EthereumProvider;
       try {

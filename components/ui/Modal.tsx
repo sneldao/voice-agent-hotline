@@ -20,13 +20,8 @@ export function Modal({
   children,
   size = 'md',
 }: ModalProps) {
-  const [mounted, setMounted] = React.useState(false);
   const modalRef = React.useRef<HTMLDivElement>(null);
   const previousActiveElement = React.useRef<Element | null>(null);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -68,7 +63,7 @@ export function Modal({
     document.body.style.overflow = 'hidden';
 
     // Focus the first focusable element in the modal
-    setTimeout(() => {
+    const focusTimer = setTimeout(() => {
       if (modalRef.current) {
         const focusableElement = modalRef.current.querySelector(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -82,6 +77,7 @@ export function Modal({
     }, 0);
 
     return () => {
+      clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleEscape);
       document.removeEventListener('keydown', handleTabKey);
       document.body.style.overflow = '';
@@ -93,7 +89,8 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!mounted || !isOpen) return null;
+  // SSR guard — no mounted state needed, avoids extra render cycle
+  if (typeof window === 'undefined' || !isOpen) return null;
 
   const sizes = {
     sm: 'max-w-sm',
