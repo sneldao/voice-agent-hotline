@@ -3,7 +3,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { AGENT_REGISTRY, findByElevenLabsId } from '@/lib/agent-registry';
+import { AGENT_REGISTRY } from '@/lib/agent-registry';
 import { redis } from '@/lib/redis';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
@@ -21,7 +21,21 @@ interface Session {
   startTime: number;
 }
 
-// Redis-backed session store for production reliability across cold starts
+// ── Rate limiting ──────────────────────────────────────────────────────────
+async function checkRateLimit(ip: string, key: string, max: number, windowSec: number): Promise<boolean> {
+  const rlKey = `ratelimit:${key}:${ip}`;
+  const count = await redis.incr(rlKey);
+  if (count === 1) await redis.expire(rlKey, windowSec);
+  return count <= max;
+}
+
+function getClientIp(request: Request): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+}
+
+// ── Redis-backed session store ─────────────────────────────────────────────
 async function getSession(callId: string): Promise<Session | null> {
   const data = await redis.hgetall(`signal_session:${callId}`);
   if (!data || Object.keys(data).length === 0) return null;
@@ -109,6 +123,12 @@ async function getSignedUrl(elevenLabsAgentId: string): Promise<string> {
  */
 export async function POST(request: Request) {
   try {
+    // Rate limit: 10 token requests per IP per minute
+    const ip = getClientIp(request);
+    if (!(await checkRateLimit(ip, 'signal_post', 10, 60))) {
+      return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
     const body: SignalMessage = await request.json();
     const { type, callId, agentId, userId } = body;
 
@@ -222,6 +242,12 @@ export async function GET(request: Request) {
 
   // Lightweight availability check — no token minting
   if (checkAgentId) {
+    // Rate limit: 30 availability checks per IP per minute
+    const ip = getClientIp(request);
+    if (!(await checkRateLimit(ip, 'signal_check', 30, 60))) {
+      return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
     const registryEntry = AGENT_REGISTRY[checkAgentId];
     if (registryEntry?.elevenLabsAgentId) {
       return Response.json({ available: true });

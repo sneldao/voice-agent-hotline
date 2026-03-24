@@ -22,9 +22,8 @@ import { Header } from '@/components/Header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
-import { readCallLaunchParams, type PaymentLaunchMode } from '@/lib/product-launch';
-import { runStreamingPreflight, STREAMING_BALANCE_ESTIMATE_MINUTES } from '@/lib/streaming-preflight';
-import { ACTIVE_CHAIN } from '@/lib/superfluid-streaming';
+import { AgentDetailModal } from '@/app/page-components';
+import { readCallLaunchParams } from '@/lib/product-launch';
 
 // Lazy load tabs for code splitting
 const DiscoverTab = React.lazy(() => import('@/components/DiscoverTab').then(m => ({ default: m.DiscoverTab })));
@@ -34,36 +33,26 @@ const ProfileTab = React.lazy(() => import('@/components/ProfileTab').then(m => 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'discover' | 'calls' | 'profile'>('discover');
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
-  const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentLaunchMode>('x402');
   const [inCall, setInCall] = useState(false);
   const [callId, setCallId] = useState<string | null>(null);
-  const [showSmartFinder, setShowSmartFinder] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showWalletGate, setShowWalletGate] = useState(false);
   const [showLowBalance, setShowLowBalance] = useState(false);
   const [requiredBalance, setRequiredBalance] = useState(0);
-  const [streamingPreflightMeta, setStreamingPreflightMeta] = useState<{
-    chainName: string;
-    tokenSymbol: string;
-    payoutAddress: string;
-    availableBalance?: number;
-    requiredBalance?: number;
-  } | null>(null);
   const [lowBalanceContent, setLowBalanceContent] = useState({
     title: 'Insufficient Balance',
     description: 'Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.',
     balanceLabel: 'Current Balance',
     requiredLabel: 'Required',
-    assetSymbol: undefined as string | undefined,
     currentBalance: 0,
   });
   const searchParams = useSearchParams();
   const router = useRouter();
-  const launchParamsRef = useRef<{ agentId: string; paymentMode: PaymentLaunchMode; autoStart: boolean } | null>(null);
+  const launchParamsRef = useRef<{ agentId: string; autoStart: boolean } | null>(null);
   const launchAttemptedRef = useRef(false);
 
-  const { connected, address, chainId, isConnecting, connect, disconnect, formatAddress, switchChain } = useWallet();
+  const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
   const { balance: userBalance, isLoading: isLoadingBalance, mutate: mutateBalance } = useUserBalance(address);
   const { agents, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents();
   const localCallHistory = useLocalCallHistory();
@@ -73,19 +62,6 @@ export default function Home() {
     launchParamsRef.current = null;
     launchAttemptedRef.current = false;
   }, []);
-  const getWalletChainId = useCallback(async () => {
-    if (typeof window === 'undefined' || !window.ethereum) {
-      return chainId;
-    }
-
-    try {
-      const ethereum = window.ethereum as { request: (args: { method: string }) => Promise<string> };
-      const currentChainId = await ethereum.request({ method: 'eth_chainId' });
-      return parseInt(currentChainId, 16);
-    } catch {
-      return chainId;
-    }
-  }, [chainId]);
 
   const startCall = useCallback(async () => {
     if (!selectedAgent) return;
@@ -111,56 +87,12 @@ export default function Home() {
 
     const estimatedCost = Number(selectedAgent.rate) * 5;
 
-    if (selectedPaymentMode === 'streaming') {
-      const payoutAddress = selectedAgent.wallet_address || selectedAgent.walletAddress;
-      let currentChainId = await getWalletChainId();
-
-      if (currentChainId !== ACTIVE_CHAIN.id) {
-        await switchChain(ACTIVE_CHAIN.id);
-        currentChainId = await getWalletChainId();
-      }
-
-      const preflight = await runStreamingPreflight({
-        walletAddress: address as `0x${string}`,
-        currentChainId,
-        agentAddress: payoutAddress,
-        ratePerMinute: Number(selectedAgent.rate),
-      });
-
-      if (!preflight.ok) {
-        setStreamingPreflightMeta(null);
-        if (preflight.code === 'insufficient_balance') {
-          setLowBalanceContent({
-            title: 'Insufficient Streaming Balance',
-            description: `Streaming calls use ${preflight.tokenSymbol}. Add enough balance to cover the first ${STREAMING_BALANCE_ESTIMATE_MINUTES} minutes before connecting.`,
-            balanceLabel: `Available ${preflight.tokenSymbol}`,
-            requiredLabel: `${STREAMING_BALANCE_ESTIMATE_MINUTES}-min reserve`,
-            assetSymbol: preflight.tokenSymbol,
-            currentBalance: preflight.availableBalance || 0,
-          });
-          setRequiredBalance(preflight.requiredBalance || 0);
-          setShowLowBalance(true);
-          return;
-        }
-
-        showError(preflight.message);
-        return;
-      }
-      setStreamingPreflightMeta({
-        chainName: preflight.requiredChainName,
-        tokenSymbol: preflight.tokenSymbol,
-        payoutAddress: payoutAddress || '',
-        availableBalance: preflight.availableBalance,
-        requiredBalance: preflight.requiredBalance,
-      });
-    } else if (userBalance < estimatedCost) {
-      setStreamingPreflightMeta(null);
+    if (userBalance < estimatedCost) {
       setLowBalanceContent({
         title: 'Insufficient Balance',
         description: 'Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.',
         balanceLabel: 'Current Balance',
         requiredLabel: 'Required',
-        assetSymbol: undefined,
         currentBalance: userBalance,
       });
       setRequiredBalance(estimatedCost);
@@ -172,36 +104,27 @@ export default function Home() {
     setCallId(newCallId);
     setInCall(true);
   }, [
-    address,
     connected,
-    getWalletChainId,
     isWebRTCSupported,
     micPermissions,
     requestMicrophonePermission,
     selectedAgent,
-    selectedPaymentMode,
-    switchChain,
     userBalance,
   ]);
 
   const endCall = useCallback(() => {
     clearLaunchState();
-    setStreamingPreflightMeta(null);
     setInCall(false);
     setSelectedAgent(null);
-    setSelectedPaymentMode('x402');
     setCallId(null);
   }, [clearLaunchState]);
 
   const handleSelectRelatedAgent = useCallback((agentId: string) => {
     const agent = agents.find((a: any) => a.id === agentId);
     clearLaunchState();
-    setStreamingPreflightMeta(null);
     setInCall(false);
     setCallId(null);
-    setSelectedPaymentMode('x402');
     setActiveTab('discover');
-    setShowSmartFinder(false);
 
     if (agent) {
       setSelectedAgent(agent);
@@ -225,8 +148,6 @@ export default function Home() {
     launchParamsRef.current = launchParams;
 
     setActiveTab('discover');
-    setShowSmartFinder(false);
-    setSelectedPaymentMode(launchParamsRef.current.paymentMode);
     router.replace('/', { scroll: false });
   }, [router, searchParams]);
 
@@ -298,10 +219,14 @@ export default function Home() {
           description={lowBalanceContent.description}
           balanceLabel={lowBalanceContent.balanceLabel}
           requiredLabel={lowBalanceContent.requiredLabel}
-          assetSymbol={lowBalanceContent.assetSymbol}
           onAddFunds={() => { setShowLowBalance(false); setActiveTab('profile'); }}
           onClose={() => setShowLowBalance(false)}
           onGoHome={() => { setShowLowBalance(false); setSelectedAgent(null); }}
+        />
+        <AgentDetailModal
+          agent={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+          onCall={startCall}
         />
         <Header
           connected={connected}
@@ -311,7 +236,7 @@ export default function Home() {
           onConnect={connect}
           onDisconnect={disconnect}
         />
-        <main id="main-content" className="max-w-md mx-auto pb-28" role="main">
+        <main id="main-content" className="max-w-2xl mx-auto pb-28 px-4 sm:px-6" role="main">
           {inCall && selectedAgent && callId ? (
             <ActiveCall
               agent={{
@@ -325,8 +250,6 @@ export default function Home() {
               }}
               callId={callId}
               userId={address || 'anonymous'}
-              paymentMode={selectedPaymentMode}
-              streamingPreflight={selectedPaymentMode === 'streaming' ? (streamingPreflightMeta || undefined) : undefined}
               relatedAgents={relatedAgents}
               onEnd={endCall}
               onSelectRelatedAgent={handleSelectRelatedAgent}
@@ -340,17 +263,11 @@ export default function Home() {
                     isLoading={isLoadingAgents}
                     error={agentsError}
                     onSelect={setSelectedAgent}
-                    selectedAgent={selectedAgent}
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
                     selectedCategory={selectedCategory}
                     onCategoryChange={setSelectedCategory}
-                    onCall={startCall}
                     onRefresh={mutateAgents}
-                    showSmartFinder={showSmartFinder}
-                    onToggleSmartFinder={() => setShowSmartFinder(!showSmartFinder)}
-                    paymentMode={selectedPaymentMode}
-                    onPaymentModeChange={setSelectedPaymentMode}
                   />
                 </Suspense>
               )}
@@ -380,7 +297,7 @@ export default function Home() {
           )}
         </main>
         <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50" role="navigation" aria-label="Main navigation">
-          <div className="max-w-md mx-auto px-4 py-2 flex justify-around">
+          <div className="max-w-2xl mx-auto px-4 py-2 flex justify-around">
             {[
               { id: 'discover', label: 'Discover', icon: '🔍' },
               { id: 'calls', label: 'Calls', icon: '📞' },

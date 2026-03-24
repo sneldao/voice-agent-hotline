@@ -1,25 +1,15 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Star, ChevronRight, Phone } from 'lucide-react';
 import { Card, Badge, Avatar, Modal, Button } from '@/components/ui';
-
-const CATEGORIES = [
-  { id: 'all', name: 'All', icon: '🌐' },
-  { id: 'blockchain', name: 'Blockchain', icon: '🪙' },
-  { id: 'tech', name: 'Tech', icon: '💻' },
-  { id: 'gaming', name: 'Gaming', icon: '🎮' },
-  { id: 'general', name: 'General', icon: '🤖' },
-];
 
 export const AgentCard = React.memo(function AgentCard({
   agent,
   onClick,
-  selected,
 }: {
   agent: any;
   onClick: () => void;
-  selected: boolean;
 }) {
   const rating = Number(agent.rating) || 0;
   const fullStars = Math.floor(rating);
@@ -28,11 +18,10 @@ export const AgentCard = React.memo(function AgentCard({
   return (
     <Card
       interactive
-      variant={selected ? 'gradient' : 'default'}
-      className={`group relative overflow-hidden p-4 ${selected ? 'border-cyan-500/50 bg-gradient-to-br from-cyan-500/10 to-blue-500/10' : 'hover:border-gray-700/50'} transition-all duration-200`}
+      variant="default"
+      className="group relative overflow-hidden p-4 hover:border-gray-700/50 transition-all duration-200"
       onClick={onClick}
     >
-      {selected && <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-transparent rounded-bl-full" />}
       <div className="flex items-start gap-4 relative">
         <div className="relative flex-shrink-0">
           <Avatar size="lg" online={agent.online}>{agent.avatar}</Avatar>
@@ -80,20 +69,14 @@ export const AgentCard = React.memo(function AgentCard({
 export const FeaturedCard = React.memo(function FeaturedCard({
   agent,
   onClick,
-  selected,
 }: {
   agent: any;
   onClick: () => void;
-  selected: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full sm:flex-shrink-0 sm:w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 ${
-        selected
-          ? 'border-cyan-500 bg-gradient-to-br from-cyan-500/20 to-blue-500/20'
-          : 'border-gray-800 bg-gray-900/50 hover:border-gray-700'
-      }`}
+      className="w-full sm:flex-shrink-0 sm:w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 border-gray-800 bg-gray-900/50 hover:border-gray-700"
     >
       <Avatar size="md" online={agent.online}>{agent.avatar}</Avatar>
       <div className="mt-3">
@@ -112,14 +95,10 @@ export function AgentDetailModal({
   agent,
   onClose,
   onCall,
-  paymentMode = 'x402',
-  onPaymentModeChange,
 }: {
   agent: any | null;
   onClose: () => void;
   onCall: () => void;
-  paymentMode?: 'x402' | 'streaming';
-  onPaymentModeChange?: (mode: 'x402' | 'streaming') => void;
 }) {
   const [calling, setCalling] = useState(false);
   const [estimatedMins, setEstimatedMins] = useState(5);
@@ -164,7 +143,7 @@ export function AgentDetailModal({
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium text-gray-300 mb-2 block">
-            {paymentMode === 'streaming' ? 'Max Call Duration' : 'Estimated Call Duration'}
+            Call Duration
           </label>
           <div className="flex gap-2">
             {[1, 5, 10, 15].map(mins => (
@@ -186,54 +165,17 @@ export function AgentDetailModal({
             <span className="text-white font-medium">${agent.rate}/min</span>
           </div>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">{paymentMode === 'streaming' ? 'Max duration' : 'Duration'}</span>
+            <span className="text-gray-400">Duration</span>
             <span className="text-white">{estimatedMins} minutes</span>
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-gray-700">
-            <span className="text-gray-400">{paymentMode === 'streaming' ? 'Max cost' : 'Estimated Cost'}</span>
+            <span className="text-gray-400">Estimated Cost</span>
             <span className="text-cyan-400 font-bold text-lg">${estimatedCost}</span>
           </div>
         </div>
-        {onPaymentModeChange && (
-          <div>
-            <label className="text-sm font-medium text-gray-300 mb-2 block">Payment Method</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => onPaymentModeChange('x402')}
-                className={`py-3 px-3 rounded-xl text-sm font-medium transition-all border ${
-                  paymentMode === 'x402'
-                    ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400'
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
-                }`}
-              >
-                <div className="text-base mb-0.5">💳</div>
-                <div className="font-semibold">Pay upfront</div>
-                <div className="text-xs opacity-70 mt-0.5">Fixed amount, settled on-chain</div>
-              </button>
-              <button
-                onClick={() => onPaymentModeChange('streaming')}
-                disabled={!agent.wallet_address && !agent.walletAddress}
-                title={!agent.wallet_address && !agent.walletAddress ? 'This agent has not configured a payout wallet' : undefined}
-                className={`py-3 px-3 rounded-xl text-sm font-medium transition-all border disabled:opacity-40 disabled:cursor-not-allowed ${
-                  paymentMode === 'streaming'
-                    ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400'
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
-                }`}
-              >
-                <div className="text-base mb-0.5">⚡</div>
-                <div className="font-semibold">Stream per second</div>
-                <div className="text-xs opacity-70 mt-0.5">Pay only for time used</div>
-              </button>
-            </div>
-            <p className={`text-xs mt-2 ${
-              paymentMode === 'streaming' ? 'text-cyan-400/80' : 'text-gray-500'
-            }`}>
-              {paymentMode === 'streaming'
-                ? '⚡ cUSD streams directly to the agent in real-time — stops the moment you hang up'
-                : '💳 A fixed payment is authorised before the call starts'}
-            </p>
-          </div>
-        )}
+        <p className="text-xs text-gray-500">
+          Payment is settled on-chain before the call connects. You only pay for the time you use.
+        </p>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
           <Button

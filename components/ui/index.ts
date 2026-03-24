@@ -81,9 +81,6 @@ export { WalletConnect, WalletSelector, BalanceDisplay } from './WalletConnect';
 // Agent Creation
 export { AgentCreationModal } from './AgentCreation';
 
-// Better Search
-export { BetterSearch } from './BetterSearch';
-
 // Payment Flow (x402)
 export { PaymentFlow, DelegationPayment } from './PaymentFlow';
 

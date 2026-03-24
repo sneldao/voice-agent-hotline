@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useCallback, useMemo, memo, useEffect, useRef } from 'react';
-import { ArrowRight, Search, Sparkles, Star } from 'lucide-react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { Search, Star } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
-import { SmartAgentFinder } from '@/components/SmartAgentFinder';
 import { PullToRefresh, RefreshButton, EmptySearchState, showSuccess } from '@/components/ui';
-import { AgentCard, FeaturedCard, AgentDetailModal } from '@/app/page-components';
+import { AgentCard, FeaturedCard } from '@/app/page-components';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -21,17 +20,11 @@ interface DiscoverTabProps {
   isLoading: boolean;
   error: string | null;
   onSelect: (a: any) => void;
-  selectedAgent: any | null;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedCategory: string;
   onCategoryChange: (c: string) => void;
-  onCall: () => void;
   onRefresh: () => Promise<void>;
-  showSmartFinder: boolean;
-  onToggleSmartFinder: () => void;
-  paymentMode?: 'x402' | 'streaming';
-  onPaymentModeChange?: (mode: 'x402' | 'streaming') => void;
 }
 
 export function DiscoverTab({
@@ -39,17 +32,11 @@ export function DiscoverTab({
   isLoading,
   error,
   onSelect,
-  selectedAgent,
   searchQuery,
   onSearchChange,
   selectedCategory,
   onCategoryChange,
-  onCall,
   onRefresh,
-  showSmartFinder,
-  onToggleSmartFinder,
-  paymentMode,
-  onPaymentModeChange,
 }: DiscoverTabProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20); // Pagination
@@ -155,41 +142,13 @@ export function DiscoverTab({
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="p-4 space-y-5">
-        {/* Smart Agent Finder */}
-        {showSmartFinder ? (
-          <SmartAgentFinder
-            availableAgents={agents.map(a => a.id)}
-            onSelectAgent={(agentId) => {
-              const agent = agents.find(a => a.id === agentId);
-              if (agent) onSelect(agent);
-            }}
-            onMinimize={onToggleSmartFinder}
-          />
-        ) : (
-          <button
-            onClick={onToggleSmartFinder}
-            className="w-full p-4 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-xl text-left hover:border-cyan-500/50 transition-all group flex items-center gap-3"
-          >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-white group-hover:text-cyan-400 transition-colors">
-                Smart Agent Finder
-              </p>
-              <p className="text-sm text-gray-400">AI-powered agent matching</p>
-            </div>
-            <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-cyan-400 transition-colors" />
-          </button>
-        )}
-
         {/* Search */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Or search agents manually..."
+              placeholder="Search agents..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
@@ -233,13 +192,12 @@ export function DiscoverTab({
                 <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
                   <Star className="w-4 h-4 text-yellow-400" /> Featured
                 </h2>
-                <div className="grid grid-cols-2 gap-3 sm:flex sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide sm:-mx-4 sm:px-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {onlineAgents.slice(0, 10).map(agent => (
                     <FeaturedCard
                       key={agent.id}
                       agent={agent}
                       onClick={() => onSelect(agent)}
-                      selected={selectedAgent?.id === agent.id}
                     />
                   ))}
                 </div>
@@ -252,24 +210,13 @@ export function DiscoverTab({
                 {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
                 <span className="ml-2 text-xs text-gray-500">({filteredAgents.length})</span>
               </h2>
-              <div 
-                className="space-y-3"
-                role="listbox"
-                aria-label="Available agents"
-                aria-activedescendant={selectedAgent ? `agent-${selectedAgent.id}` : undefined}
-              >
+              <div className="space-y-3">
                 {visibleAgents.map(agent => (
-                  <div 
+                  <AgentCard
                     key={agent.id}
-                    role="option"
-                    aria-selected={selectedAgent?.id === agent.id}
-                  >
-                    <AgentCard
-                      agent={agent}
-                      onClick={() => onSelect(agent)}
-                      selected={selectedAgent?.id === agent.id}
-                    />
-                  </div>
+                    agent={agent}
+                    onClick={() => onSelect(agent)}
+                  />
                 ))}
               </div>
               {hasMore && (
@@ -284,15 +231,6 @@ export function DiscoverTab({
             </section>
           </>
         )}
-
-        {/* Agent Detail Modal */}
-        <AgentDetailModal
-          agent={selectedAgent}
-          onClose={() => onSelect(null)}
-          onCall={onCall}
-          paymentMode={paymentMode}
-          onPaymentModeChange={onPaymentModeChange}
-        />
       </div>
     </PullToRefresh>
   );
