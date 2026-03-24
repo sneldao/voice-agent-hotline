@@ -4,6 +4,9 @@
 
 'use client';
 
+// Force dynamic rendering to avoid SSR issues with client-only SDKs
+export const revalidate = 0;
+
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAgentVoice } from '@/lib/useAgentVoice';

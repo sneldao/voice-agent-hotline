@@ -13,6 +13,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  
+  // Disable static generation for all routes - this app requires dynamic rendering
+  // due to client-only SDKs (ElevenLabs, WebRTC, WalletConnect)
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  },
 
   // Server actions configuration
   experimental: {
@@ -35,8 +41,16 @@ const nextConfig = {
     ];
   },
 
-  // Webpack configuration to suppress third-party warnings
-  webpack: (config, { isServer, dev }) => {
+  // Webpack configuration to suppress third-party warnings and handle client-only modules
+  webpack: (config, { isServer }) => {
+    // Mark client-only modules as external on server to prevent bundling during SSR
+    if (isServer) {
+      config.externals = config.externals || [];
+      if (Array.isArray(config.externals)) {
+        config.externals.push('@elevenlabs/client');
+      }
+    }
+
     // Suppress pino-pretty warning from WalletConnect
     if (!isServer) {
       config.resolve.fallback = {

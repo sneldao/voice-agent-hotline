@@ -1,8 +1,14 @@
 'use client';
 
+// Force dynamic rendering to avoid SSR issues with client-only SDKs
+export const revalidate = 0;
+
 import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
+import dynamic from 'next/dynamic';
 import { Phone, Search, Star, Clock, Loader2, AlertCircle, SlidersHorizontal, X, Wallet } from 'lucide-react';
-import { ActiveCall } from '@/components/ActiveCall';
+// Dynamic import for ActiveCall with SSR disabled to avoid ElevenLabs SDK issues
+const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
 import { useWallet } from '@/lib/WalletContextNew';
 import { apiUrl } from '@/lib/api';
 

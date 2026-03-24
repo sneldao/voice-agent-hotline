@@ -1,15 +1,20 @@
 'use client';
 
+// Force dynamic rendering to avoid SSR issues with client-only SDKs
+export const revalidate = 0;
+
 import { useState, useCallback, Suspense, useEffect, useMemo, useRef } from 'react';
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { ToastProvider, showError } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
 import { useOnboarding } from '@/lib/useOnboarding';
 import { useUserBalance, useAgents } from '@/lib/useSWR';
-import { ActiveCall } from '@/components/ActiveCall';
+// Dynamic import for ActiveCall with SSR disabled to avoid ElevenLabs SDK issues
+const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
 import { Onboarding } from '@/components/Onboarding';
 import { WalletConnectGate } from '@/components/WalletConnectGate';
 import { LowBalanceWarning } from '@/components/LowBalanceWarning';
@@ -91,6 +96,18 @@ export default function Home() {
       if (!granted) { showError('Microphone permission required'); return; }
     }
     if (!connected) { setShowWalletGate(true); return; }
+
+    // Pre-flight: verify the agent is configured (lightweight, no token minting)
+    try {
+      const preflightRes = await fetch(`/api/webrtc/signal?agentId=${encodeURIComponent(selectedAgent.id)}`);
+      if (!preflightRes.ok) {
+        showError('Agent is unavailable right now');
+        return;
+      }
+    } catch {
+      showError('Cannot reach voice service. Please try again.');
+      return;
+    }
 
     const estimatedCost = Number(selectedAgent.rate) * 5;
 
@@ -191,17 +208,8 @@ export default function Home() {
     }
   }, [agents, clearLaunchState]);
 
-  // DRY: Single source of truth for filtering logic
-  const filteredAgents = useMemo(() => {
-    return agents.filter((agent: any) => {
-      const name = (agent.name || "").toLowerCase();
-      const specialty = (agent.specialty || "").toLowerCase();
-      const q = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || name.includes(q) || specialty.includes(q);
-      const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [agents, searchQuery, selectedCategory]);
+  // Agents are passed unfiltered to DiscoverTab which handles filtering with debounced search
+  const filteredAgents = agents;
 
   const relatedAgents = useMemo(
     () => getRelatedAgentRecommendations(selectedAgent, agents, 3),

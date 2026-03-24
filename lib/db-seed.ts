@@ -215,6 +215,7 @@ export async function seedAgents() {
     };
 
     await redis.hset(`agent:${agent.id}`, agentData as unknown as Record<string, string>);
+    await redis.sadd('agent_index', agent.id);
     console.log(`  ✅ Saved ${agent.name} to Redis`);
   }
 
@@ -231,12 +232,12 @@ export async function getAgent(agentId: string): Promise<AgentSeed | null> {
 }
 
 export async function getAllAgents(): Promise<AgentSeed[]> {
-  const agentKeys = await redis.keys('agent:*');
-  if (!agentKeys || agentKeys.length === 0) return [];
+  const agentIds = await redis.smembers('agent_index');
+  if (!agentIds || agentIds.length === 0) return [];
 
   const agents = await Promise.all(
-    agentKeys.map(async (key) => {
-      const agent = await redis.hgetall(key);
+    agentIds.map(async (id) => {
+      const agent = await redis.hgetall(`agent:${id}`);
       if (!agent || Object.keys(agent).length === 0) return null;
 
       return {

@@ -8,14 +8,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// Dynamic import for SSR safety
-let Conversation: any = null;
-if (typeof window !== 'undefined') {
-  import('@elevenlabs/client').then(mod => {
-    Conversation = mod.Conversation;
-  });
-}
-
 export interface ConversationState {
   isConnected: boolean;
   isConnecting: boolean;
@@ -90,21 +82,6 @@ export function useElevenLabsConversation(options: ConversationOptions) {
       return false;
     }
     
-    // Wait for Conversation to be loaded
-    if (!Conversation) {
-      try {
-        const mod = await import('@elevenlabs/client');
-        Conversation = mod.Conversation;
-      } catch (error) {
-        console.error('[ElevenLabs] Failed to load SDK:', error);
-        setState(prev => ({
-          ...prev,
-          error: 'Failed to load ElevenLabs SDK',
-        }));
-        return false;
-      }
-    }
-    
     if (conversationRef.current) {
       console.warn('[ElevenLabs] Conversation already active');
       return false;
@@ -118,6 +95,9 @@ export function useElevenLabsConversation(options: ConversationOptions) {
     }));
 
     try {
+      // Dynamically import the SDK to avoid SSR issues
+      const { Conversation } = await import('@elevenlabs/client');
+      
       // Get conversation token from our signaling endpoint
       const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       

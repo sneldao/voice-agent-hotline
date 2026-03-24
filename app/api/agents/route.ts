@@ -23,10 +23,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ agent });
     }
 
-    // List all agents
-    const agentKeys = await redis.keys('agent:*');
+    // List all agents via Set index (O(N) members, non-blocking unlike KEYS)
+    let agentIds = await redis.smembers('agent_index');
+    if (agentIds.length === 0) {
+      // One-time migration: backfill index from existing agent:* keys
+      const keys = await redis.keys('agent:*');
+      agentIds = keys.map(k => k.replace('agent:', ''));
+      if (agentIds.length > 0) {
+        for (const id of agentIds) {
+          await redis.sadd('agent_index', id);
+        }
+      }
+    }
     const agents = await Promise.all(
-      agentKeys.map(key => redis.hgetall(key))
+      agentIds.map(id => redis.hgetall(`agent:${id}`))
     );
 
     return NextResponse.json({ agents });
@@ -184,6 +194,7 @@ export async function POST(req: NextRequest) {
         total_revenue: '0',
       };
       await redis.hset(`agent:${agentId}`, agent);
+      await redis.sadd('agent_index', agentId);
       console.log('[Agents API] Self-registration submitted:', agentId, name);
       return NextResponse.json({ agent, message: 'Registration submitted for review' }, { status: 201 });
     }
@@ -241,6 +252,7 @@ export async function POST(req: NextRequest) {
     };
 
     await redis.hset(`agent:${agentId}`, agent);
+    await redis.sadd('agent_index', agentId);
 
     return NextResponse.json({ agent }, { status: 201 });
   } catch (error: any) {
@@ -301,6 +313,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const deleted = await redis.del(`agent:${id}`);
+    await redis.srem('agent_index', id);
 
     if (deleted === 0) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });

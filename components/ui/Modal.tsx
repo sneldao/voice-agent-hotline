@@ -117,7 +117,7 @@ export function Modal({
       >
         {/* Overlay */}
         <div 
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"
+          className="absolute inset-0 bg-black/80 animate-fade-in"
           onClick={onClose}
         />
         
@@ -134,8 +134,7 @@ export function Modal({
             w-full
             mx-4
             ${sizes[size]}
-            bg-gray-900/95
-            backdrop-blur-xl
+            bg-gray-900
             rounded-2xl
             border
             border-gray-700/50

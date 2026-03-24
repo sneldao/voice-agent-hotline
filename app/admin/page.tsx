@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering to avoid SSR issues with client-only SDKs
+export const revalidate = 0;
+
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@/lib/WalletContextNew';
 import { apiUrl } from '@/lib/api';

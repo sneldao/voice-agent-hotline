@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import { AGENT_REGISTRY, findByElevenLabsId } from '@/lib/agent-registry';
+import { redis } from '@/lib/redis';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
@@ -14,13 +15,36 @@ interface SignalMessage {
   userId?: string;
 }
 
-// In-memory session store for development (use Redis in production)
-const sessions = new Map<string, {
+interface Session {
   agentId: string;
-  elevenLabsAgentId: string | null;
-  conversationId?: string;
+  elevenLabsAgentId: string;
   startTime: number;
-}>();
+}
+
+// Redis-backed session store for production reliability across cold starts
+async function getSession(callId: string): Promise<Session | null> {
+  const data = await redis.hgetall(`signal_session:${callId}`);
+  if (!data || Object.keys(data).length === 0) return null;
+  return {
+    agentId: data.agentId as string,
+    elevenLabsAgentId: data.elevenLabsAgentId as string,
+    startTime: Number(data.startTime),
+  };
+}
+
+async function setSession(callId: string, session: Session): Promise<void> {
+  await redis.hset(`signal_session:${callId}`, {
+    agentId: session.agentId,
+    elevenLabsAgentId: session.elevenLabsAgentId,
+    startTime: session.startTime.toString(),
+  });
+  // Auto-expire after 1 hour to avoid orphaned keys
+  await redis.expire(`signal_session:${callId}`, 3600);
+}
+
+async function deleteSession(callId: string): Promise<void> {
+  await redis.del(`signal_session:${callId}`);
+}
 
 /**
  * Get ElevenLabs conversation token for WebRTC
@@ -99,40 +123,49 @@ export async function POST(request: Request) {
         );
       }
 
-      // Look up agent in registry to get ElevenLabs agent ID
+      // Look up agent: first in static registry, then fall back to Redis
       const registryEntry = AGENT_REGISTRY[agentId];
-      
-      if (!registryEntry) {
-        return Response.json(
-          { error: `Agent ${agentId} not found in registry` },
-          { status: 404 }
-        );
+      let elevenLabsAgentId: string | null = null;
+      let voiceId = '';
+      let agentName = '';
+
+      if (registryEntry) {
+        elevenLabsAgentId = registryEntry.elevenLabsAgentId;
+        voiceId = registryEntry.voiceId;
+        agentName = registryEntry.name;
+      } else {
+        // Dynamic agent — look up in Redis
+        const redisAgent = await redis.hgetall(`agent:${agentId}`);
+        if (redisAgent && Object.keys(redisAgent).length > 0) {
+          elevenLabsAgentId = (redisAgent.elevenlabs_agent_id as string) || null;
+          voiceId = (redisAgent.voice_id as string) || '';
+          agentName = (redisAgent.name as string) || '';
+        }
       }
 
-      const elevenLabsAgentId = registryEntry.elevenLabsAgentId;
-
       if (!elevenLabsAgentId) {
-        // Agent not seeded in ElevenLabs yet
         return Response.json({
           error: 'Agent not configured in ElevenLabs',
-          hint: 'Run `npx tsx scripts/seed-elevenlabs.ts` to seed agents',
+          hint: registryEntry
+            ? 'Run `npx tsx scripts/seed-elevenlabs.ts` to seed agents'
+            : 'Agent has no ElevenLabs ID set',
           agentId,
-        }, { status: 503 });
+        }, { status: registryEntry ? 503 : 404 });
       }
 
       // Create session
-      sessions.set(callId, {
+      await setSession(callId, {
         agentId,
         elevenLabsAgentId,
         startTime: Date.now(),
       });
 
       try {
-        // Get conversation token for WebRTC
-        const token = await getConversationToken(elevenLabsAgentId);
-
-        // Also get signed URL as fallback
-        const signedUrl = await getSignedUrl(elevenLabsAgentId);
+        // Fetch conversation token and signed URL in parallel
+        const [token, signedUrl] = await Promise.all([
+          getConversationToken(elevenLabsAgentId),
+          getSignedUrl(elevenLabsAgentId),
+        ]);
 
         return Response.json({
           type: 'token',
@@ -140,9 +173,9 @@ export async function POST(request: Request) {
           token,
           signedUrl,
           elevenLabsAgentId,
-          connectionType: 'webrtc', // Client can use 'websocket' with signedUrl
-          voiceId: registryEntry.voiceId,
-          agentName: registryEntry.name,
+          connectionType: 'webrtc',
+          voiceId,
+          agentName,
         });
       } catch (error) {
         console.error('[Signal] Failed to get ElevenLabs token:', error);
@@ -155,7 +188,7 @@ export async function POST(request: Request) {
 
     // ICE candidate handling (for future direct WebRTC if needed)
     if (type === 'ice-candidate') {
-      const session = sessions.get(callId);
+      const session = await getSession(callId);
       if (!session) {
         return Response.json(
           { error: 'Session not found' },
@@ -185,6 +218,20 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const callId = url.searchParams.get('callId');
+  const checkAgentId = url.searchParams.get('agentId');
+
+  // Lightweight availability check — no token minting
+  if (checkAgentId) {
+    const registryEntry = AGENT_REGISTRY[checkAgentId];
+    if (registryEntry?.elevenLabsAgentId) {
+      return Response.json({ available: true });
+    }
+    const redisAgent = await redis.hgetall(`agent:${checkAgentId}`);
+    if (redisAgent && redisAgent.elevenlabs_agent_id) {
+      return Response.json({ available: true });
+    }
+    return Response.json({ error: 'Agent not configured' }, { status: 404 });
+  }
 
   if (!callId) {
     // Health check - return registry status
@@ -200,7 +247,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const session = sessions.get(callId);
+  const session = await getSession(callId);
   if (!session) {
     return Response.json(
       { error: 'Session not found' },
@@ -223,10 +270,12 @@ export async function DELETE(request: Request) {
   const url = new URL(request.url);
   const callId = url.searchParams.get('callId');
 
-  if (callId && sessions.has(callId)) {
-    const session = sessions.get(callId);
-    sessions.delete(callId);
-    console.log(`[Signal] Session ${callId} ended (agent: ${session?.agentId})`);
+  if (callId) {
+    const session = await getSession(callId);
+    if (session) {
+      await deleteSession(callId);
+      console.log(`[Signal] Session ${callId} ended (agent: ${session.agentId})`);
+    }
   }
 
   return Response.json({ deleted: true });

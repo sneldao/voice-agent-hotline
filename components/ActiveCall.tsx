@@ -107,12 +107,12 @@ export function ActiveCall({
     }
   }, [hasStarted, isSupported, startCall, resetPayment]);
 
-  // Update connecting state when call is active
+  // Update connecting state when call is active or errored
   useEffect(() => {
-    if (call.isConnected || call.duration > 0 || call.status === 'connected') {
+    if (call.isConnected || call.duration > 0 || call.status === 'connected' || call.error) {
       setIsConnecting(false);
     }
-  }, [call.isConnected, call.duration, call.status]);
+  }, [call.isConnected, call.duration, call.status, call.error]);
 
   useEffect(() => {
     if (paymentMode !== 'streaming' || !call.isConnected || streamingStartedRef.current) {
