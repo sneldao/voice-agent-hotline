@@ -1,6 +1,5 @@
 'use client';
 
-import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Toaster, toast } from 'sonner';
 import {
@@ -41,7 +40,6 @@ import {
 
 // Toast configuration
 export function ToastProvider() {
-  const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -51,7 +49,7 @@ export function ToastProvider() {
   return (
     <Toaster
       position="bottom-center"
-      theme={theme === 'dark' ? 'dark' : 'light'}
+      theme="dark"
       toastOptions={{
         className: 'bg-gray-900 text-white border border-gray-800',
         duration: 3000,

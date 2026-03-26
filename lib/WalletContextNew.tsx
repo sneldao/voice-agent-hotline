@@ -54,33 +54,44 @@ const ethersConfig = defaultConfig({
 let web3Modal: ReturnType<typeof createWeb3Modal> | null = null;
 let web3ModalInitAttempted = false;
 
+let web3ModalEventCallback: ((event: any) => void) | null = null;
+
 function ensureWeb3Modal() {
   if (web3ModalInitAttempted) return web3Modal;
   web3ModalInitAttempted = true;
 
   if (!projectId || typeof window === 'undefined') return null;
 
-  try {
-    web3Modal = createWeb3Modal({
-      ethersConfig,
-      chains,
-      projectId,
-      enableAnalytics: false,
-      themeMode: 'dark',
-      themeVariables: {
-        '--w3m-accent': '#06b6d4',
-        '--w3m-border-radius-master': '12px',
-      },
-    });
-  } catch (error: any) {
-    if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
-      console.warn('Web3Modal: window.ethereum conflict handled gracefully');
-    } else {
-      console.error('Web3Modal initialization error:', error);
-    }
-  }
+  // Defer initialization off the critical render path to avoid
+  // MutationObserver conflicts with React hydration and portal rendering.
+  setTimeout(() => {
+    try {
+      web3Modal = createWeb3Modal({
+        ethersConfig,
+        chains,
+        projectId,
+        enableAnalytics: false,
+        themeMode: 'dark',
+        themeVariables: {
+          '--w3m-accent': '#06b6d4',
+          '--w3m-border-radius-master': '12px',
+        },
+      });
 
-  return web3Modal;
+      // Subscribe events now that modal is ready
+      if (web3Modal && web3ModalEventCallback) {
+        web3Modal.subscribeEvents(web3ModalEventCallback);
+      }
+    } catch (error: any) {
+      if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
+        console.warn('Web3Modal: window.ethereum conflict handled gracefully');
+      } else {
+        console.error('Web3Modal initialization error:', error);
+      }
+    }
+  }, 0);
+
+  return null;
 }
 
 interface WalletState {
@@ -200,51 +211,56 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      // Listen for Web3Modal events — guard against spurious updates that cascade re-renders
-      if (modal) {
-        modal.subscribeEvents((event) => {
-          if (event.data.event === 'MODAL_CLOSE') {
+      // Register Web3Modal event callback — subscribed once modal is ready (deferred init)
+      web3ModalEventCallback = (event) => {
+        const m = web3Modal;
+        if (!m) return;
+        if (event.data.event === 'MODAL_CLOSE') {
+          setWallet(prev => {
+            if (!prev.isConnecting) return prev; // no-op if already false
+            return { ...prev, isConnecting: false };
+          });
+        } else if (event.data.event === 'CONNECT_SUCCESS') {
+          const address = m.getAddress();
+          const chainId = m.getChainId();
+          
+          if (address) {
             setWallet(prev => {
-              if (!prev.isConnecting) return prev; // no-op if already false
-              return { ...prev, isConnecting: false };
-            });
-          } else if (event.data.event === 'CONNECT_SUCCESS') {
-            const address = modal.getAddress();
-            const chainId = modal.getChainId();
-            
-            if (address) {
-              setWallet(prev => {
-                // Skip if already connected to same address
-                if (prev.connected && prev.address === address) return prev;
-                return {
-                  connected: true,
-                  address,
-                  chainId: chainId != null ? Number(chainId) : null,
-                  balance: null,
-                  isConnecting: false,
-                  walletType: 'walletconnect',
-                };
-              });
-              
-              providerRef.current = modal.getWalletProvider()
-                ? new BrowserProvider(modal.getWalletProvider() as any)
-                : null;
-            }
-          } else if (event.data.event === 'DISCONNECT_SUCCESS') {
-            setWallet(prev => {
-              if (!prev.connected) return prev; // no-op if already disconnected
+              // Skip if already connected to same address
+              if (prev.connected && prev.address === address) return prev;
               return {
-                connected: false,
-                address: null,
-                chainId: null,
+                connected: true,
+                address,
+                chainId: chainId != null ? Number(chainId) : null,
                 balance: null,
                 isConnecting: false,
-                walletType: null,
+                walletType: 'walletconnect',
               };
             });
-            providerRef.current = null;
+            
+            providerRef.current = m.getWalletProvider()
+              ? new BrowserProvider(m.getWalletProvider() as any)
+              : null;
           }
-        });
+        } else if (event.data.event === 'DISCONNECT_SUCCESS') {
+          setWallet(prev => {
+            if (!prev.connected) return prev; // no-op if already disconnected
+            return {
+              connected: false,
+              address: null,
+              chainId: null,
+              balance: null,
+              isConnecting: false,
+              walletType: null,
+            };
+          });
+          providerRef.current = null;
+        }
+      };
+
+      // If modal already initialized (e.g. from prior mount), subscribe immediately
+      if (web3Modal) {
+        web3Modal.subscribeEvents(web3ModalEventCallback);
       }
     }
   }, []);
