@@ -75,7 +75,9 @@ export function ThemeToggle({ className = '' }: ThemeToggleProps) {
 }
 
 /**
- * Initialize theme before hydration to prevent flash
+ * Initialize theme before hydration to prevent flash of unstyled content.
+ * Uses dangerouslySetInnerHTML intentionally — this script must run synchronously
+ * before React hydration to avoid a visible theme flicker.
  */
 export function ThemeScript() {
   return (

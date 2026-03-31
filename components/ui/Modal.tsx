@@ -100,14 +100,6 @@ export function Modal({
 
   return createPortal(
     <>
-      {/* Styles for animations */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes scale-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        .animate-fade-in { animation: fade-in 0.2s ease-out; }
-        .animate-scale-in { animation: scale-in 0.2s ease-out; }
-      ` }} />
-      
       {/* Backdrop */}
       <div 
         className="fixed inset-0 z-50 flex items-center justify-center"

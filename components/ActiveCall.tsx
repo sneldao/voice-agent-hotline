@@ -6,22 +6,13 @@ import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useRealPayment, type PaymentState } from '@/lib/useRealPayment';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
+import type { Agent } from '@/lib/types';
 import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
 import { Mic, MicOff, Volume2, Volume1, VolumeX, PhoneOff, Clock, Signal, AlertCircle, Phone } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 import { showError } from './ui';
 import { parseEther } from 'viem';
-
-interface Agent {
-  id: string;
-  name: string;
-  specialty: string;
-  avatar?: string;
-  rate: number;
-  color?: string;
-  walletAddress?: string;
-}
 
 interface ActiveCallProps {
   agent: Agent;
@@ -87,7 +78,7 @@ export function ActiveCall({
   const [isFinalizing, setIsFinalizing] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const streamingStartedRef = useRef(false);
-  const agentPayoutAddress = agent.walletAddress || '';
+  const agentPayoutAddress = agent.wallet_address || agent.wallet || '';
   const platformAddress = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
   // Fall back to platform address if agent has no wallet (no split in that case)
   const payoutAddress = agentPayoutAddress || platformAddress;

@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with client-only SDKs
 export const revalidate = 0;
 
-import { useState, useCallback, Suspense, useEffect, useMemo, useRef } from 'react';
+import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef } from 'react';
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -14,6 +14,9 @@ import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
 import { useOnboarding } from '@/lib/useOnboarding';
 import { useUserBalance, useAgents } from '@/lib/useSWR';
+import { Search, Phone, User } from 'lucide-react';
+import { generateCallId } from '@/lib/ids';
+import type { Agent } from '@/lib/types';
 // Dynamic import for ActiveCall with SSR disabled to avoid ElevenLabs SDK issues
 const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
 import { Onboarding } from '@/components/Onboarding';
@@ -31,23 +34,94 @@ const DiscoverTab = React.lazy(() => import('@/components/DiscoverTab').then(m =
 const CallsHistoryTab = React.lazy(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
 const ProfileTab = React.lazy(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
 
-export default function Home() {
-  const [activeTab, setActiveTab] = useState<'discover' | 'calls' | 'profile'>('discover');
-  const [selectedAgent, setSelectedAgent] = useState<any>(null);
-  const [inCall, setInCall] = useState(false);
-  const [callId, setCallId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [showWalletGate, setShowWalletGate] = useState(false);
-  const [showLowBalance, setShowLowBalance] = useState(false);
-  const [requiredBalance, setRequiredBalance] = useState(0);
-  const [lowBalanceContent, setLowBalanceContent] = useState({
+interface PageState {
+  activeTab: 'discover' | 'calls' | 'profile';
+  selectedAgent: Agent | null;
+  inCall: boolean;
+  callId: string | null;
+  searchQuery: string;
+  selectedCategory: string;
+  showWalletGate: boolean;
+  showLowBalance: boolean;
+  requiredBalance: number;
+  lowBalanceContent: {
+    title: string;
+    description: string;
+    balanceLabel: string;
+    requiredLabel: string;
+    currentBalance: number;
+  };
+}
+
+type PageAction =
+  | { type: 'SET_TAB'; tab: PageState['activeTab'] }
+  | { type: 'SELECT_AGENT'; agent: Agent | null }
+  | { type: 'START_CALL'; callId: string }
+  | { type: 'END_CALL' }
+  | { type: 'SET_SEARCH'; query: string }
+  | { type: 'SET_CATEGORY'; category: string }
+  | { type: 'SHOW_WALLET_GATE'; show: boolean }
+  | { type: 'SHOW_LOW_BALANCE'; show: boolean; required?: number; balance?: number }
+  | { type: 'DISMISS_LOW_BALANCE' };
+
+const initialPageState: PageState = {
+  activeTab: 'discover',
+  selectedAgent: null,
+  inCall: false,
+  callId: null,
+  searchQuery: '',
+  selectedCategory: 'all',
+  showWalletGate: false,
+  showLowBalance: false,
+  requiredBalance: 0,
+  lowBalanceContent: {
     title: 'Insufficient Balance',
     description: 'Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.',
     balanceLabel: 'Current Balance',
     requiredLabel: 'Required',
     currentBalance: 0,
-  });
+  },
+};
+
+function pageReducer(state: PageState, action: PageAction): PageState {
+  switch (action.type) {
+    case 'SET_TAB':
+      return { ...state, activeTab: action.tab };
+    case 'SELECT_AGENT':
+      return { ...state, selectedAgent: action.agent };
+    case 'START_CALL':
+      return { ...state, inCall: true, callId: action.callId };
+    case 'END_CALL':
+      return { ...state, inCall: false, selectedAgent: null, callId: null };
+    case 'SET_SEARCH':
+      return { ...state, searchQuery: action.query };
+    case 'SET_CATEGORY':
+      return { ...state, selectedCategory: action.category };
+    case 'SHOW_WALLET_GATE':
+      return { ...state, showWalletGate: action.show };
+    case 'SHOW_LOW_BALANCE':
+      return {
+        ...state,
+        showLowBalance: action.show,
+        ...(action.required !== undefined ? { requiredBalance: action.required } : {}),
+        ...(action.balance !== undefined
+          ? { lowBalanceContent: { ...state.lowBalanceContent, currentBalance: action.balance } }
+          : {}),
+      };
+    case 'DISMISS_LOW_BALANCE':
+      return { ...state, showLowBalance: false };
+    default:
+      return state;
+  }
+}
+
+export default function Home() {
+  const [state, dispatch] = useReducer(pageReducer, initialPageState);
+  const {
+    activeTab, selectedAgent, inCall, callId,
+    searchQuery, selectedCategory,
+    showWalletGate, showLowBalance, requiredBalance, lowBalanceContent,
+  } = state;
   const searchParams = useSearchParams();
   const router = useRouter();
   const launchParamsRef = useRef<{ agentId: string; autoStart: boolean } | null>(null);
@@ -72,7 +146,7 @@ export default function Home() {
       const granted = await requestMicrophonePermission();
       if (!granted) { showError('Microphone permission required'); return; }
     }
-    if (!connected) { setShowWalletGate(true); return; }
+    if (!connected) { dispatch({ type: 'SHOW_WALLET_GATE', show: true }); return; }
 
     // Pre-flight: verify the agent is configured (lightweight, no token minting)
     try {
@@ -89,21 +163,17 @@ export default function Home() {
     const estimatedCost = Number(selectedAgent.rate) * 5;
 
     if (userBalance < estimatedCost) {
-      setLowBalanceContent({
-        title: 'Insufficient Balance',
-        description: 'Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.',
-        balanceLabel: 'Current Balance',
-        requiredLabel: 'Required',
-        currentBalance: userBalance,
+      dispatch({
+        type: 'SHOW_LOW_BALANCE',
+        show: true,
+        required: estimatedCost,
+        balance: userBalance,
       });
-      setRequiredBalance(estimatedCost);
-      setShowLowBalance(true);
       return;
     }
 
-    const newCallId = `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    setCallId(newCallId);
-    setInCall(true);
+    const newCallId = generateCallId();
+    dispatch({ type: 'START_CALL', callId: newCallId });
   }, [
     connected,
     isWebRTCSupported,
@@ -115,20 +185,17 @@ export default function Home() {
 
   const endCall = useCallback(() => {
     clearLaunchState();
-    setInCall(false);
-    setSelectedAgent(null);
-    setCallId(null);
+    dispatch({ type: 'END_CALL' });
   }, [clearLaunchState]);
 
   const handleSelectRelatedAgent = useCallback((agentId: string) => {
-    const agent = agents.find((a: any) => a.id === agentId);
+    const agent = agents.find((a) => a.id === agentId);
     clearLaunchState();
-    setInCall(false);
-    setCallId(null);
-    setActiveTab('discover');
+    dispatch({ type: 'END_CALL' });
+    dispatch({ type: 'SET_TAB', tab: 'discover' });
 
     if (agent) {
-      setSelectedAgent(agent);
+      dispatch({ type: 'SELECT_AGENT', agent });
     }
   }, [agents, clearLaunchState]);
 
@@ -148,19 +215,9 @@ export default function Home() {
 
     launchParamsRef.current = launchParams;
 
-    setActiveTab('discover');
+    dispatch({ type: 'SET_TAB', tab: 'discover' });
     router.replace('/', { scroll: false });
   }, [router, searchParams]);
-
-  // Listen for tab switch events from child components
-  useEffect(() => {
-    const handleSwitchTab = (e: CustomEvent) => {
-      const tab = e.detail as 'discover' | 'calls' | 'profile';
-      setActiveTab(tab);
-    };
-    window.addEventListener('switch-tab', handleSwitchTab as EventListener);
-    return () => window.removeEventListener('switch-tab', handleSwitchTab as EventListener);
-  }, []);
 
   useEffect(() => {
     const launchParams = launchParamsRef.current;
@@ -168,14 +225,14 @@ export default function Home() {
       return;
     }
 
-    const agent = agents.find((candidate: any) => candidate.id === launchParams.agentId);
+    const agent = agents.find((candidate) => candidate.id === launchParams.agentId);
     if (!agent) {
       showError('Selected agent is no longer available.');
       launchParamsRef.current = null;
       return;
     }
 
-    setSelectedAgent(agent);
+    dispatch({ type: 'SELECT_AGENT', agent });
   }, [agents, selectedAgent]);
 
   useEffect(() => {
@@ -208,8 +265,8 @@ export default function Home() {
         />
         <WalletConnectGate
           isOpen={showWalletGate}
-          onConnect={() => { connect(); setShowWalletGate(false); }}
-          onClose={() => setShowWalletGate(false)}
+          onConnect={() => { connect(); dispatch({ type: 'SHOW_WALLET_GATE', show: false }); }}
+          onClose={() => dispatch({ type: 'SHOW_WALLET_GATE', show: false })}
           isConnecting={isConnecting}
         />
         <LowBalanceWarning
@@ -220,13 +277,13 @@ export default function Home() {
           description={lowBalanceContent.description}
           balanceLabel={lowBalanceContent.balanceLabel}
           requiredLabel={lowBalanceContent.requiredLabel}
-          onAddFunds={() => { setShowLowBalance(false); setActiveTab('profile'); }}
-          onClose={() => setShowLowBalance(false)}
-          onGoHome={() => { setShowLowBalance(false); setSelectedAgent(null); }}
+          onAddFunds={() => { dispatch({ type: 'DISMISS_LOW_BALANCE' }); dispatch({ type: 'SET_TAB', tab: 'profile' }); }}
+          onClose={() => dispatch({ type: 'DISMISS_LOW_BALANCE' })}
+          onGoHome={() => { dispatch({ type: 'DISMISS_LOW_BALANCE' }); dispatch({ type: 'SELECT_AGENT', agent: null }); }}
         />
         <AgentDetailModal
           agent={selectedAgent}
-          onClose={() => setSelectedAgent(null)}
+          onClose={() => dispatch({ type: 'SELECT_AGENT', agent: null })}
           onCall={startCall}
         />
         <Header
@@ -244,10 +301,14 @@ export default function Home() {
                 id: selectedAgent.id,
                 name: selectedAgent.name,
                 specialty: selectedAgent.specialty,
+                bio: selectedAgent.bio || '',
                 avatar: selectedAgent.avatar,
                 rate: Number(selectedAgent.rate),
                 color: selectedAgent.color,
-                walletAddress: selectedAgent.wallet_address || selectedAgent.walletAddress,
+                online: selectedAgent.online,
+                rating: selectedAgent.rating || 0,
+                calls: selectedAgent.calls || 0,
+                wallet_address: selectedAgent.wallet_address,
               }}
               callId={callId}
               userId={address || 'anonymous'}
@@ -259,39 +320,46 @@ export default function Home() {
             <>
               {activeTab === 'discover' && (
                 <Suspense fallback={<TabLoading />}>
-                  <DiscoverTab
-                    agents={filteredAgents}
-                    isLoading={isLoadingAgents}
-                    error={agentsError}
-                    onSelect={setSelectedAgent}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    selectedCategory={selectedCategory}
-                    onCategoryChange={setSelectedCategory}
-                    onRefresh={mutateAgents}
-                  />
+                  <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
+                    <DiscoverTab
+                      agents={filteredAgents}
+                      isLoading={isLoadingAgents}
+                      error={agentsError}
+                      onSelect={(agent: Agent | null) => dispatch({ type: 'SELECT_AGENT', agent })}
+                      searchQuery={searchQuery}
+                      onSearchChange={(query: string) => dispatch({ type: 'SET_SEARCH', query })}
+                      selectedCategory={selectedCategory}
+                      onCategoryChange={(category: string) => dispatch({ type: 'SET_CATEGORY', category })}
+                      onRefresh={mutateAgents}
+                    />
+                  </ErrorBoundary>
                 </Suspense>
               )}
               {activeTab === 'calls' && (
                 <Suspense fallback={<TabLoading />}>
-                  <CallsHistoryTab
-                    localHistory={localCallHistory}
-                    address={address}
-                    isLoading={false}
-                    error={null}
-                    onRefresh={async () => {}}
-                    agents={agents}
-                    onSelectAgent={setSelectedAgent}
-                  />
+                  <ErrorBoundary fallback={<TabError label="Calls History" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'calls' })} />}>
+                    <CallsHistoryTab
+                      localHistory={localCallHistory}
+                      address={address}
+                      isLoading={false}
+                      error={null}
+                      onRefresh={async () => {}}
+                      agents={agents}
+                      onSelectAgent={(agent: Agent | null) => dispatch({ type: 'SELECT_AGENT', agent })}
+                      onSwitchTab={(tab) => dispatch({ type: 'SET_TAB', tab: tab as PageState['activeTab'] })}
+                    />
+                  </ErrorBoundary>
                 </Suspense>
               )}
               {activeTab === 'profile' && (
                 <Suspense fallback={<TabLoading />}>
-                  <ProfileTab
-                    balance={userBalance}
-                    address={address}
-                    isLoading={isLoadingBalance}
-                  />
+                  <ErrorBoundary fallback={<TabError label="Profile" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'profile' })} />}>
+                    <ProfileTab
+                      balance={userBalance}
+                      address={address}
+                      isLoading={isLoadingBalance}
+                    />
+                  </ErrorBoundary>
                 </Suspense>
               )}
             </>
@@ -300,18 +368,18 @@ export default function Home() {
         <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50" role="navigation" aria-label="Main navigation">
           <div className="max-w-2xl mx-auto px-4 py-2 flex justify-around">
             {[
-              { id: 'discover', label: 'Discover', icon: '🔍' },
-              { id: 'calls', label: 'Calls', icon: '📞' },
-              { id: 'profile', label: 'Profile', icon: '👤' },
+              { id: 'discover', label: 'Discover', Icon: Search },
+              { id: 'calls', label: 'Calls', Icon: Phone },
+              { id: 'profile', label: 'Profile', Icon: User },
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                onClick={() => dispatch({ type: 'SET_TAB', tab: tab.id as PageState['activeTab'] })}
                 className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
                   activeTab === tab.id ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
-                <span className="text-xl">{tab.icon}</span>
+                <tab.Icon className="w-5 h-5" />
                 <span className="text-xs font-medium">{tab.label}</span>
               </button>
             ))}
@@ -327,6 +395,20 @@ function TabLoading() {
     <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
       <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
       <p className="text-gray-400 text-sm mt-4">Loading...</p>
+    </div>
+  );
+}
+
+function TabError({ label, onRetry }: { label: string; onRetry: () => void }) {
+  return (
+    <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
+      <p className="text-red-400 text-sm mb-4">Something went wrong loading {label}.</p>
+      <button
+        onClick={onRetry}
+        className="px-4 py-2 text-sm font-medium text-cyan-400 bg-cyan-500/10 rounded-lg hover:bg-cyan-500/20 transition-colors"
+      >
+        Try Again
+      </button>
     </div>
   );
 }

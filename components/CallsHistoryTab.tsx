@@ -6,6 +6,7 @@ import { CallHistorySkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { useLocalCallHistory, CallRecord } from '@/lib/useCallHistory';
 import { RefreshButton, Card, Avatar, TranscriptModal, ShareModal, ExportModal, EmptyHistoryState, showError } from '@/components/ui';
+import type { Agent } from '@/lib/types';
 
 interface CallsHistoryTabProps {
   localHistory: ReturnType<typeof useLocalCallHistory>;
@@ -13,8 +14,9 @@ interface CallsHistoryTabProps {
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => Promise<void>;
-  agents: any[];
-  onSelectAgent: (agent: any) => void;
+  agents: Agent[];
+  onSelectAgent: (agent: Agent) => void;
+  onSwitchTab?: (tab: string) => void;
 }
 
 export function CallsHistoryTab({
@@ -25,6 +27,7 @@ export function CallsHistoryTab({
   onRefresh,
   agents,
   onSelectAgent,
+  onSwitchTab,
 }: CallsHistoryTabProps) {
   const [filter, setFilter] = useState<'all' | 'saved'>('all');
   const [selectedCall, setSelectedCall] = useState<CallRecord | null>(null);
@@ -114,9 +117,7 @@ export function CallsHistoryTab({
         title="No calls yet"
         description="Start your first voice call with an AI agent"
         actionLabel="Browse Agents"
-        onAction={() => {
-          window.dispatchEvent(new CustomEvent('switch-tab', { detail: 'discover' }));
-        }}
+        onAction={() => onSwitchTab?.('discover')}
       />
     );
   }
@@ -178,9 +179,7 @@ export function CallsHistoryTab({
         </div>
       ) : (
         <EmptyHistoryState 
-          onBrowseAgents={() => {
-            window.dispatchEvent(new CustomEvent('switch-tab', { detail: 'discover' }));
-          }}
+          onBrowseAgents={() => onSwitchTab?.('discover')}
         />
       )}
 

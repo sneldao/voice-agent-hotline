@@ -138,8 +138,13 @@ export default function Marketplace() {
             id: selectedAgent.id,
             name: selectedAgent.name,
             specialty: selectedAgent.description,
+            bio: selectedAgent.description,
+            rating: 0,
+            calls: 0,
             rate: selectedAgent.ratePerMinute,
             color: 'from-cyan-500 to-blue-600',
+            avatar: '',
+            online: true,
           }}
           callId={`call_${Date.now()}`}
           userId="user"

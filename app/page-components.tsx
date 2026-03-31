@@ -3,12 +3,13 @@
 import React, { useState } from 'react';
 import { Star, ChevronRight, Phone } from 'lucide-react';
 import { Card, Badge, Avatar, Modal, Button } from '@/components/ui';
+import type { Agent } from '@/lib/types';
 
 export const AgentCard = React.memo(function AgentCard({
   agent,
   onClick,
 }: {
-  agent: any;
+  agent: Agent;
   onClick: () => void;
 }) {
   const rating = Number(agent.rating) || 0;
@@ -70,7 +71,7 @@ export const FeaturedCard = React.memo(function FeaturedCard({
   agent,
   onClick,
 }: {
-  agent: any;
+  agent: Agent;
   onClick: () => void;
 }) {
   return (
@@ -96,7 +97,7 @@ export function AgentDetailModal({
   onClose,
   onCall,
 }: {
-  agent: any | null;
+  agent: Agent | null;
   onClose: () => void;
   onCall: () => void;
 }) {

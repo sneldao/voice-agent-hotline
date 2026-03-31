@@ -76,11 +76,12 @@ h1, h2, h3, .font-display {
   letter-spacing: -0.01em;
 }
 
-/* Smooth transitions for theme switching */
+/* Smooth transitions for theme switching — scoped to theme-relevant elements only */
 body,
-*,
-*::before,
-*::after {
+nav, header, main, footer,
+.bg-gray-900, .bg-gray-950, .bg-gray-800,
+.card, .btn, .input, .glass,
+.border-gray-700, .border-gray-800 {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -144,76 +145,7 @@ body,
   border: 1px solid rgba(71, 85, 105, 0.3);
 }
 
-/* Button styles - touch-friendly (minimum 44px height) */
-.btn {
-  @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200;
-  min-height: var(--touch-min);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--secondary)));
-  @apply text-white shadow-lg shadow-cyan-500/25;
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, rgb(var(--primary-hover)), rgb(var(--secondary)));
-  @apply shadow-cyan-500/40;
-  transform: translateY(-1px);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-.btn-secondary {
-  @apply bg-gray-800 text-white border border-gray-700;
-}
-
-.btn-secondary:hover {
-  @apply bg-gray-700 border-gray-600;
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, rgb(var(--error)), #f43f5e);
-  @apply text-white shadow-lg shadow-red-500/25;
-}
-
-.btn-danger:hover {
-  @apply shadow-red-500/40;
-  transform: translateY(-1px);
-}
-
-/* Input styles - touch-friendly */
-.input {
-  @apply w-full rounded-xl border border-gray-700 bg-gray-800/50 px-4 py-3 text-sm transition-all duration-200;
-  min-height: var(--touch-min);
-  touch-action: manipulation;
-}
-
-.input:focus {
-  @apply outline-none border-cyan-500 ring-2 ring-cyan-500/20;
-}
-
-.input::placeholder {
-  @apply text-gray-500;
-}
-
-/* Card styles */
-.card {
-  @apply rounded-xl border p-4;
-  background: var(--card-bg);
-  border-color: rgba(var(--border), 0.5);
-}
-
-.card-hover {
-  @apply transition-all duration-200;
-  border-color: rgba(var(--border), 0.7);
-}
-
-/* Button styles */
+/* Button styles — touch-friendly (minimum 44px height), themeable via CSS vars */
 .btn {
   @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200;
   min-height: var(--touch-min);
@@ -234,6 +166,10 @@ body,
   transform: translateY(-1px);
 }
 
+.btn-primary:active {
+  transform: translateY(0);
+}
+
 .btn-secondary {
   background: var(--card-bg);
   @apply border;
@@ -245,13 +181,24 @@ body,
   background: rgba(var(--border), 0.2);
 }
 
-/* Input styles */
+.btn-danger {
+  background: linear-gradient(135deg, rgb(var(--error)), #f43f5e);
+  @apply text-white shadow-lg shadow-red-500/25;
+}
+
+.btn-danger:hover {
+  @apply shadow-red-500/40;
+  transform: translateY(-1px);
+}
+
+/* Input styles — touch-friendly, themeable via CSS vars */
 .input {
   @apply w-full rounded-xl border px-4 py-3 text-sm transition-all duration-200;
   background: var(--input-bg);
   border-color: rgba(var(--border), 0.5);
   color: var(--foreground);
   min-height: var(--touch-min);
+  touch-action: manipulation;
 }
 
 .input:focus {
@@ -262,6 +209,18 @@ body,
 
 .input::placeholder {
   opacity: 0.6;
+}
+
+/* Card styles */
+.card {
+  @apply rounded-xl border p-4;
+  background: var(--card-bg);
+  border-color: rgba(var(--border), 0.5);
+}
+
+.card-hover {
+  @apply transition-all duration-200;
+  border-color: rgba(var(--border), 0.7);
 }
 
 /* Modal */

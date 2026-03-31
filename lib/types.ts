@@ -13,11 +13,18 @@ export interface Agent {
   avatar: string;
   color: string;
   online: boolean;
+  // Optional display fields
+  category?: string;
+  verified?: boolean;
+  totalRatings?: number;
+  totalCalls?: number;
+  tags?: string[];
+  // Wallet / payout
   wallet?: string;
+  wallet_address?: string;
   // Registration fields
   status?: AgentStatus;
   elevenlabs_agent_id?: string;
-  wallet_address?: string;
   system_prompt?: string;
   contact_email?: string;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { generateCallId } from './ids';
 
 export interface CallRecord {
   id: string;
@@ -31,6 +32,33 @@ interface CallHistoryState {
 
 const STORAGE_KEY = 'call_history';
 
+/**
+ * Single-pass computation of aggregate stats from a call list.
+ * Replaces scattered reduce/filter chains that iterated the array multiple times.
+ */
+function computeStats(calls: CallRecord[]): Pick<CallHistoryState, 'totalCalls' | 'totalDuration' | 'totalSpent' | 'averageRating'> {
+  let totalDuration = 0;
+  let totalSpent = 0;
+  let ratingSum = 0;
+  let ratedCount = 0;
+
+  for (const c of calls) {
+    totalDuration += c.duration;
+    totalSpent += c.cost;
+    if (c.rating !== undefined) {
+      ratingSum += c.rating;
+      ratedCount++;
+    }
+  }
+
+  return {
+    totalCalls: calls.length,
+    totalDuration,
+    totalSpent,
+    averageRating: ratedCount > 0 ? ratingSum / ratedCount : 0,
+  };
+}
+
 export function useLocalCallHistory() {
   const [state, setState] = useState<CallHistoryState>({
     calls: [],
@@ -46,34 +74,17 @@ export function useLocalCallHistory() {
     if (stored) {
       try {
         const calls: CallRecord[] = JSON.parse(stored);
-        updateState(calls);
+        setState({ calls, ...computeStats(calls) });
       } catch {
         // Invalid storage, ignore
       }
     }
   }, []);
 
-  const updateState = (calls: CallRecord[]) => {
-    const totalDuration = calls.reduce((sum, c) => sum + c.duration, 0);
-    const totalSpent = calls.reduce((sum, c) => sum + c.cost, 0);
-    const ratedCalls = calls.filter(c => c.rating !== undefined);
-    const averageRating = ratedCalls.length > 0
-      ? ratedCalls.reduce((sum, c) => sum + (c.rating || 0), 0) / ratedCalls.length
-      : 0;
-
-    setState({
-      calls,
-      totalCalls: calls.length,
-      totalDuration,
-      totalSpent,
-      averageRating,
-    });
-  };
-
   const saveCall = useCallback((call: Omit<CallRecord, 'id' | 'timestamp' | 'isSaved'>) => {
     const newCall: CallRecord = {
       ...call,
-      id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: generateCallId(),
       timestamp: Date.now(),
       isSaved: false,
     };
@@ -81,17 +92,7 @@ export function useLocalCallHistory() {
     setState(prev => {
       const calls = [newCall, ...prev.calls];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(calls));
-      
-      const totalDuration = calls.reduce((sum, c) => sum + c.duration, 0);
-      const totalSpent = calls.reduce((sum, c) => sum + c.cost, 0);
-      
-      return {
-        calls,
-        totalCalls: calls.length,
-        totalDuration,
-        totalSpent,
-        averageRating: prev.averageRating,
-      };
+      return { calls, ...computeStats(calls) };
     });
 
     return newCall.id;
@@ -99,23 +100,17 @@ export function useLocalCallHistory() {
 
   const rateCall = useCallback((callId: string, rating: number, feedback?: string) => {
     setState(prev => {
-      const calls = prev.calls.map(c => 
+      const calls = prev.calls.map(c =>
         c.id === callId ? { ...c, rating, feedback } : c
       );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(calls));
-      
-      const ratedCalls = calls.filter(c => c.rating !== undefined);
-      const averageRating = ratedCalls.length > 0
-        ? ratedCalls.reduce((sum, c) => sum + (c.rating || 0), 0) / ratedCalls.length
-        : 0;
-
-      return { ...prev, calls, averageRating };
+      return { calls, ...computeStats(calls) };
     });
   }, []);
 
   const toggleSaveCall = useCallback((callId: string) => {
     setState(prev => {
-      const calls = prev.calls.map(c => 
+      const calls = prev.calls.map(c =>
         c.id === callId ? { ...c, isSaved: !c.isSaved } : c
       );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(calls));
@@ -127,17 +122,11 @@ export function useLocalCallHistory() {
     setState(prev => {
       const calls = prev.calls.map(c =>
         c.id === callId
-          ? {
-              ...c,
-              txHash: receipt.txHash ?? c.txHash,
-              cost: receipt.cost ?? c.cost,
-            }
+          ? { ...c, txHash: receipt.txHash ?? c.txHash, cost: receipt.cost ?? c.cost }
           : c
       );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(calls));
-
-      const totalSpent = calls.reduce((sum, c) => sum + c.cost, 0);
-      return { ...prev, calls, totalSpent };
+      return { calls, ...computeStats(calls) };
     });
   }, []);
 
@@ -145,21 +134,7 @@ export function useLocalCallHistory() {
     setState(prev => {
       const calls = prev.calls.filter(c => c.id !== callId);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(calls));
-      
-      const totalDuration = calls.reduce((sum, c) => sum + c.duration, 0);
-      const totalSpent = calls.reduce((sum, c) => sum + c.cost, 0);
-      const ratedCalls = calls.filter(c => c.rating !== undefined);
-      const averageRating = ratedCalls.length > 0
-        ? ratedCalls.reduce((sum, c) => sum + (c.rating || 0), 0) / ratedCalls.length
-        : 0;
-
-      return {
-        calls,
-        totalCalls: calls.length,
-        totalDuration,
-        totalSpent,
-        averageRating,
-      };
+      return { calls, ...computeStats(calls) };
     });
   }, []);
 

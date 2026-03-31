@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { signMessage } from './WalletContextNew';
+import { generateCallId } from './ids';
 
 export interface ConversationState {
   isConnected: boolean;
@@ -103,7 +104,7 @@ export function useElevenLabsConversation(options: ConversationOptions) {
       const { Conversation } = await import('@elevenlabs/client');
       
       // Get conversation token from our signaling endpoint
-      const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const callId = generateCallId();
       const timestamp = Math.floor(Date.now() / 1000).toString();
 
       // Sign the call request with the connected wallet

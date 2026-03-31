@@ -127,58 +127,6 @@ function WelcomeStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
   );
 }
 
-function WalletIntroStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
-  return (
-    <div>
-      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-        <Wallet className="w-8 h-8 text-white" />
-      </div>
-      
-      <h2 className="text-xl font-bold text-white mb-3 text-center">
-        Connect Your Wallet
-      </h2>
-      
-      <p className="text-gray-400 mb-6 text-center">
-        We use crypto wallets for payments. Don't worry - it's simpler than it sounds!
-      </p>
-
-      <div className="bg-gray-800/50 rounded-xl p-4 mb-6 space-y-3">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">🔐</span>
-          <div>
-            <p className="font-medium text-white">Your wallet = Your account</p>
-            <p className="text-sm text-gray-400">No passwords needed. Your wallet is your identity.</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">💰</span>
-          <div>
-            <p className="font-medium text-white">Pay as you go</p>
-            <p className="text-sm text-gray-400">Only pay for the seconds you're on a call.</p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">🌐</span>
-          <div>
-            <p className="font-medium text-white">Works everywhere</p>
-            <p className="text-sm text-gray-400">Use MetaMask, Rainbow, or any wallet you prefer.</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-3">
-        <Button onClick={onNext} className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500">
-          Connect Wallet
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-        <Button onClick={onSkip} variant="ghost">
-          Skip
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function WalletConnectStep({ 
   isConnected, 
   onNext, 

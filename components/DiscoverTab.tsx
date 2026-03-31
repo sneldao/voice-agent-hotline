@@ -6,6 +6,7 @@ import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { PullToRefresh, RefreshButton, EmptySearchState, showSuccess } from '@/components/ui';
 import { AgentCard, FeaturedCard } from '@/app/page-components';
+import type { Agent } from '@/lib/types';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -16,10 +17,10 @@ const CATEGORIES = [
 ];
 
 interface DiscoverTabProps {
-  agents: any[];
+  agents: Agent[];
   isLoading: boolean;
   error: string | null;
-  onSelect: (a: any) => void;
+  onSelect: (a: Agent) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedCategory: string;
