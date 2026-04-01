@@ -406,7 +406,7 @@ function HomeInner() {
                       onSearchChange={handleSearchChange}
                       selectedCategory={selectedCategory}
                       onCategoryChange={handleCategoryChange}
-                      onRefresh={async () => { await mutateAgents(); }}
+                      onRefresh={mutateAgents}
                       hasMore={hasMore}
                       onLoadMore={handleLoadMore}
                     />
