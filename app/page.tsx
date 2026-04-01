@@ -188,6 +188,10 @@ export default function Home() {
     dispatch({ type: 'END_CALL' });
   }, [clearLaunchState]);
 
+  const closeModal = useCallback(() => {
+    dispatch({ type: 'SELECT_AGENT', agent: null });
+  }, []);
+
   const handleSelectRelatedAgent = useCallback((agentId: string) => {
     const agent = agents.find((a) => a.id === agentId);
     clearLaunchState();
@@ -198,6 +202,27 @@ export default function Home() {
       dispatch({ type: 'SELECT_AGENT', agent });
     }
   }, [agents, clearLaunchState]);
+
+  // Memoized handlers to prevent re-renders from inline arrow functions
+  const handleSelectAgent = useCallback((agent: Agent | null) => {
+    dispatch({ type: 'SELECT_AGENT', agent });
+  }, []);
+
+  const handleSearchChange = useCallback((query: string) => {
+    dispatch({ type: 'SET_SEARCH', query });
+  }, []);
+
+  const handleCategoryChange = useCallback((category: string) => {
+    dispatch({ type: 'SET_CATEGORY', category });
+  }, []);
+
+  const handleSelectRelatedAgentDispatch = useCallback((agent: Agent | null) => {
+    dispatch({ type: 'SELECT_AGENT', agent });
+  }, []);
+
+  const handleSwitchTab = useCallback((tab: string) => {
+    dispatch({ type: 'SET_TAB', tab: tab as PageState['activeTab'] });
+  }, []);
 
   // Agents are passed unfiltered to DiscoverTab which handles filtering with debounced search
   const filteredAgents = agents;
@@ -283,7 +308,7 @@ export default function Home() {
         />
         <AgentDetailModal
           agent={selectedAgent}
-          onClose={() => dispatch({ type: 'SELECT_AGENT', agent: null })}
+          onClose={closeModal}
           onCall={startCall}
         />
         <Header
@@ -325,11 +350,11 @@ export default function Home() {
                       agents={filteredAgents}
                       isLoading={isLoadingAgents}
                       error={agentsError}
-                      onSelect={(agent: Agent | null) => dispatch({ type: 'SELECT_AGENT', agent })}
+                      onSelect={handleSelectAgent}
                       searchQuery={searchQuery}
-                      onSearchChange={(query: string) => dispatch({ type: 'SET_SEARCH', query })}
+                      onSearchChange={handleSearchChange}
                       selectedCategory={selectedCategory}
-                      onCategoryChange={(category: string) => dispatch({ type: 'SET_CATEGORY', category })}
+                      onCategoryChange={handleCategoryChange}
                       onRefresh={mutateAgents}
                     />
                   </ErrorBoundary>
@@ -345,8 +370,8 @@ export default function Home() {
                       error={null}
                       onRefresh={async () => {}}
                       agents={agents}
-                      onSelectAgent={(agent: Agent | null) => dispatch({ type: 'SELECT_AGENT', agent })}
-                      onSwitchTab={(tab) => dispatch({ type: 'SET_TAB', tab: tab as PageState['activeTab'] })}
+                      onSelectAgent={handleSelectRelatedAgentDispatch}
+                      onSwitchTab={handleSwitchTab}
                     />
                   </ErrorBoundary>
                 </Suspense>

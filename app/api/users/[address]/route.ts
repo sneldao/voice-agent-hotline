@@ -14,15 +14,8 @@ export async function GET(
     let user = await getUserByAddress(normalizedAddress);
     
     if (!user) {
-      // Create new user if doesn't exist
-      user = {
-        id: `user_${normalizedAddress}`,
-        address: normalizedAddress,
-        balance: 0,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      await createUser(user);
+      // Return 404 instead of auto-creating to prevent phantom users from bots/prefetchers
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
     return NextResponse.json({

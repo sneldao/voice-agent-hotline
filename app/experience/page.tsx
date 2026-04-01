@@ -17,7 +17,7 @@ import { AgentComparison } from '@/components/AgentComparison';
 import { CallEstimator } from '@/components/CallEstimator';
 import { AgentToAgentChat } from '@/components/AgentToAgentChat';
 import { RateLimitPanel } from '@/components/RateLimitDisplay';
-import { useRealAgents } from '@/lib/useRealAgents';
+import { useAgents } from '@/lib/useSWR';
 import { getDirectPaymentReadiness, getStreamingReadiness } from '@/lib/product-readiness';
 import { buildCallLaunchHref } from '@/lib/product-launch';
 
@@ -61,7 +61,7 @@ const PAYMENT_MODES = [
 
 export default function VoiceAgentExperiencePage() {
   const router = useRouter();
-  const { agents, isLoading } = useRealAgents();
+  const { agents, isLoading, error: agentsError } = useAgents();
   const [apiKey, setApiKey] = useState('');
   const [agentId, setAgentId] = useState('');
   const [textInput, setTextInput] = useState('');
@@ -91,8 +91,12 @@ export default function VoiceAgentExperiencePage() {
     avatar: agent.avatar || 'A',
     specialty: agent.specialty,
   }));
-  const directReadiness = getDirectPaymentReadiness(selectedAgent?.walletAddress);
-  const streamingReadiness = getStreamingReadiness(selectedAgent?.walletAddress);
+  const directReadiness = getDirectPaymentReadiness(
+    (selectedAgent as any)?.walletAddress || (selectedAgent as any)?.wallet_address
+  );
+  const streamingReadiness = getStreamingReadiness(
+    (selectedAgent as any)?.walletAddress || (selectedAgent as any)?.wallet_address
+  );
 
   const {
     isSpeaking,
