@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { Search, Star } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
-import { PullToRefresh, RefreshButton, EmptySearchState, showSuccess } from '@/components/ui';
+import { PullToRefresh, RefreshButton, showSuccess } from '@/components/ui';
 import { AgentCard, FeaturedCard } from '@/app/page-components';
 import type { Agent } from '@/lib/types';
 
@@ -26,6 +26,8 @@ interface DiscoverTabProps {
   selectedCategory: string;
   onCategoryChange: (c: string) => void;
   onRefresh: () => Promise<void>;
+  hasMore: boolean;
+  onLoadMore: () => void;
 }
 
 export function DiscoverTab({
@@ -38,63 +40,22 @@ export function DiscoverTab({
   selectedCategory,
   onCategoryChange,
   onRefresh,
+  hasMore,
+  onLoadMore,
 }: DiscoverTabProps) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(20); // Pagination
-
-  // PERFORMANT: Debounced search with 300ms delay
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
-
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-    }, 300);
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [searchQuery]);
-
   const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await onRefresh();
-    setIsRefreshing(false);
-    showSuccess('Agents refreshed');
+    try {
+      await onRefresh();
+      showSuccess('Agents refreshed');
+    } catch {
+      // PullToRefresh handles its own loading state via finally
+    }
   }, [onRefresh]);
 
-  const hasSearchQuery = debouncedQuery.trim().length > 0;
+  const onlineAgents = agents.filter(a => a.online);
+  const hasSearchQuery = searchQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
   const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
-
-  // PERFORMANT: Memoized filtered agents using debounced query
-  const filteredAgents = useMemo(() => {
-    return agents.filter(agent => {
-      const name = (agent.name || "").toLowerCase();
-      const specialty = (agent.specialty || "").toLowerCase();
-      const q = debouncedQuery.toLowerCase();
-      const matchesSearch = !debouncedQuery || name.includes(q) || specialty.includes(q);
-      const matchesCategory = selectedCategory === 'all' || agent.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [agents, debouncedQuery, selectedCategory]);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setVisibleCount(20);
-  }, [debouncedQuery, selectedCategory]);
-
-  const onlineAgents = useMemo(() => filteredAgents.filter(a => a.online), [filteredAgents]);
-  const visibleAgents = filteredAgents.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredAgents.length;
-
-  const handleLoadMore = useCallback(() => {
-    setVisibleCount(prev => prev + 20);
-  }, []);
 
   if (isLoading) {
     return (
@@ -180,58 +141,49 @@ export function DiscoverTab({
           </div>
         </div>
 
-        {/* Empty states */}
-        {hasNoSearchResults && <EmptySearchState onClear={() => onSearchChange('')} />}
-        {hasNoResults && <EmptySearchState onClear={() => onCategoryChange('all')} />}
-
-        {/* Content */}
-        {!hasNoResults && !hasNoSearchResults && (
-          <>
-            {/* Featured Agents - show max 10 */}
-            {onlineAgents.length > 0 && (
-              <section>
-                <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
-                  <Star className="w-4 h-4 text-yellow-400" /> Featured
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {onlineAgents.slice(0, 10).map(agent => (
-                    <FeaturedCard
-                      key={agent.id}
-                      agent={agent}
-                      onClick={() => onSelect(agent)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* All Agents - Optimized rendering */}
-            <section aria-label="Agent list">
-              <h2 className="text-sm font-semibold text-gray-400 mb-3">
-                {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
-                <span className="ml-2 text-xs text-gray-500">({filteredAgents.length})</span>
-              </h2>
-              <div className="space-y-3">
-                {visibleAgents.map(agent => (
-                  <AgentCard
-                    key={agent.id}
-                    agent={agent}
-                    onClick={() => onSelect(agent)}
-                  />
-                ))}
-              </div>
-              {hasMore && (
-                <button
-                  onClick={handleLoadMore}
-                  className="w-full mt-4 py-3 text-sm font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl transition-colors"
-                  aria-label={`Load ${filteredAgents.length - visibleCount} more agents`}
-                >
-                  Load More ({filteredAgents.length - visibleCount} remaining)
-                </button>
-              )}
-            </section>
-          </>
+        {/* Featured Agents — online only, max 10 */}
+        {onlineAgents.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-400" /> Featured
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {onlineAgents.slice(0, 10).map(agent => (
+                <FeaturedCard
+                  key={agent.id}
+                  agent={agent}
+                  onClick={() => onSelect(agent)}
+                />
+              ))}
+            </div>
+          </section>
         )}
+
+        {/* All Agents */}
+        <section aria-label="Agent list">
+          <h2 className="text-sm font-semibold text-gray-400 mb-3">
+            {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
+            <span className="ml-2 text-xs text-gray-500">({agents.length})</span>
+          </h2>
+          <div className="space-y-3">
+            {agents.map(agent => (
+              <div key={agent.id} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 120px' }}>
+                <AgentCard
+                  agent={agent}
+                  onClick={() => onSelect(agent)}
+                />
+              </div>
+            ))}
+          </div>
+          {hasMore && (
+            <button
+              onClick={onLoadMore}
+              className="w-full mt-4 py-3 text-sm font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl transition-colors"
+            >
+              Load More
+            </button>
+          )}
+        </section>
       </div>
     </PullToRefresh>
   );

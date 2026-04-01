@@ -503,6 +503,7 @@ export class ReputationStakingService {
     };
 
     await redis.hset(`reputation:${agentId}`, this.serializeReputation(reputation));
+    await redis.sadd('reputation_index', `reputation:${agentId}`);
 
     console.log('[Reputation] Score updated:', {
       agentId,
@@ -549,12 +550,16 @@ export class ReputationStakingService {
    * Get leaderboard (top agents by reputation)
    */
   async getLeaderboard(limit: number = 10): Promise<ReputationScore[]> {
-    const keys = await redis.keys('reputation:*');
+    const keys = await redis.smembers('reputation_index');
     const scores: ReputationScore[] = [];
 
-    for (const key of keys) {
-      const data = await redis.hgetall(key);
-      if (data) {
+    const pipeline = redis.pipeline();
+    keys.forEach(k => pipeline.hgetall(k));
+    const results = await pipeline.exec();
+
+    for (const raw of (results || [])) {
+      const data = (raw as [Error | null, any])[1];
+      if (data && Object.keys(data).length > 0) {
         scores.push(this.deserializeReputation(data as Record<string, string>));
       }
     }

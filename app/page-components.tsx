@@ -1,9 +1,33 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Star, ChevronRight, Phone } from 'lucide-react';
 import { Card, Badge, Avatar, Modal, Button } from '@/components/ui';
 import type { Agent } from '@/lib/types';
+
+const STAR_COLORS = [
+  'text-yellow-400 fill-yellow-400',
+  'text-yellow-400 fill-yellow-400/50',
+  'text-gray-600',
+];
+
+function getStarClass(index: number, fullStars: number, hasHalfStar: boolean): string {
+  if (index < fullStars) return STAR_COLORS[0];
+  if (index === fullStars && hasHalfStar) return STAR_COLORS[1];
+  return STAR_COLORS[2];
+}
+
+const Stars = React.memo(function Stars({ rating }: { rating: number }) {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  return (
+    <div className="flex items-center gap-0.5">
+      {[0, 1, 2, 3, 4].map(i => (
+        <Star key={i} className={`w-4 h-4 ${getStarClass(i, fullStars, hasHalfStar)}`} />
+      ))}
+    </div>
+  );
+});
 
 export const AgentCard = React.memo(function AgentCard({
   agent,
@@ -13,8 +37,6 @@ export const AgentCard = React.memo(function AgentCard({
   onClick: () => void;
 }) {
   const rating = Number(agent.rating) || 0;
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
 
   return (
     <Card
@@ -35,11 +57,7 @@ export const AgentCard = React.memo(function AgentCard({
           </div>
           <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed mb-2.5">{agent.bio || agent.specialty}</p>
           <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-0.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className={`w-4 h-4 ${i < fullStars ? 'text-yellow-400 fill-yellow-400' : i === fullStars && hasHalfStar ? 'text-yellow-400 fill-yellow-400/50' : 'text-gray-600'}`} />
-              ))}
-            </div>
+            <Stars rating={rating} />
             <span className="text-sm font-medium text-gray-300">{rating.toFixed(1)}</span>
             <span className="text-xs text-gray-500">({agent.totalRatings || 0})</span>
           </div>

@@ -11,10 +11,22 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    const agentKeys = await redis.keys('agent:*');
-    const agents = await Promise.all(agentKeys.map(key => redis.hgetall(key)));
+    const agentIds = await redis.smembers('agent_index');
+    if (agentIds.length === 0) {
+      return NextResponse.json({
+        summary: { totalAgents: 0, totalCalls: 0, avgRating: 0, topAgent: null, generatedAt: new Date().toISOString() },
+        agents: [],
+      });
+    }
 
-    const activeAgents = agents.filter(a => a && (a.active === 'true' || a.active === true || String(a.active).toLowerCase() === 'true'));
+    const pipeline = redis.pipeline();
+    agentIds.forEach(id => pipeline.hgetall(`agent:${id}`));
+    const results = await pipeline.exec();
+    const agents = (results || [])
+      .map((r: any) => r[1])
+      .filter((a: any) => a && Object.keys(a).length > 0);
+
+    const activeAgents = agents.filter((a: any) => a && (a.active === 'true' || a.active === true || String(a.active).toLowerCase() === 'true'));
 
     const totalCalls = activeAgents.reduce((sum, a) => sum + (parseInt(String(a?.totalCalls ?? '0')) || 0), 0);
     const totalAgents = activeAgents.length;

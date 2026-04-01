@@ -27,26 +27,40 @@ export async function GET(req: NextRequest) {
       const callIds = await redis.smembers(`call_index:${callerAddress.toLowerCase()}`);
       if (callIds.length === 0) return NextResponse.json({ calls: [] });
 
-      const calls = await Promise.all(
-        callIds.map(async (id) => {
-          const data = await redis.hgetall(`call:${id}`);
-          if (!data || Object.keys(data).length === 0) return null;
-          if (data.transcripts && typeof data.transcripts === 'string') {
-            try { data.transcripts = JSON.parse(data.transcripts); } catch { data.transcripts = []; }
+      // Batch fetch with pipeline
+      const pipeline = redis.pipeline();
+      callIds.forEach(id => pipeline.hgetall(`call:${id}`));
+      const results = await pipeline.exec();
+
+      const calls = (results || [])
+        .map((r: any) => {
+          if (!r || Object.keys(r).length === 0) return null;
+          if (r.transcripts && typeof r.transcripts === 'string') {
+            try { r.transcripts = JSON.parse(r.transcripts); } catch { r.transcripts = []; }
           }
-          return data;
+          return r;
         })
-      );
-      return NextResponse.json({ calls: calls.filter(Boolean).slice(0, 50) });
+        .filter(Boolean)
+        .slice(0, 50);
+
+      return NextResponse.json({ calls });
     }
 
-    // List recent calls (admin)
-    const callKeys = await redis.keys('call:*');
-    const calls = await Promise.all(
-      callKeys.filter(k => !k.includes('index')).slice(0, 50).map(key => redis.hgetall(key))
-    );
+    // List recent calls (admin) — use index set instead of KEYS
+    const callIds = await redis.smembers('call_index:all');
+    if (callIds.length === 0) return NextResponse.json({ calls: [] });
 
-    return NextResponse.json({ calls });
+    const pipeline = redis.pipeline();
+    callIds.slice(0, 50).forEach(id => pipeline.hgetall(`call:${id}`));
+    const results = await pipeline.exec();
+    const calls = (results || [])
+      .map((r: any) => r)
+      .filter((c: any) => c && Object.keys(c).length > 0);
+
+    return NextResponse.json(
+      { calls },
+      { headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=15' } }
+    );
   } catch (error: any) {
     console.error('[Calls API] GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -85,6 +99,7 @@ export async function POST(req: NextRequest) {
       if (callData.caller_address !== 'anonymous') {
         await redis.sadd(`call_index:${callData.caller_address}`, callId);
       }
+      await redis.sadd('call_index:all', callId);
 
       // Increment agent stats
       await redis.hincrby(`agent:${agent_id}`, 'total_calls', 1);

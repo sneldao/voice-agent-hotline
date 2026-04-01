@@ -138,7 +138,9 @@ export class VoicePaymentService {
 
     const redis = getRedis();
     await redis.hset(`payment-session:${session.id}`, this.serializeSession(session));
-    console.log(`[x402] Call authorized: ${session.id} | max $${(maxAuthorized / 100).toFixed(2)}`);
+    // Add to index set for efficient listing
+    await redis.sadd('payment_session_index', session.id);
+    console.log(`[x402] Call authorized: ${session.id} | max ${(maxAuthorized / 100).toFixed(2)}`);
 
     return {
       sessionId: session.id,
@@ -275,12 +277,18 @@ export class VoicePaymentService {
 
   async getAgentHistory(agentId: string): Promise<CallSession[]> {
     const redis = getRedis();
-    const keys = await redis.keys('payment-session:*');
+    const sessionIds = await redis.smembers('payment_session_index');
     const sessions: CallSession[] = [];
-    
-    for (const key of keys) {
-      const data = await redis.hgetall(key);
-      const session = this.deserializeSession(data as Record<string, string>);
+
+    if (sessionIds.length === 0) return sessions;
+
+    const pipeline = redis.pipeline();
+    sessionIds.forEach(id => pipeline.hgetall(`payment-session:${id}`));
+    const results = await pipeline.exec();
+
+    for (const raw of (results || [])) {
+      const data = (raw as [Error | null, any])[1];
+      const session = data ? this.deserializeSession(data as Record<string, string>) : null;
       if (session && session.agentId === agentId && session.status === 'settled') {
         sessions.push(session);
       }
@@ -291,17 +299,24 @@ export class VoicePaymentService {
 
   async getUserHistory(userAddress: Address): Promise<CallSession[]> {
     const redis = getRedis();
-    const keys = await redis.keys('payment-session:*');
+    // Use Set index instead of KEYS
+    const sessionIds = await redis.smembers('payment_session_index');
+    if (sessionIds.length === 0) return [];
+
+    // Batch fetch with pipeline
+    const pipeline = redis.pipeline();
+    sessionIds.forEach(id => pipeline.hgetall(`payment-session:${id}`));
+    const results = await pipeline.exec();
+
     const sessions: CallSession[] = [];
-    
-    for (const key of keys) {
-      const data = await redis.hgetall(key);
-      const session = this.deserializeSession(data as Record<string, string>);
+    for (const raw of results || []) {
+      const data = (raw as [Error | null, Record<string, string>])[1];
+      const session = data ? this.deserializeSession(data) : null;
       if (session && session.userAddress.toLowerCase() === userAddress.toLowerCase() && session.status === 'settled') {
         sessions.push(session);
       }
     }
-    
+
     return sessions;
   }
 }

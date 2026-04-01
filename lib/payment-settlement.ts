@@ -384,6 +384,7 @@ export class PaymentSettlement {
 
       const redis = getRedis();
       await redis.hset(`payment-receipt:${paymentReceipt.callId}`, this.serializeReceipt(paymentReceipt));
+      await redis.sadd('payment_receipt_index', `payment-receipt:${paymentReceipt.callId}`);
 
       console.log('[Settlement] ✅ Payment settled!', {
         txHash: hash,
@@ -451,12 +452,18 @@ export class PaymentSettlement {
    */
   async getReceiptsForAddress(address: Address): Promise<PaymentReceipt[]> {
     const redis = getRedis();
-    const keys = await redis.keys('payment-receipt:*');
+    const keys = await redis.smembers('payment_receipt_index');
     const receipts: PaymentReceipt[] = [];
-    
-    for (const key of keys) {
-      const data = await redis.hgetall(key);
-      const receipt = this.deserializeReceipt(data as Record<string, string>);
+
+    if (keys.length === 0) return receipts;
+
+    const pipeline = redis.pipeline();
+    keys.forEach(k => pipeline.hgetall(k));
+    const results = await pipeline.exec();
+
+    for (const raw of (results || [])) {
+      const data = (raw as [Error | null, any])[1];
+      const receipt = data ? this.deserializeReceipt(data as Record<string, string>) : null;
       if (receipt && (
         receipt.payer.toLowerCase() === address.toLowerCase() ||
         receipt.payee.toLowerCase() === address.toLowerCase()
@@ -477,14 +484,20 @@ export class PaymentSettlement {
     averageGasUsed: string;
   }> {
     const redis = getRedis();
-    const keys = await redis.keys('payment-receipt:*');
+    const keys = await redis.smembers('payment_receipt_index');
     const receipts: PaymentReceipt[] = [];
-    
-    for (const key of keys) {
-      const data = await redis.hgetall(key);
-      const receipt = this.deserializeReceipt(data as Record<string, string>);
-      if (receipt) {
-        receipts.push(receipt);
+
+    if (keys.length > 0) {
+      const pipeline = redis.pipeline();
+      keys.forEach(k => pipeline.hgetall(k));
+      const results = await pipeline.exec();
+
+      for (const raw of (results || [])) {
+        const data = (raw as [Error | null, any])[1];
+        const receipt = data ? this.deserializeReceipt(data as Record<string, string>) : null;
+        if (receipt) {
+          receipts.push(receipt);
+        }
       }
     }
     

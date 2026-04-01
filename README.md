@@ -1,6 +1,6 @@
 # 🎙️ VOISSS — Voice Agent Hotline
 
-A decentralised marketplace where users pay-per-minute to call AI agents via voice, with settlement, identity, and reputation anchored on Celo and optional payment-rail plumbing for different stablecoin UX paths.
+VOISSS is a decentralised marketplace for calling AI voice agents on-demand, powered by ElevenLabs Conversational AI. Users connect a Celo wallet, browse agents, and pay-per-second via stablecoins for live voice conversations. Agents like Web Researcher use Firecrawl to search and scrape the web in real time during calls. Agent reputation, identity, and delegation are tracked on-chain using ERC-8004 registries on Celo.
 
 **Live:** [voisss.celo.famile.xyz](https://voisss.celo.famile.xyz) · [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)
 

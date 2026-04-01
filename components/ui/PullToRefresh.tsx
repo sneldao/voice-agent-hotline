@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { RefreshCw } from './Toast';
 
 interface PullToRefreshProps {
@@ -14,34 +14,84 @@ export function PullToRefresh({
   children,
   threshold = 120,
 }: PullToRefreshProps) {
-  const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
   const startY = useRef<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const pullDistanceRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isRefreshingRef = useRef(false);
+
+  // Keep ref in sync with state for touch handler access
+  useEffect(() => {
+    isRefreshingRef.current = isRefreshing;
+  }, [isRefreshing]);
+
+  const updatePullDOM = useCallback((distance: number) => {
+    const indicator = indicatorRef.current;
+    const content = contentRef.current;
+    if (!indicator || !content) return;
+
+    const clampedDistance = Math.min(distance, threshold * 2);
+    const indicatorHeight = Math.min(clampedDistance, 80);
+    const contentOffset = Math.min(clampedDistance / 2, 60);
+    const rotation = Math.min(clampedDistance, 180);
+    const isThresholdMet = clampedDistance >= threshold;
+
+    indicator.style.height = `${indicatorHeight}px`;
+    indicator.style.opacity = '1';
+    content.style.transform = `translateY(${contentOffset}px)`;
+    content.style.transition = 'none';
+
+    const icon = indicator.querySelector('[data-ptr-icon]') as HTMLElement | null;
+    const text = indicator.querySelector('[data-ptr-text]') as HTMLElement | null;
+    if (icon) {
+      icon.style.transform = `rotate(${rotation}deg)`;
+      icon.style.color = isThresholdMet ? '#22d3ee' : '#9ca3af';
+    }
+    if (text) {
+      text.textContent = isThresholdMet ? 'Release to refresh' : 'Pull to refresh';
+    }
+  }, [threshold]);
+
+  const resetPullDOM = useCallback((animate: boolean) => {
+    const indicator = indicatorRef.current;
+    const content = contentRef.current;
+    if (!indicator || !content) return;
+
+    indicator.style.height = '0px';
+    indicator.style.opacity = '0';
+    content.style.transform = 'translateY(0)';
+    content.style.transition = animate ? 'transform 0.3s ease-out' : 'none';
+  }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    // Only enable pull-to-refresh when at the top
+    if (isRefreshingRef.current) return;
     if (window.scrollY > 0) return;
     startY.current = e.touches[0].clientY;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (startY.current === null || isRefreshing) return;
-    
+    if (startY.current === null || isRefreshingRef.current) return;
+
     const currentY = e.touches[0].clientY;
     const distance = currentY - startY.current;
-    
+
     if (distance > 0 && distance < threshold * 2) {
-      setIsPulling(true);
-      setPullDistance(distance);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        pullDistanceRef.current = distance;
+        updatePullDOM(distance);
+      });
     }
-  }, [isRefreshing, threshold]);
+  }, [threshold, updatePullDOM]);
 
   const handleTouchEnd = useCallback(async () => {
     if (startY.current === null) return;
-    
-    if (pullDistance >= threshold && !isRefreshing) {
+
+    const distance = pullDistanceRef.current;
+
+    if (distance >= threshold && !isRefreshingRef.current) {
       setIsRefreshing(true);
       try {
         await onRefresh();
@@ -49,54 +99,50 @@ export function PullToRefresh({
         setIsRefreshing(false);
       }
     }
-    
-    setIsPulling(false);
-    setPullDistance(0);
+
+    resetPullDOM(true);
+    pullDistanceRef.current = 0;
     startY.current = null;
-  }, [pullDistance, threshold, isRefreshing, onRefresh]);
+  }, [threshold, onRefresh, resetPullDOM]);
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   return (
     <div
-      ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       className="relative"
     >
-      {/* Pull indicator */}
+      {/* Pull indicator — styles driven by DOM refs, not React state */}
       <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-center overflow-hidden transition-all duration-200"
-        style={{
-          height: isPulling || isRefreshing ? Math.min(pullDistance, 80) : 0,
-          opacity: isPulling || isRefreshing ? 1 : 0,
-        }}
+        ref={indicatorRef}
+        className="absolute top-0 left-0 right-0 flex items-center justify-center overflow-hidden"
+        style={{ height: 0, opacity: 0 }}
       >
         <div className="flex flex-col items-center gap-2 pt-4">
           {isRefreshing ? (
             <RefreshCw className="w-6 h-6 text-cyan-400 animate-spin" />
           ) : (
             <RefreshCw
-              className={`w-6 h-6 text-gray-400 transition-transform ${
-                pullDistance >= threshold ? 'text-cyan-400' : ''
-              }`}
-              style={{
-                transform: `rotate(${Math.min(pullDistance, 180)}deg)`,
-              }}
+              data-ptr-icon
+              className="w-6 h-6 text-gray-400"
+              style={{ transform: 'rotate(0deg)' }}
             />
           )}
-          <span className="text-xs text-gray-400">
-            {pullDistance >= threshold ? 'Release to refresh' : 'Pull to refresh'}
+          <span data-ptr-text className="text-xs text-gray-400">
+            Pull to refresh
           </span>
         </div>
       </div>
 
-      {/* Content */}
-      <div
-        style={{
-          transform: isPulling ? `translateY(${Math.min(pullDistance / 2, 60)}px)` : 'translateY(0)',
-          transition: isPulling ? 'none' : 'transform 0.3s ease-out',
-        }}
-      >
+      {/* Content — transform driven by DOM ref */}
+      <div ref={contentRef}>
         {children}
       </div>
     </div>

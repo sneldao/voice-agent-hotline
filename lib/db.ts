@@ -157,6 +157,7 @@ export async function createSession(session: CallSession): Promise<CallSession> 
   await redis.hset(key('session', session.id), session as any);
   await redis.sadd(key('user', session.userId, 'sessions'), session.id);
   await redis.sadd(key('agent', session.agentId, 'sessions'), session.id);
+  await redis.sadd('session_index:all', session.id);
   return session;
 }
 
@@ -222,12 +223,16 @@ export async function getPlatformStats(): Promise<{
   totalCalls: number;
   totalRevenue: number;
 }> {
-  const sessionKeys = await redis.keys(key('session', '*'));
+  const sessionIds = await redis.smembers<string[]>('session_index:all');
+  if (!sessionIds.length) return { totalUsers: 0, totalAgents: 0, onlineAgents: 0, totalCalls: 0, totalRevenue: 0 };
+  const pipeline = redis.pipeline();
+  sessionIds.slice(0, 100).forEach(id => pipeline.hgetall(key('session', id)));
+  const results = await pipeline.exec();
   const uniqueAgents = new Set<string>();
   const uniqueUsers = new Set<string>();
   let totalRevenue = 0;
-  for (const k of sessionKeys.slice(0, 100)) {
-    const session = await redis.hgetall(k) as CallSession | null;
+  for (const raw of (results || [])) {
+    const session = (raw as [Error | null, any])[1] as CallSession | null;
     if (session) {
       uniqueAgents.add(session.agentId);
       uniqueUsers.add(session.userId);
@@ -238,7 +243,7 @@ export async function getPlatformStats(): Promise<{
     totalUsers: uniqueUsers.size,
     totalAgents: uniqueAgents.size,
     onlineAgents: await redis.zcard(key('agents:online')),
-    totalCalls: sessionKeys.length,
+    totalCalls: sessionIds.length,
     totalRevenue,
   };
 }

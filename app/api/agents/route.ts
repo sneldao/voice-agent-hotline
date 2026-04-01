@@ -23,23 +23,48 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ agent });
     }
 
-    // List all agents via Set index (O(N) members, non-blocking unlike KEYS)
-    let agentIds = await redis.smembers('agent_index');
-    if (agentIds.length === 0) {
-      // One-time migration: backfill index from existing agent:* keys
-      const keys = await redis.keys('agent:*');
-      agentIds = keys.map(k => k.replace('agent:', ''));
-      if (agentIds.length > 0) {
-        for (const id of agentIds) {
-          await redis.sadd('agent_index', id);
-        }
-      }
-    }
-    const agents = await Promise.all(
-      agentIds.map(id => redis.hgetall(`agent:${id}`))
-    );
+    // Pagination and filtering params
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const search = (searchParams.get('search') || '').toLowerCase().trim();
+    const category = (searchParams.get('category') || '').toLowerCase().trim();
 
-    return NextResponse.json({ agents });
+    // List all agents via Set index (non-blocking unlike KEYS)
+    const agentIds = await redis.smembers('agent_index');
+    if (agentIds.length === 0) {
+      return NextResponse.json({ agents: [], total: 0, page: 1, hasMore: false });
+    }
+
+    // Batch fetch with pipeline instead of N individual roundtrips
+    const pipeline = redis.pipeline();
+    agentIds.forEach(id => pipeline.hgetall(`agent:${id}`));
+    const results = await pipeline.exec();
+    let agents = (results || [])
+      .map((r: any) => r[1])
+      .filter((a: any) => a && Object.keys(a).length > 0);
+
+    // Server-side filtering
+    if (search) {
+      agents = agents.filter((a: any) => {
+        const name = (a.name || '').toLowerCase();
+        const specialty = (a.specialty || '').toLowerCase();
+        return name.includes(search) || specialty.includes(search);
+      });
+    }
+
+    if (category && category !== 'all') {
+      agents = agents.filter((a: any) => (a.category || '').toLowerCase() === category);
+    }
+
+    const total = agents.length;
+    const start = (page - 1) * limit;
+    const paginatedAgents = agents.slice(start, start + limit);
+    const hasMore = start + limit < total;
+
+    return NextResponse.json(
+      { agents: paginatedAgents, total, page, hasMore },
+      { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60' } }
+    );
   } catch (error: any) {
     console.error('[Agents API] GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

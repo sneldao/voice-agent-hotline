@@ -3,7 +3,13 @@
 import useSWR from 'swr';
 import type { Agent } from './types';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`);
+  }
+  return res.json();
+};
 
 export function useUserBalance(address?: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
@@ -26,17 +32,39 @@ export function useUserBalance(address?: string | null) {
   };
 }
 
-export function useAgents() {
-  const { data, error, isLoading, mutate } = useSWR('/api/agents?capability=all', fetcher, {
+interface UseAgentsParams {
+  search?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useAgents(params?: UseAgentsParams) {
+  const search = params?.search || '';
+  const category = params?.category || '';
+  const page = params?.page || 1;
+  const limit = params?.limit || 20;
+
+  const queryParts: string[] = ['capability=all'];
+  if (search) queryParts.push(`search=${encodeURIComponent(search)}`);
+  if (category && category !== 'all') queryParts.push(`category=${encodeURIComponent(category)}`);
+  queryParts.push(`page=${page}`);
+  queryParts.push(`limit=${limit}`);
+
+  const key = `/api/agents?${queryParts.join('&')}`;
+
+  const { data, error, isLoading, mutate } = useSWR(key, fetcher, {
     refreshInterval: 60000,
     revalidateOnFocus: false,
-    dedupingInterval: 10000,
-    staleTime: 10000,
+    dedupingInterval: search ? 2000 : 10000,
+    staleTime: search ? 1000 : 10000,
     keepPreviousData: true,
   });
 
   return {
     agents: (data?.agents || []) as Agent[],
+    total: data?.total || 0,
+    hasMore: data?.hasMore || false,
     isLoading,
     error,
     mutate,

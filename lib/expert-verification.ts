@@ -514,6 +514,8 @@ export class ExpertVerificationService {
    */
   private async saveProfile(profile: ExpertProfile): Promise<void> {
     await redis.hset(`expert:${profile.agentId}`, this.serializeProfile(profile));
+    // Add to index set for efficient listing
+    await redis.sadd('expert_index', profile.agentId);
   }
 
   /**
@@ -524,14 +526,21 @@ export class ExpertVerificationService {
     minTrustScore?: number;
     verificationLevel?: string;
   }): Promise<ExpertProfile[]> {
-    const keys = await redis.keys('expert:*');
-    const experts: ExpertProfile[] = [];
+    // Use Set index instead of KEYS for O(1) lookup
+    const expertIds = await redis.smembers('expert_index');
+    if (expertIds.length === 0) return [];
 
-    for (const key of keys) {
-      const data = await redis.hgetall(key);
+    // Batch fetch with pipeline
+    const pipeline = redis.pipeline();
+    expertIds.forEach(id => pipeline.hgetall(`expert:${id}`));
+    const results = await pipeline.exec();
+
+    const experts: ExpertProfile[] = [];
+    for (const raw of results || []) {
+      const data = (raw as [Error | null, Record<string, string>])[1];
       if (!data) continue;
 
-      const profile = this.deserializeProfile(data as Record<string, string>);
+      const profile = this.deserializeProfile(data);
 
       // Apply filters
       if (filters?.category && profile.category !== filters.category) continue;

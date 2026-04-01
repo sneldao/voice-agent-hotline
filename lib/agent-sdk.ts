@@ -131,6 +131,8 @@ export class AgentSDK {
     // Store in Redis
     await redis.hset(`agent:${agentId}`, this.serializeAgent(agent));
     await redis.set(`apikey:${apiKey}`, agentId);
+    // Add to index set for efficient listing
+    await redis.sadd('agent_index:external', agentId);
 
     // Auto-approve general category, pending for sensitive categories
     if (config.category === 'legal' || config.category === 'medical') {
@@ -180,14 +182,21 @@ export class AgentSDK {
     minRating?: number;
     maxRate?: number;
   }): Promise<RegisteredAgent[]> {
-    const keys = await redis.keys('agent:ext_*');
-    const agents: RegisteredAgent[] = [];
+    // Use Set index instead of KEYS for O(1) lookup
+    const agentIds = await redis.smembers('agent_index:external');
+    if (agentIds.length === 0) return [];
 
-    for (const key of keys) {
-      const data = await redis.hgetall(key);
+    // Batch fetch with pipeline
+    const pipeline = redis.pipeline();
+    agentIds.forEach(id => pipeline.hgetall(`agent:${id}`));
+    const results = await pipeline.exec();
+
+    const agents: RegisteredAgent[] = [];
+    for (const raw of results || []) {
+      const data = (raw as [Error | null, Record<string, string>])[1];
       if (!data) continue;
 
-      const agent = this.deserializeAgent(data as Record<string, string>);
+      const agent = this.deserializeAgent(data);
       if (agent.status !== 'active') continue;
 
       // Apply filters

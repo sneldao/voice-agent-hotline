@@ -3,7 +3,7 @@
 // Force dynamic rendering to avoid SSR issues with client-only SDKs
 export const revalidate = 0;
 
-import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef } from 'react';
+import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -116,6 +116,14 @@ function pageReducer(state: PageState, action: PageAction): PageState {
 }
 
 export default function Home() {
+  return (
+    <Suspense fallback={<TabLoading />}>
+      <HomeInner />
+    </Suspense>
+  );
+}
+
+function HomeInner() {
   const [state, dispatch] = useReducer(pageReducer, initialPageState);
   const {
     activeTab, selectedAgent, inCall, callId,
@@ -127,9 +135,31 @@ export default function Home() {
   const launchParamsRef = useRef<{ agentId: string; autoStart: boolean } | null>(null);
   const launchAttemptedRef = useRef(false);
 
+  // Debounce search query for API calls (300ms)
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery]);
+
   const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
   const { balance: userBalance, isLoading: isLoadingBalance, mutate: mutateBalance } = useUserBalance(address);
-  const { agents, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents();
+  // Load more: fetch next page
+  const [page, setPage] = useState(1);
+  const [allAgents, setAllAgents] = useState<Agent[]>([]);
+
+  const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
+    search: debouncedQuery,
+    category: selectedCategory,
+    page,
+  });
   const localCallHistory = useLocalCallHistory();
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
   const onboarding = useOnboarding(connected, userBalance);
@@ -203,7 +233,6 @@ export default function Home() {
     }
   }, [agents, clearLaunchState]);
 
-  // Memoized handlers to prevent re-renders from inline arrow functions
   const handleSelectAgent = useCallback((agent: Agent | null) => {
     dispatch({ type: 'SELECT_AGENT', agent });
   }, []);
@@ -224,13 +253,35 @@ export default function Home() {
     dispatch({ type: 'SET_TAB', tab: tab as PageState['activeTab'] });
   }, []);
 
-  // Agents are passed unfiltered to DiscoverTab which handles filtering with debounced search
-  const filteredAgents = agents;
-
   const relatedAgents = useMemo(
     () => getRelatedAgentRecommendations(selectedAgent, agents, 3),
     [agents, selectedAgent]
   );
+
+  // Accumulate agents across pages for "Load More"
+  // Reset when search/category changes
+  const prevFiltersRef = useRef(`${debouncedQuery}|${selectedCategory}`);
+  useEffect(() => {
+    const currentFilters = `${debouncedQuery}|${selectedCategory}`;
+    if (prevFiltersRef.current !== currentFilters) {
+      prevFiltersRef.current = currentFilters;
+      setPage(1);
+      setAllAgents(agents);
+    } else if (page === 1) {
+      setAllAgents(agents);
+    } else {
+      // Append new page, dedup by id
+      setAllAgents(prev => {
+        const existingIds = new Set(prev.map(a => a.id));
+        const newAgents = agents.filter(a => !existingIds.has(a.id));
+        return newAgents.length > 0 ? [...prev, ...newAgents] : prev;
+      });
+    }
+  }, [agents, page, debouncedQuery, selectedCategory]);
+
+  const handleLoadMore = useCallback(() => {
+    setPage(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
     const launchParams = readCallLaunchParams(searchParams);
@@ -347,15 +398,17 @@ export default function Home() {
                 <Suspense fallback={<TabLoading />}>
                   <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
                     <DiscoverTab
-                      agents={filteredAgents}
-                      isLoading={isLoadingAgents}
+                      agents={allAgents}
+                      isLoading={isLoadingAgents && allAgents.length === 0}
                       error={agentsError}
                       onSelect={handleSelectAgent}
                       searchQuery={searchQuery}
                       onSearchChange={handleSearchChange}
                       selectedCategory={selectedCategory}
                       onCategoryChange={handleCategoryChange}
-                      onRefresh={mutateAgents}
+                      onRefresh={async () => { await mutateAgents(); }}
+                      hasMore={hasMore}
+                      onLoadMore={handleLoadMore}
                     />
                   </ErrorBoundary>
                 </Suspense>

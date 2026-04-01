@@ -22,6 +22,11 @@ export function Modal({
 }: ModalProps) {
   const modalRef = React.useRef<HTMLDivElement>(null);
   const previousActiveElement = React.useRef<Element | null>(null);
+  const onCloseRef = React.useRef(onClose);
+
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -30,7 +35,7 @@ export function Modal({
     previousActiveElement.current = document.activeElement;
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
 
     // Focus trap
@@ -87,7 +92,7 @@ export function Modal({
         previousActiveElement.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // SSR guard — no mounted state needed, avoids extra render cycle
   if (typeof window === 'undefined' || !isOpen) return null;
@@ -107,7 +112,7 @@ export function Modal({
         {/* Overlay */}
         <div 
           className="absolute inset-0 bg-black/80 animate-fade-in"
-          onClick={onClose}
+          onClick={() => onCloseRef.current()}
         />
         
         {/* Modal */}
