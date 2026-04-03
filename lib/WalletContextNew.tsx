@@ -53,45 +53,56 @@ const ethersConfig = defaultConfig({
 // Module-scope creation can block the main thread and create MutationObserver conflicts.
 let web3Modal: ReturnType<typeof createWeb3Modal> | null = null;
 let web3ModalInitAttempted = false;
+let web3ModalInitPromise: Promise<ReturnType<typeof createWeb3Modal> | null> | null = null;
 
 let web3ModalEventCallback: ((event: any) => void) | null = null;
 
+function createWeb3ModalSafely() {
+  try {
+    web3Modal = createWeb3Modal({
+      ethersConfig,
+      chains,
+      projectId,
+      enableAnalytics: false,
+      themeMode: 'dark',
+      themeVariables: {
+        '--w3m-accent': '#06b6d4',
+        '--w3m-border-radius-master': '12px',
+      },
+    });
+
+    if (web3Modal && web3ModalEventCallback) {
+      web3Modal.subscribeEvents(web3ModalEventCallback);
+    }
+
+    return web3Modal;
+  } catch (error: any) {
+    if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
+      console.warn('Web3Modal: window.ethereum conflict handled gracefully');
+    } else {
+      console.error('Web3Modal initialization error:', error);
+    }
+    return null;
+  }
+}
+
 function ensureWeb3Modal() {
-  if (web3ModalInitAttempted) return web3Modal;
+  if (web3Modal) return Promise.resolve(web3Modal);
+  if (web3ModalInitPromise) return web3ModalInitPromise;
+  if (!projectId || typeof window === 'undefined') return Promise.resolve(null);
+
   web3ModalInitAttempted = true;
 
-  if (!projectId || typeof window === 'undefined') return null;
+  // Keep init off the first render tick, but make callers await the result.
+  web3ModalInitPromise = new Promise<ReturnType<typeof createWeb3Modal> | null>((resolve) => {
+    setTimeout(() => {
+      resolve(createWeb3ModalSafely());
+    }, 0);
+  }).finally(() => {
+    web3ModalInitPromise = null;
+  });
 
-  // Defer initialization off the critical render path to avoid
-  // MutationObserver conflicts with React hydration and portal rendering.
-  setTimeout(() => {
-    try {
-      web3Modal = createWeb3Modal({
-        ethersConfig,
-        chains,
-        projectId,
-        enableAnalytics: false,
-        themeMode: 'dark',
-        themeVariables: {
-          '--w3m-accent': '#06b6d4',
-          '--w3m-border-radius-master': '12px',
-        },
-      });
-
-      // Subscribe events now that modal is ready
-      if (web3Modal && web3ModalEventCallback) {
-        web3Modal.subscribeEvents(web3ModalEventCallback);
-      }
-    } catch (error: any) {
-      if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
-        console.warn('Web3Modal: window.ethereum conflict handled gracefully');
-      } else {
-        console.error('Web3Modal initialization error:', error);
-      }
-    }
-  }, 0);
-
-  return null;
+  return web3ModalInitPromise;
 }
 
 interface WalletState {
@@ -132,10 +143,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       initialized.current = true;
 
       // Lazy-init Web3Modal on first mount instead of module scope
-      const modal = ensureWeb3Modal();
+      void ensureWeb3Modal();
       
       const checkConnection = async () => {
         try {
+          const modal = await ensureWeb3Modal();
           // Check if Web3Modal is initialized and has an existing connection
           if (modal && modal.getIsConnected()) {
             const address = modal.getAddress();
@@ -294,7 +306,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       // If no injected wallet or connection failed, use WalletConnect
-      const modal = ensureWeb3Modal();
+      const modal = await ensureWeb3Modal();
       if (modal) {
         await modal.open();
         // Connection will be handled by the event listener
@@ -328,7 +340,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const switchChain = useCallback(async (chainId: number) => {
     if (wallet.walletType === 'walletconnect') {
-      const modal = ensureWeb3Modal();
+      const modal = await ensureWeb3Modal();
       if (modal) {
         await modal.switchNetwork(chainId);
       }
