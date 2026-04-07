@@ -67,7 +67,7 @@ export function useAgents(params?: UseAgentsParams) {
     total: data?.total || 0,
     hasMore: data?.hasMore || false,
     isLoading,
-    error,
+    error: error instanceof Error ? error.message : error ? 'Request failed' : null,
     mutate,
   };
 }
