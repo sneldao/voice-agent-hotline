@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { apiUrl } from './api';
 import type { Agent } from './types';
 
 const fetcher = async (url: string) => {
@@ -13,7 +14,7 @@ const fetcher = async (url: string) => {
 
 export function useUserBalance(address?: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
-    address ? `/api/users/${address}` : null,
+    address ? apiUrl(`/api/users/${address}`) : null,
     fetcher,
     {
       refreshInterval: 30000,
@@ -51,7 +52,7 @@ export function useAgents(params?: UseAgentsParams) {
   queryParts.push(`page=${page}`);
   queryParts.push(`limit=${limit}`);
 
-  const key = `/api/agents?${queryParts.join('&')}`;
+  const key = apiUrl(`/api/agents?${queryParts.join('&')}`);
 
   const { data, error, isLoading, mutate } = useSWR(key, fetcher, {
     refreshInterval: 60000,

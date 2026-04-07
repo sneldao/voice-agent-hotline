@@ -14,6 +14,8 @@
  *   pm2 status
  */
 
+require('dotenv').config({ path: '.env.local' });
+
 module.exports = {
   apps: [
     {
@@ -30,6 +32,7 @@ module.exports = {
       
       // Environment variables
       env: {
+        ...process.env,
         NODE_ENV: 'production',
         PORT: 3042,
         HOSTNAME: '0.0.0.0',
