@@ -165,9 +165,9 @@ export function DiscoverTab({
             {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
             <span className="ml-2 text-xs text-gray-500">({agents.length})</span>
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-3 min-h-[400px]">
             {agents.map(agent => (
-              <div key={agent.id} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 120px' }}>
+              <div key={agent.id} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 130px' }}>
                 <AgentCard
                   agent={agent}
                   onClick={() => onSelect(agent)}

@@ -95,7 +95,7 @@ export const FeaturedCard = React.memo(function FeaturedCard({
   return (
     <button
       onClick={onClick}
-      className="w-full sm:flex-shrink-0 sm:w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 border-gray-800 bg-gray-900/50 hover:border-gray-700"
+      className="w-full sm:flex-shrink-0 sm:w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 border-gray-800 bg-gray-900/50 hover:border-gray-700 active:scale-[0.98] will-change-transform"
     >
       <Avatar size="md" online={agent.online}>{agent.avatar}</Avatar>
       <div className="mt-3">
@@ -124,12 +124,11 @@ export function AgentDetailModal({
 
   if (!agent) return null;
 
-  const estimatedCost = (agent.rate * estimatedMins).toFixed(2);
-
-  const handleCall = () => {
+  const estimatedCost = useMemo(() => (agent.rate * estimatedMins).toFixed(2), [agent.rate, estimatedMins]);
+  const handleCall = useCallback(() => {
     setCalling(true);
     onCall();
-  };
+  }, [onCall]);
 
   return (
     <Modal isOpen={!!agent} onClose={onClose} size="md">

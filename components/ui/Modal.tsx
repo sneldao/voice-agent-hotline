@@ -43,14 +43,17 @@ export function Modal({
       if (e.key !== 'Tab' || !modalRef.current) return;
 
       const focusableElements = modalRef.current.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
+      
+      if (focusableElements.length === 0) return;
+      
       const firstElement = focusableElements[0] as HTMLElement;
       const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
 
+      // Shift + Tab
       if (e.shiftKey) {
-        // Shift + Tab
-        if (document.activeElement === firstElement) {
+        if (document.activeElement === firstElement || document.activeElement === modalRef.current) {
           lastElement.focus();
           e.preventDefault();
         }
@@ -68,21 +71,21 @@ export function Modal({
     document.body.style.overflow = 'hidden';
 
     // Focus the first focusable element in the modal
-    const focusTimer = setTimeout(() => {
+    const focusTimer = requestAnimationFrame(() => {
       if (modalRef.current) {
         const focusableElement = modalRef.current.querySelector(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         ) as HTMLElement;
         if (focusableElement) {
-          focusableElement.focus();
+          focusableElement.focus({ preventScroll: true });
         } else {
-          modalRef.current.focus();
+          modalRef.current.focus({ preventScroll: true });
         }
       }
-    }, 0);
+    });
 
     return () => {
-      clearTimeout(focusTimer);
+      cancelAnimationFrame(focusTimer);
       document.removeEventListener('keydown', handleEscape);
       document.removeEventListener('keydown', handleTabKey);
       document.body.style.overflow = '';
@@ -140,6 +143,7 @@ export function Modal({
             flex
             flex-col
             max-h-[85vh]
+            will-change-transform
           `}
         >
           {/* Header */}

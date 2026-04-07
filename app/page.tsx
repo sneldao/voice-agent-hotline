@@ -234,7 +234,11 @@ function HomeInner() {
   }, [agents, clearLaunchState]);
 
   const handleSelectAgent = useCallback((agent: Agent | null) => {
-    dispatch({ type: 'SELECT_AGENT', agent });
+    // Small delay to ensure any active transitions or ripples can complete
+    // without being interrupted by a heavy modal mount
+    requestAnimationFrame(() => {
+      dispatch({ type: 'SELECT_AGENT', agent });
+    });
   }, []);
 
   const handleSearchChange = useCallback((query: string) => {
