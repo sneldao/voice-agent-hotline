@@ -42,7 +42,19 @@ export async function GET(req: NextRequest) {
     const results = await pipeline.exec();
     let agents = (results || [])
       .map((r: any) => Array.isArray(r) ? r[1] : r)
-      .filter((a: any) => a && Object.keys(a).length > 0);
+      .filter((a: any) => a && Object.keys(a).length > 0)
+      .map((a: any) => ({
+        ...a,
+        // Ensure UI-friendly booleans/numbers for frontend
+        online: a.active === 'true' || a.status === 'active' || true, // Default to online if active
+        verified: a.status === 'active',
+        rate: parseFloat(a.price_per_minute || a.rate || '0.1'),
+        rating: parseFloat(a.rating || '0'),
+        totalRatings: parseInt(a.total_ratings || '0', 10),
+        totalCalls: parseInt(a.total_calls || '0', 10),
+        avatar: a.avatar || a.emoji || '🤖',
+        color: a.color || 'from-cyan-500 to-blue-500',
+      }));
 
     // Server-side filtering
     if (search) {

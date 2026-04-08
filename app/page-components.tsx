@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Star, ChevronRight, Phone } from 'lucide-react';
 import { Card, Badge, Avatar, Modal, Button } from '@/components/ui';
 import type { Agent } from '@/lib/types';
@@ -122,13 +122,17 @@ export function AgentDetailModal({
   const [calling, setCalling] = useState(false);
   const [estimatedMins, setEstimatedMins] = useState(5);
 
-  if (!agent) return null;
+  const estimatedCost = useMemo(() => {
+    if (!agent) return "0.00";
+    return (agent.rate * estimatedMins).toFixed(2);
+  }, [agent?.rate, estimatedMins]);
 
-  const estimatedCost = useMemo(() => (agent.rate * estimatedMins).toFixed(2), [agent.rate, estimatedMins]);
   const handleCall = useCallback(() => {
     setCalling(true);
     onCall();
   }, [onCall]);
+
+  if (!agent) return null;
 
   return (
     <Modal isOpen={!!agent} onClose={onClose} size="md">
