@@ -1,13 +1,101 @@
-// ============================================
-// Agent Skills & Utility Flows
-// Updated to use consolidated types from lib/core/types.ts
-// ============================================
+export type AgentStatus = 'active' | 'pending' | 'rejected';
 
-import { DelegationScope, SkillType, BookingRequest, OrderRequest, ReminderRequest, ResearchRequest, Skill, DelegationOption, hasSkillPermission, getSkillRequiredScope, getSkillByType, calculateDelegationLimit, formatDelegationForDisplay, createDelegationOptions } from './core/types';
+export interface Agent {
+  id: string;
+  name: string;
+  specialty: string;
+  bio: string;
+  rating: number;
+  calls: number;
+  rate: number;
+  avatar: string;
+  color: string;
+  online: boolean;
+  category?: string;
+  verified?: boolean;
+  totalRatings?: number;
+  totalCalls?: number;
+  tags?: string[];
+  wallet?: string;
+  wallet_address?: string;
+  status?: AgentStatus;
+  elevenlabs_agent_id?: string;
+  system_prompt?: string;
+  contact_email?: string;
+}
 
-// ============================================
-// Skill Types
-// ============================================
+export interface CallSession {
+  id: string;
+  agentId: string;
+  userWallet: string;
+  startTime: Date;
+  endTime?: Date;
+  duration: number;
+  cost: number;
+  paid: boolean;
+}
+
+export interface PaymentState {
+  status: 'free' | 'pending' | 'active' | 'completed';
+  balance: number;
+  perMinuteRate: number;
+  freeMinutes: number;
+  minutesUsed: number;
+}
+
+export interface Feedback {
+  agentId: string;
+  rating: number;
+  tag: 'helpful' | 'knowledgeable' | 'slow' | 'unclear' | 'other';
+  comment?: string;
+}
+
+export interface AgentSubmission {
+  name: string;
+  description: string;
+  specialty: string;
+  category: string;
+  elevenlabs_agent_id: string;
+  voice_id: string;
+  system_prompt: string;
+  rate: number;
+  wallet_address: string;
+  contact_email: string;
+}
+
+export interface AgentRegistration {
+  tokenId: bigint;
+  owner: string;
+  agentURI: string;
+  timestamp: bigint;
+}
+
+export interface ReputationScore {
+  agentId: bigint;
+  average: number;
+  total: number;
+  distribution: { 5: number; 4: number; 3: number; 2: number; 1: number };
+}
+
+export interface PaymentRequirements {
+  scheme: 'exact' | 'upto';
+  network: string;
+  maxAmountRequired: string;
+  payTo: string;
+  asset: string;
+  description: string;
+  mimeType: string;
+}
+
+export interface PaymentAuthorization {
+  from: string;
+  to: string;
+  value: string;
+  validAfter: string;
+  validBefore: string;
+  nonce: string;
+  signature: string;
+}
 
 export type SkillType = 'book' | 'order' | 'schedule' | 'research';
 
@@ -19,46 +107,11 @@ export interface Skill {
   requiredScope: keyof Pick<DelegationScope, 'canBook' | 'canOrder' | 'canSchedule' | 'canResearch'>;
 }
 
-export const SKILLS: Skill[] = [
-  {
-    type: 'book',
-    name: 'Book Appointment',
-    description: 'Schedule appointments, reservations, and services',
-    icon: '📅',
-    requiredScope: 'canBook',
-  },
-  {
-    type: 'order',
-    name: 'Place Order',
-    description: 'Order food, goods, and services',
-    icon: '🛒',
-    requiredScope: 'canOrder',
-  },
-  {
-    type: 'schedule',
-    name: 'Set Reminder',
-    description: 'Schedule reminders and notifications',
-    icon: '⏰',
-    requiredScope: 'canSchedule',
-  },
-  {
-    type: 'research',
-    name: 'Research',
-    description: 'Gather information and analysis',
-    icon: '🔍',
-    requiredScope: 'canResearch',
-  },
-];
-
-// ============================================
-// Booking Flow Types
-// ============================================
-
 export interface BookingRequest {
   serviceType: 'restaurant' | 'appointment' | 'travel' | 'event' | 'other';
   businessName: string;
-  dateTime: string; // ISO format
-  duration?: number; // minutes
+  dateTime: string;
+  duration?: number;
   partySize?: number;
   notes?: string;
   preferences?: {
@@ -77,10 +130,6 @@ export interface BookingConfirmation {
   cancellationPolicy?: string;
   estimatedCost?: string;
 }
-
-// ============================================
-// Ordering Flow Types
-// ============================================
 
 export interface OrderRequest {
   vendor: string;
@@ -101,7 +150,7 @@ export interface OrderItem {
   productId: string;
   name: string;
   quantity: number;
-  price: number; // in cents
+  price: number;
   options?: Record<string, string>;
 }
 
@@ -114,14 +163,10 @@ export interface OrderConfirmation {
   items: OrderItem[];
 }
 
-// ============================================
-// Scheduling Flow Types
-// ============================================
-
 export interface ReminderRequest {
   title: string;
   description?: string;
-  scheduledTime: string; // ISO format
+  scheduledTime: string;
   repeat?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   channels?: ('push' | 'email' | 'sms' | 'call')[];
   priority?: 'low' | 'medium' | 'high';
@@ -137,10 +182,6 @@ export interface ReminderConfirmation {
   scheduledTime: string;
   channels: string[];
 }
-
-// ============================================
-// Research Flow Types
-// ============================================
 
 export interface ResearchRequest {
   topic: string;
@@ -160,7 +201,7 @@ export interface ResearchResult {
   summary: string;
   source?: string;
   url?: string;
-  relevanceScore: number; // 0-1
+  relevanceScore: number;
   metadata?: Record<string, string>;
 }
 
@@ -169,12 +210,8 @@ export interface ResearchConfirmation {
   status: 'in_progress' | 'completed' | 'failed';
   results?: ResearchResult[];
   totalResults?: number;
-  estimatedTime?: number; // seconds
+  estimatedTime?: number;
 }
-
-// ============================================
-// Skill Execution Context
-// ============================================
 
 export interface SkillExecutionContext {
   userId: string;
@@ -194,10 +231,6 @@ export interface SkillExecutionContext {
   };
 }
 
-// ============================================
-// Skill Execution Result
-// ============================================
-
 export interface SkillResult<T> {
   success: boolean;
   data?: T;
@@ -207,9 +240,13 @@ export interface SkillResult<T> {
   gasEstimate?: number;
 }
 
-// ============================================
-// Utility Flow Service (Consolidated)
-// ============================================
+export interface DelegationScope {
+  canBook: boolean;
+  canOrder: boolean;
+  canSchedule: boolean;
+  canResearch: boolean;
+  maxSpend?: number;
+}
 
 export class UtilityFlowService {
   private context: SkillExecutionContext;
@@ -218,19 +255,10 @@ export class UtilityFlowService {
     this.context = context;
   }
 
-  // ========================================
-  // Booking Operations
-  // ========================================
-
-  /**
-   * Execute a booking request
-   */
   async book(request: BookingRequest): Promise<SkillResult<BookingConfirmation>> {
     if (!this.context.scope.canBook) {
       return { success: false, error: 'Booking permission not granted' };
     }
-
-    // Check budget
     const estimatedCost = this.estimateBookingCost(request);
     if (estimatedCost > (this.context.scope.maxSpend || 0)) {
       return { 
@@ -240,49 +268,29 @@ export class UtilityFlowService {
         approvalAmount: estimatedCost,
       };
     }
-
-    try {
-      // In production, integrate with booking APIs
-      // For now, return a mock confirmation
-      const confirmation: BookingConfirmation = {
-        bookingId: \`book_\${Date.now()}\`,
-        status: 'confirmed',
-        businessName: request.businessName,
-        dateTime: request.dateTime,
-        confirmationCode: this.generateConfirmationCode(),
-        estimatedCost: \`\$\{(estimatedCost / 100).toFixed(2)}\`,
-      };
-
-      return { success: true, data: confirmation };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Booking failed' 
-      };
-    }
+    const confirmation: BookingConfirmation = {
+      bookingId: \`book_\${Date.now()}\`,
+      status: 'confirmed',
+      businessName: request.businessName,
+      dateTime: request.dateTime,
+      confirmationCode: this.generateConfirmationCode(),
+      estimatedCost: \`\$\{(estimatedCost / 100).toFixed(2)}\`,
+    };
+    return { success: true, data: confirmation };
   }
 
-  /**
-   * Cancel an existing booking
-   */
   async cancelBooking(bookingId: string): Promise<SkillResult<{ cancelled: boolean; refund?: number }>> {
     if (!this.context.scope.canBook) {
       return { success: false, error: 'Booking permission not granted' };
     }
-
-    // In production, call booking API
     return { success: true, data: { cancelled: true, refund: 0 } };
   }
 
-  /**
-   * Search for available bookings
-   */
   async searchBookings(query: {
     serviceType?: string;
     location?: string;
     dateRange?: { start: string; end: string };
   }): Promise<SkillResult<BookingConfirmation[]>> {
-    // Mock search results
     return { 
       success: true, 
       data: [
@@ -297,22 +305,11 @@ export class UtilityFlowService {
     };
   }
 
-  // ========================================
-  // Ordering Operations
-  // ========================================
-
-  /**
-   * Execute an order request
-   */
   async order(request: OrderRequest): Promise<SkillResult<OrderConfirmation>> {
     if (!this.context.scope.canOrder) {
       return { success: false, error: 'Ordering permission not granted' };
     }
-
-    // Calculate total
     const total = request.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    // Check budget
     if (total > (this.context.scope.maxSpend || 0)) {
       return { 
         success: false, 
@@ -321,30 +318,17 @@ export class UtilityFlowService {
         approvalAmount: total,
       };
     }
-
-    try {
-      const confirmation: OrderConfirmation = {
-        orderId: \`order_\${Date.now()}\`,
-        status: 'preparing',
-        estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-        totalCost: total,
-        items: request.items,
-      };
-
-      return { success: true, data: confirmation };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Order failed' 
-      };
-    }
+    const confirmation: OrderConfirmation = {
+      orderId: \`order_\${Date.now()}\`,
+      status: 'preparing',
+      estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      totalCost: total,
+      items: request.items,
+    };
+    return { success: true, data: confirmation };
   }
 
-  /**
-   * Track an existing order
-   */
   async trackOrder(orderId: string): Promise<SkillResult<OrderConfirmation>> {
-    // Mock tracking
     return {
       success: true,
       data: {
@@ -357,42 +341,26 @@ export class UtilityFlowService {
     };
   }
 
-  /**
-   * Cancel an order
-   */
   async cancelOrder(orderId: string): Promise<SkillResult<{ cancelled: boolean; refund: number }>> {
     if (!this.context.scope.canOrder) {
       return { success: false, error: 'Ordering permission not granted' };
     }
-
     return { success: true, data: { cancelled: true, refund: 5000 } };
   }
 
-  // ========================================
-  // Scheduling Operations
-  // ========================================
-
-  /**
-   * Schedule a reminder
-   */
   async scheduleReminder(request: ReminderRequest): Promise<SkillResult<ReminderConfirmation>> {
     if (!this.context.scope.canSchedule) {
       return { success: false, error: 'Scheduling permission not granted' };
     }
-
     const confirmation: ReminderConfirmation = {
       reminderId: \`remind_\${Date.now()}\`,
       status: 'scheduled',
       scheduledTime: request.scheduledTime,
       channels: request.channels || ['push'],
     };
-
     return { success: true, data: confirmation };
   }
 
-  /**
-   * Update an existing reminder
-   */
   async updateReminder(
     reminderId: string,
     updates: Partial<ReminderRequest>
@@ -408,26 +376,14 @@ export class UtilityFlowService {
     };
   }
 
-  /**
-   * Dismiss/delete a reminder
-   */
   async dismissReminder(reminderId: string): Promise<SkillResult<{ dismissed: boolean }>> {
     return { success: true, data: { dismissed: true } };
   }
 
-  // ========================================
-  // Research Operations
-  // ========================================
-
-  /**
-   * Execute a research request
-   */
   async research(request: ResearchRequest): Promise<SkillResult<ResearchConfirmation>> {
     if (!this.context.scope.canResearch) {
       return { success: false, error: 'Research permission not granted' };
     }
-
-    // Mock research results
     const results: ResearchResult[] = [
       {
         id: 'result_1',
@@ -446,7 +402,6 @@ export class UtilityFlowService {
         url: 'https://example.com/result2',
       },
     ];
-
     return {
       success: true,
       data: {
@@ -458,9 +413,6 @@ export class UtilityFlowService {
     };
   }
 
-  /**
-   * Get detailed information on a research result
-   */
   async getResearchDetail(resultId: string): Promise<SkillResult<ResearchResult>> {
     return {
       success: true,
@@ -478,13 +430,6 @@ export class UtilityFlowService {
     };
   }
 
-  // ========================================
-  // Helper Methods
-  // ========================================
-
-  /**
-   * Estimate booking cost based on service type
-   */
   private estimateBookingCost(request: BookingRequest): number {
     const pricing: Record<string, number> = {
       restaurant: 5000,
@@ -496,17 +441,10 @@ export class UtilityFlowService {
     return pricing[request.serviceType] || 5000;
   }
 
-  /**
-   * Generate a unique confirmation code
-   */
   private generateConfirmationCode(): string {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
 }
-
-// ============================================
-// Skill Permission Checker
-// ============================================
 
 export function hasSkillPermission(
   scope: DelegationScope,
@@ -521,9 +459,6 @@ export function hasSkillPermission(
   return !!(scope[permissionMap[skillType]]);
 }
 
-/**
- * Get the required delegation scope for a skill type
- */
 export function getSkillRequiredScope(skillType: SkillType): keyof DelegationScope {
   const permissionMap: Record<SkillType, keyof DelegationScope> = {
     book: 'canBook',
@@ -534,16 +469,9 @@ export function getSkillRequiredScope(skillType: SkillType): keyof DelegationSco
   return permissionMap[skillType];
 }
 
-/**
- * Get a skill definition by type
- */
 export function getSkillByType(type: SkillType): Skill | undefined {
   return SKILLS.find(skill => skill.type === type);
 }
-
-// ============================================
-// Delegation Options Factory
-// ============================================
 
 export function createDelegationOptions(): DelegationOption[] {
   return SKILLS.map(skill => ({
@@ -552,21 +480,15 @@ export function createDelegationOptions(): DelegationOption[] {
   }));
 }
 
-/**
- * Format delegation options for display
- */
 export function formatDelegationForDisplay(options: DelegationOption[]): string {
   const enabled = options.filter(o => o.enabled);
   if (enabled.length === 0) return 'No permissions granted';
   return enabled.map(o => o.skill.name).join(', ');
 }
 
-/**
- * Calculate the total delegation limit
- */
 export function calculateDelegationLimit(options: DelegationOption[]): bigint {
   const maxSpend = options
     .filter(o => o.enabled && o.limits?.maxSpend)
     .reduce((sum, o) => sum + (o.limits?.maxSpend || 0), 0);
-  return BigInt(maxSpend) || BigInt(100000); // Default 100k wei
+  return BigInt(maxSpend) || BigInt(100000);
 }
