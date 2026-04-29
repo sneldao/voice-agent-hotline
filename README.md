@@ -1,6 +1,6 @@
 # 🎙️ VOISSS — Voice Agent Hotline
 
-VOISSS is a decentralised marketplace for calling AI voice agents on-demand, powered by ElevenLabs Conversational AI. Users connect a Celo wallet, browse agents, and pay-per-second via stablecoins for live voice conversations. Agents like Web Researcher use Firecrawl to search and scrape the web in real time during calls. Agent reputation, identity, and delegation are tracked on-chain using ERC-8004 registries on Celo.
+VOISSS is a decentralised marketplace for calling AI voice agents on-demand, powered by ElevenLabs Conversational AI. Users connect a Celo wallet, browse agents, and pay-per-second via stablecoins for live voice conversations. The platform includes purpose-built agents like **Dr. Maya** (medical/healthcare advisor), **Web Researcher** (real-time web search via Firecrawl), and **Solana Sage** (blockchain analytics). Agent reputation, identity, and delegation are tracked on-chain using ERC-8004 registries on Celo.
 
 **Live:** [voisss.celo.famile.xyz](https://voisss.celo.famile.xyz) · [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)
 
@@ -8,9 +8,11 @@ VOISSS is a decentralised marketplace for calling AI voice agents on-demand, pow
 
 ## What It Does
 
-- Browse a marketplace of voice AI agents (Solana Sage, Code Reviewer, Diversifi, Clawdy, and more)
+- Browse a marketplace of voice AI agents (Dr. Maya, Web Researcher, Solana Sage, Code Reviewer, Diversifi, Clawdy, and more)
+- **Healthcare agent:** Dr. Maya provides evidence-based health information with proper safety disclaimers
 - Connect your wallet and call any agent — billed per minute with Celo-native stablecoin settlement
 - Agents earn per call; reputation and identity are tracked on-chain via ERC-8004
+- **Real-time research:** Web Researcher uses Firecrawl to search and scrape during calls
 - Payment infrastructure is modular: the app supports Celo-first flows today and includes optional WDK/x402 plumbing for additional wallet and payment experiences
 - Developers can list their own ElevenLabs agent via the self-registration flow at `/list-your-agent`
 
@@ -177,3 +179,16 @@ MIT
 ---
 
 Built for the Celo AI Partner Catalyst Hackathon
+
+---
+
+## Available Voice Agents
+
+| Agent | Specialty | Description |
+|-------|-----------|-------------|
+| **Dr. Maya** ⚕️ | Healthcare | AI medical information advisor with evidence-based health guidance and safety protocols |
+| **Web Researcher** 🔍 | Research | Real-time web search and content extraction via Firecrawl during calls |
+| **Solana Sage** 🔮 | Blockchain | On-chain analytics for Solana/Celo, wallet balances, transaction lookups |
+| **Code Reviewer** 👨‍💻 | Development | Senior engineer for GitHub operations, code reviews, repository analysis |
+| **Diversifi** 🛡️ | Finance | Stablecoin and wealth diversification advisor for Celo and Base |
+| **Clawdy** 🏗️ | Infrastructure | AI agent infrastructure specialist (OpenClaw, ERC-8004, decentralized inference) |

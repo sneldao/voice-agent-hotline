@@ -9,18 +9,30 @@ interface PullToRefreshProps {
   threshold?: number;
 }
 
+// Check if device supports touch
+const isTouchDevice = () => {
+  if (typeof window === 'undefined') return false;
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+};
+
 export function PullToRefresh({
   onRefresh,
   children,
   threshold = 120,
 }: PullToRefreshProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isTouchEnabled, setIsTouchEnabled] = useState(false);
   const startY = useRef<number | null>(null);
   const pullDistanceRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const isRefreshingRef = useRef(false);
+
+  // Only enable touch handlers on touch-capable devices (mobile)
+  useEffect(() => {
+    setIsTouchEnabled(isTouchDevice());
+  }, []);
 
   // Keep ref in sync with state for touch handler access
   useEffect(() => {
@@ -66,12 +78,14 @@ export function PullToRefresh({
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isTouchEnabled) return;
     if (isRefreshingRef.current) return;
     if (window.scrollY > 0) return;
     startY.current = e.touches[0].clientY;
-  }, []);
+  }, [isTouchEnabled]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isTouchEnabled) return;
     if (startY.current === null || isRefreshingRef.current) return;
 
     const currentY = e.touches[0].clientY;
@@ -84,9 +98,10 @@ export function PullToRefresh({
         updatePullDOM(distance);
       });
     }
-  }, [threshold, updatePullDOM]);
+  }, [isTouchEnabled, threshold, updatePullDOM]);
 
   const handleTouchEnd = useCallback(async () => {
+    if (!isTouchEnabled) return;
     if (startY.current === null) return;
 
     const distance = pullDistanceRef.current;
@@ -103,7 +118,7 @@ export function PullToRefresh({
     resetPullDOM(true);
     pullDistanceRef.current = 0;
     startY.current = null;
-  }, [threshold, onRefresh, resetPullDOM]);
+  }, [isTouchEnabled, threshold, onRefresh, resetPullDOM]);
 
   // Cleanup RAF on unmount
   useEffect(() => {
@@ -112,11 +127,16 @@ export function PullToRefresh({
     };
   }, []);
 
+  // Only add touch handlers on touch devices
+  const containerProps = isTouchEnabled ? {
+    onTouchStart: handleTouchStart,
+    onTouchMove: handleTouchMove,
+    onTouchEnd: handleTouchEnd,
+  } : {};
+
   return (
     <div
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      {...containerProps}
       className="relative"
     >
       {/* Pull indicator — styles driven by DOM refs, not React state */}

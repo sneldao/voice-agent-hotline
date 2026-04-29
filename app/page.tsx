@@ -29,10 +29,11 @@ import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
 import { AgentDetailModal } from '@/app/page-components';
 import { readCallLaunchParams } from '@/lib/product-launch';
 
-// Lazy load tabs for code splitting
-const DiscoverTab = React.lazy(() => import('@/components/DiscoverTab').then(m => ({ default: m.DiscoverTab })));
-const CallsHistoryTab = React.lazy(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
-const ProfileTab = React.lazy(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
+// Eager load tabs - no lazy loading needed for small component trees
+// Lazy loading causes initial render delay and interactivity issues
+import { DiscoverTab } from '@/components/DiscoverTab';
+import { CallsHistoryTab } from '@/components/CallsHistoryTab';
+import { ProfileTab } from '@/components/ProfileTab';
 
 interface PageState {
   activeTab: 'discover' | 'calls' | 'profile';
@@ -151,15 +152,18 @@ function HomeInner() {
 
   const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
   const { balance: userBalance, isLoading: isLoadingBalance, mutate: mutateBalance } = useUserBalance(address);
-  // Load more: fetch next page
+
+  // Pagination state
   const [page, setPage] = useState(1);
-  const [allAgents, setAllAgents] = useState<Agent[]>([]);
 
   const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
     search: debouncedQuery,
     category: selectedCategory,
     page,
   });
+
+  // Use agents directly from SWR - SWR handles pagination with keepPreviousData
+  const displayedAgents = agents;
   const localCallHistory = useLocalCallHistory();
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
   const onboarding = useOnboarding(connected, userBalance);
@@ -262,28 +266,8 @@ function HomeInner() {
     [agents, selectedAgent]
   );
 
-  // Accumulate agents across pages for "Load More"
-  // Reset when search/category changes
-  const prevFiltersRef = useRef(`${debouncedQuery}|${selectedCategory}`);
-  useEffect(() => {
-    const currentFilters = `${debouncedQuery}|${selectedCategory}`;
-    if (prevFiltersRef.current !== currentFilters) {
-      prevFiltersRef.current = currentFilters;
-      setPage(1);
-      setAllAgents(agents);
-    } else if (page === 1) {
-      setAllAgents(agents);
-    } else {
-      // Append new page, dedup by id
-      setAllAgents(prev => {
-        const existingIds = new Set(prev.map(a => a.id));
-        const newAgents = agents.filter(a => !existingIds.has(a.id));
-        return newAgents.length > 0 ? [...prev, ...newAgents] : prev;
-      });
-    }
-  }, [agents, page, debouncedQuery, selectedCategory]);
-
   const handleLoadMore = useCallback(() => {
+    // SWR handles pagination via page parameter
     setPage(prev => prev + 1);
   }, []);
 
@@ -402,8 +386,8 @@ function HomeInner() {
                 <Suspense fallback={<TabLoading />}>
                   <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
                     <DiscoverTab
-                      agents={allAgents}
-                      isLoading={isLoadingAgents && allAgents.length === 0}
+                      agents={displayedAgents}
+                      isLoading={isLoadingAgents && displayedAgents.length === 0}
                       error={agentsError}
                       onSelect={handleSelectAgent}
                       searchQuery={searchQuery}

@@ -33,7 +33,7 @@ export interface PaymentState {
   isProcessing: boolean;
   isSettled: boolean;
   isSimulated: boolean;
-  mode: 'user_settled' | 'superfluid_stream' | 'yellow_channel';
+  mode: 'user_settled' | 'superfluid_stream';
   txHash?: string;
   error: string | null;
   explorerUrl?: string;

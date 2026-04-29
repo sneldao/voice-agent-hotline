@@ -44,3 +44,4 @@ dump.rdb
 .junie
 .kilocode
 .blackboxcli/
+.aider*

@@ -350,6 +350,17 @@ nav, header, main, footer,
   animation: shimmer 1.5s infinite;
 }
 
+/* Skeleton loading pulse - uses GPU-accelerated opacity for smooth animation */
+.skeleton-pulse {
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes skeleton-shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* Focus visible for keyboard navigation */
 :focus-visible {
   @apply outline-none ring-2 ring-cyan-500 ring-offset-2 ring-offset-gray-900;

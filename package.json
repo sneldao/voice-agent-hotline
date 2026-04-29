@@ -18,6 +18,7 @@
     "@erc7824/nitrolite": "^0.5.3",
     "@mendable/firecrawl-js": "^4.16.0",
     "@tanstack/react-query": "^5.8.4",
+    "@tanstack/react-virtual": "^3.10.9",
     "@tetherto/wdk": "^1.0.0-beta.6",
     "@tetherto/wdk-wallet-evm": "^1.0.0-beta.10",
     "@types/node": "^20.19.33",

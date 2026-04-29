@@ -1,5 +1,3 @@
-// Core types for Voice Agent Hotline
-
 export type AgentStatus = 'active' | 'pending' | 'rejected';
 
 export interface Agent {
@@ -9,20 +7,17 @@ export interface Agent {
   bio: string;
   rating: number;
   calls: number;
-  rate: number; // dollars per minute
+  rate: number;
   avatar: string;
   color: string;
   online: boolean;
-  // Optional display fields
   category?: string;
   verified?: boolean;
   totalRatings?: number;
   totalCalls?: number;
   tags?: string[];
-  // Wallet / payout
   wallet?: string;
   wallet_address?: string;
-  // Registration fields
   status?: AgentStatus;
   elevenlabs_agent_id?: string;
   system_prompt?: string;
@@ -35,8 +30,8 @@ export interface CallSession {
   userWallet: string;
   startTime: Date;
   endTime?: Date;
-  duration: number; // seconds
-  cost: number; // dollars
+  duration: number;
+  cost: number;
   paid: boolean;
 }
 
@@ -50,12 +45,11 @@ export interface PaymentState {
 
 export interface Feedback {
   agentId: string;
-  rating: number; // 1-5
+  rating: number;
   tag: 'helpful' | 'knowledgeable' | 'slow' | 'unclear' | 'other';
   comment?: string;
 }
 
-// Agent self-registration payload (submitted by external developers)
 export interface AgentSubmission {
   name: string;
   description: string;
@@ -69,7 +63,6 @@ export interface AgentSubmission {
   contact_email: string;
 }
 
-// ERC-8004 Types
 export interface AgentRegistration {
   tokenId: bigint;
   owner: string;
@@ -84,7 +77,6 @@ export interface ReputationScore {
   distribution: { 5: number; 4: number; 3: number; 2: number; 1: number };
 }
 
-// x402 Types
 export interface PaymentRequirements {
   scheme: 'exact' | 'upto';
   network: string;
@@ -95,12 +87,84 @@ export interface PaymentRequirements {
   mimeType: string;
 }
 
-export interface PaymentAuthorization {
-  from: string;
-  to: string;
-  value: string;
-  validAfter: string;
-  validBefore: string;
-  nonce: string;
-  signature: string;
+export interface EIP712Signature {
+  v: number;
+  r: `0x${string}`;
+  s: `0x${string}`;
+}
+
+export interface SignedAuthorization {
+  from: `0x${string}`;
+  to: `0x${string}`;
+  value: bigint;
+  validAfter: bigint;
+  validBefore: bigint;
+  nonce: `0x${string}`;
+  signature: EIP712Signature;
+}
+
+export interface SettlementResult {
+  success: boolean;
+  txHash?: `0x${string}`;
+  blockNumber?: bigint;
+  gasUsed?: bigint;
+  actualAmount?: string;
+  taskId?: string;
+  error?: string;
+}
+
+export type SkillType = 'book' | 'order' | 'schedule' | 'research';
+
+export interface Skill {
+  type: SkillType;
+  name: string;
+  description: string;
+  icon: string;
+  requiredScope: keyof Pick<DelegationScope, 'canBook' | 'canOrder' | 'canSchedule' | 'canResearch'>;
+}
+
+export interface BookingConfirmation {
+  bookingId: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  businessName: string;
+  dateTime: string;
+  confirmationCode?: string;
+  cancellationPolicy?: string;
+  estimatedCost?: string;
+}
+
+export interface OrderConfirmation {
+  orderId: string;
+  status: 'preparing' | 'ready' | 'shipped' | 'delivered' | 'cancelled';
+  estimatedDelivery?: string;
+  trackingNumber?: string;
+  totalCost: number;
+  items: { productId: string; name: string; quantity: number; price: number; options?: Record<string, string> }[];
+}
+
+export interface ResearchResult {
+  id: string;
+  title: string;
+  summary: string;
+  source?: string;
+  url?: string;
+  relevanceScore: number;
+  metadata?: Record<string, string>;
+}
+
+export interface SkillResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  requiresApproval?: boolean;
+  approvalAmount?: number;
+  gasEstimate?: number;
+}
+
+export interface DelegationScope {
+  canBook: boolean;
+  canOrder: boolean;
+  canSchedule: boolean;
+  canResearch: boolean;
+  maxSpend?: number;
 }
