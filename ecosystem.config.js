@@ -22,17 +22,16 @@ module.exports = {
       // Application name
       name: 'voice-hotline-celo',
       
-      // Start with standalone server (required for output: 'standalone')
-      // 'next start' does not work with standalone output - must use server.js directly
-      script: '.next/standalone/server.js',
+      // Launch via start.sh which sets env vars and cds into .next/standalone
+      // Direct server.js path fails: no sibling node_modules outside standalone dir
+      script: 'start-voice-hotline.sh',
       
       // Use fork mode (Next.js handles its own clustering internally)
       instances: 1,
       exec_mode: 'fork',
       
-      // Environment variables
+      // Environment variables (secrets exported by start-voice-hotline.sh)
       env: {
-        ...process.env,
         NODE_ENV: 'production',
         PORT: 3042,
         HOSTNAME: '0.0.0.0',
