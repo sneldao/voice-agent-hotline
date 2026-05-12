@@ -9,28 +9,21 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ToastProvider, showError } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
-import { signMessage } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
-import { useOnboarding } from '@/lib/useOnboarding';
 import { useUserBalance, useAgents } from '@/lib/useSWR';
 import { Search, Phone, User } from 'lucide-react';
 import { generateCallId } from '@/lib/ids';
 import type { Agent } from '@/lib/types';
 // Dynamic import for ActiveCall with SSR disabled to avoid ElevenLabs SDK issues
 const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
-import { Onboarding } from '@/components/Onboarding';
-import { WalletConnectGate } from '@/components/WalletConnectGate';
-import { LowBalanceWarning } from '@/components/LowBalanceWarning';
 import { Header } from '@/components/Header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
-import { AgentDetailModal } from '@/app/page-components';
 import { readCallLaunchParams } from '@/lib/product-launch';
 
-// Eager load tabs - no lazy loading needed for small component trees
-// Lazy loading causes initial render delay and interactivity issues
+// Eager load tabs
 import { DiscoverTab } from '@/components/DiscoverTab';
 import { CallsHistoryTab } from '@/components/CallsHistoryTab';
 import { ProfileTab } from '@/components/ProfileTab';
@@ -42,16 +35,6 @@ interface PageState {
   callId: string | null;
   searchQuery: string;
   selectedCategory: string;
-  showWalletGate: boolean;
-  showLowBalance: boolean;
-  requiredBalance: number;
-  lowBalanceContent: {
-    title: string;
-    description: string;
-    balanceLabel: string;
-    requiredLabel: string;
-    currentBalance: number;
-  };
 }
 
 type PageAction =
@@ -60,10 +43,7 @@ type PageAction =
   | { type: 'START_CALL'; callId: string }
   | { type: 'END_CALL' }
   | { type: 'SET_SEARCH'; query: string }
-  | { type: 'SET_CATEGORY'; category: string }
-  | { type: 'SHOW_WALLET_GATE'; show: boolean }
-  | { type: 'SHOW_LOW_BALANCE'; show: boolean; required?: number; balance?: number }
-  | { type: 'DISMISS_LOW_BALANCE' };
+  | { type: 'SET_CATEGORY'; category: string };
 
 const initialPageState: PageState = {
   activeTab: 'discover',
@@ -72,16 +52,6 @@ const initialPageState: PageState = {
   callId: null,
   searchQuery: '',
   selectedCategory: 'all',
-  showWalletGate: false,
-  showLowBalance: false,
-  requiredBalance: 0,
-  lowBalanceContent: {
-    title: 'Insufficient Balance',
-    description: 'Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.',
-    balanceLabel: 'Current Balance',
-    requiredLabel: 'Required',
-    currentBalance: 0,
-  },
 };
 
 function pageReducer(state: PageState, action: PageAction): PageState {
@@ -98,19 +68,6 @@ function pageReducer(state: PageState, action: PageAction): PageState {
       return { ...state, searchQuery: action.query };
     case 'SET_CATEGORY':
       return { ...state, selectedCategory: action.category };
-    case 'SHOW_WALLET_GATE':
-      return { ...state, showWalletGate: action.show };
-    case 'SHOW_LOW_BALANCE':
-      return {
-        ...state,
-        showLowBalance: action.show,
-        ...(action.required !== undefined ? { requiredBalance: action.required } : {}),
-        ...(action.balance !== undefined
-          ? { lowBalanceContent: { ...state.lowBalanceContent, currentBalance: action.balance } }
-          : {}),
-      };
-    case 'DISMISS_LOW_BALANCE':
-      return { ...state, showLowBalance: false };
     default:
       return state;
   }
@@ -129,7 +86,6 @@ function HomeInner() {
   const {
     activeTab, selectedAgent, inCall, callId,
     searchQuery, selectedCategory,
-    showWalletGate, showLowBalance, requiredBalance, lowBalanceContent,
   } = state;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -151,7 +107,7 @@ function HomeInner() {
   }, [searchQuery]);
 
   const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
-  const { balance: userBalance, isLoading: isLoadingBalance, mutate: mutateBalance } = useUserBalance(address);
+  const { balance: userBalance, isLoading: isLoadingBalance } = useUserBalance(address);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -162,69 +118,55 @@ function HomeInner() {
     page,
   });
 
-  // Use agents directly from SWR - SWR handles pagination with keepPreviousData
   const displayedAgents = agents;
   const localCallHistory = useLocalCallHistory();
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
-  const onboarding = useOnboarding(connected, userBalance);
+
   const clearLaunchState = useCallback(() => {
     launchParamsRef.current = null;
     launchAttemptedRef.current = false;
   }, []);
 
-  const startCall = useCallback(async () => {
-    if (!selectedAgent) return;
-    if (!isWebRTCSupported) { showError('WebRTC not supported'); return; }
-    if (micPermissions.microphone === 'denied') { showError('Microphone access required'); return; }
+  // Tap agent → start call immediately (no modal, no wallet gate)
+  const startCallWithAgent = useCallback(async (agent: Agent) => {
+    if (!isWebRTCSupported) { showError('Your browser does not support voice calls'); return; }
+    if (micPermissions.microphone === 'denied') { showError('Microphone access is blocked. Please allow it in browser settings.'); return; }
     if (micPermissions.microphone === 'prompt') {
       const granted = await requestMicrophonePermission();
-      if (!granted) { showError('Microphone permission required'); return; }
+      if (!granted) { showError('Microphone permission is required for voice calls'); return; }
     }
-    if (!connected) { dispatch({ type: 'SHOW_WALLET_GATE', show: true }); return; }
 
-    // Pre-flight: verify the agent is configured (lightweight, no token minting)
+    // Set agent and start call in one go
+    dispatch({ type: 'SELECT_AGENT', agent });
+
+    // Pre-flight: verify the agent is configured
     try {
-      const preflightRes = await fetch(`/api/webrtc/signal?agentId=${encodeURIComponent(selectedAgent.id)}`);
+      const preflightRes = await fetch(`/api/webrtc/signal?agentId=${encodeURIComponent(agent.id)}`);
       if (!preflightRes.ok) {
-        showError('Agent is unavailable right now');
+        showError('This agent is unavailable right now');
+        dispatch({ type: 'SELECT_AGENT', agent: null });
         return;
       }
     } catch {
       showError('Cannot reach voice service. Please try again.');
-      return;
-    }
-
-    const estimatedCost = Number(selectedAgent.rate) * 5;
-
-    if (userBalance < estimatedCost) {
-      dispatch({
-        type: 'SHOW_LOW_BALANCE',
-        show: true,
-        required: estimatedCost,
-        balance: userBalance,
-      });
+      dispatch({ type: 'SELECT_AGENT', agent: null });
       return;
     }
 
     const newCallId = generateCallId();
     dispatch({ type: 'START_CALL', callId: newCallId });
-  }, [
-    connected,
-    isWebRTCSupported,
-    micPermissions,
-    requestMicrophonePermission,
-    selectedAgent,
-    userBalance,
-  ]);
+  }, [isWebRTCSupported, micPermissions, requestMicrophonePermission]);
 
   const endCall = useCallback(() => {
     clearLaunchState();
     dispatch({ type: 'END_CALL' });
   }, [clearLaunchState]);
 
-  const closeModal = useCallback(() => {
-    dispatch({ type: 'SELECT_AGENT', agent: null });
-  }, []);
+  const handleSelectAgent = useCallback((agent: Agent | null) => {
+    if (agent) {
+      startCallWithAgent(agent);
+    }
+  }, [startCallWithAgent]);
 
   const handleSelectRelatedAgent = useCallback((agentId: string) => {
     const agent = agents.find((a) => a.id === agentId);
@@ -233,13 +175,9 @@ function HomeInner() {
     dispatch({ type: 'SET_TAB', tab: 'discover' });
 
     if (agent) {
-      dispatch({ type: 'SELECT_AGENT', agent });
+      startCallWithAgent(agent);
     }
-  }, [agents, clearLaunchState]);
-
-  const handleSelectAgent = useCallback((agent: Agent | null) => {
-    dispatch({ type: 'SELECT_AGENT', agent });
-  }, []);
+  }, [agents, clearLaunchState, startCallWithAgent]);
 
   const handleSearchChange = useCallback((query: string) => {
     dispatch({ type: 'SET_SEARCH', query });
@@ -250,8 +188,8 @@ function HomeInner() {
   }, []);
 
   const handleSelectRelatedAgentDispatch = useCallback((agent: Agent | null) => {
-    dispatch({ type: 'SELECT_AGENT', agent });
-  }, []);
+    if (agent) startCallWithAgent(agent);
+  }, [startCallWithAgent]);
 
   const handleSwitchTab = useCallback((tab: string) => {
     dispatch({ type: 'SET_TAB', tab: tab as PageState['activeTab'] });
@@ -263,7 +201,6 @@ function HomeInner() {
   );
 
   const handleLoadMore = useCallback(() => {
-    // SWR handles pagination via page parameter
     setPage(prev => prev + 1);
   }, []);
 
@@ -274,7 +211,6 @@ function HomeInner() {
     }
 
     launchParamsRef.current = launchParams;
-
     dispatch({ type: 'SET_TAB', tab: 'discover' });
     router.replace('/', { scroll: false });
   }, [router, searchParams]);
@@ -287,65 +223,21 @@ function HomeInner() {
 
     const agent = agents.find((candidate) => candidate.id === launchParams.agentId);
     if (!agent) {
-      showError('Selected agent is no longer available.');
       launchParamsRef.current = null;
       return;
     }
 
-    dispatch({ type: 'SELECT_AGENT', agent });
-  }, [agents, selectedAgent]);
-
-  useEffect(() => {
-    const launchParams = launchParamsRef.current;
-    if (!launchParams?.autoStart || !selectedAgent || launchAttemptedRef.current) {
-      return;
+    if (launchParams.autoStart) {
+      startCallWithAgent(agent);
+      launchAttemptedRef.current = true;
     }
-
-    void startCall().finally(() => {
-      if (connected) {
-        launchAttemptedRef.current = true;
-      }
-    });
-  }, [connected, selectedAgent, startCall]);
+  }, [agents, selectedAgent, startCallWithAgent]);
 
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-950 text-white font-sans">
         <OfflineBanner />
         <ToastProvider />
-        <Onboarding
-          isOpen={onboarding.isOpen}
-          currentStep={onboarding.currentStep}
-          walletConnected={connected}
-          walletBalance={userBalance}
-          onClose={onboarding.closeOnboarding}
-          onNext={onboarding.nextStep}
-          onSkip={onboarding.skipOnboarding}
-          onConnect={connect}
-        />
-        <WalletConnectGate
-          isOpen={showWalletGate}
-          onConnect={() => { connect(); dispatch({ type: 'SHOW_WALLET_GATE', show: false }); }}
-          onClose={() => dispatch({ type: 'SHOW_WALLET_GATE', show: false })}
-          isConnecting={isConnecting}
-        />
-        <LowBalanceWarning
-          isOpen={showLowBalance}
-          balance={lowBalanceContent.currentBalance}
-          requiredAmount={requiredBalance}
-          title={lowBalanceContent.title}
-          description={lowBalanceContent.description}
-          balanceLabel={lowBalanceContent.balanceLabel}
-          requiredLabel={lowBalanceContent.requiredLabel}
-          onAddFunds={() => { dispatch({ type: 'DISMISS_LOW_BALANCE' }); dispatch({ type: 'SET_TAB', tab: 'profile' }); }}
-          onClose={() => dispatch({ type: 'DISMISS_LOW_BALANCE' })}
-          onGoHome={() => { dispatch({ type: 'DISMISS_LOW_BALANCE' }); dispatch({ type: 'SELECT_AGENT', agent: null }); }}
-        />
-        <AgentDetailModal
-          agent={selectedAgent}
-          onClose={closeModal}
-          onCall={startCall}
-        />
         <Header
           connected={connected}
           userBalance={userBalance}

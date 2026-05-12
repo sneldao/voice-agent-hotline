@@ -10,9 +10,10 @@ import type { Agent } from '@/lib/types';
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
-  { id: 'blockchain', name: 'Blockchain', icon: '🪙' },
+  { id: 'healthcare', name: 'Health', icon: '⚕️' },
+  { id: 'research', name: 'Research', icon: '🔍' },
   { id: 'tech', name: 'Tech', icon: '💻' },
-  { id: 'gaming', name: 'Gaming', icon: '🎮' },
+  { id: 'blockchain', name: 'Crypto', icon: '🪙' },
   { id: 'general', name: 'General', icon: '🤖' },
 ];
 
@@ -105,8 +106,16 @@ export function DiscoverTab({
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="p-4 space-y-5">
         {/* Hero Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 p-4 text-center">
-          <p className="text-sm font-medium text-cyan-300">🎙️ Tap an agent, then just talk — no keyboard needed</p>
+        <div className="rounded-2xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Tap any agent to start talking</p>
+              <p className="text-xs text-gray-400 mt-0.5">No signup needed. Just tap and speak.</p>
+            </div>
+          </div>
         </div>
 
         {/* Search */}
