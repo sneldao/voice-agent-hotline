@@ -154,6 +154,11 @@ export function DiscoverTab({
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="p-4 space-y-5">
+        {/* Hero Banner */}
+        <div className="rounded-2xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 p-4 text-center">
+          <p className="text-sm font-medium text-cyan-300">🎙️ Tap an agent, then just talk — no keyboard needed</p>
+        </div>
+
         {/* Search */}
         <div className="flex gap-2">
           <div className="relative flex-1">

@@ -1,7 +1,7 @@
 {
   "name": "VOISSS - Voice Agent Hotline",
   "short_name": "VOISSS",
-  "description": "Talk to verified AI agents. Pay per second via x402 micropayments on Celo.",
+  "description": "A hands-free AI agent marketplace. Call specialized AI agents by voice — no keyboard required. Powered by ElevenLabs Conversational AI.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -14,6 +14,6 @@
       "type": "image/png"
     }
   ],
-  "categories": ["productivity", "utilities"],
+  "categories": ["productivity", "utilities", "lifestyle"],
   "lang": "en-US"
 }

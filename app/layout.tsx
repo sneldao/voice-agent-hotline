@@ -30,11 +30,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://voisss-agent-hotline.vercel.app'),
   title: {
-    default: 'VOISSS - Voice Agent Hotline',
+    default: 'VOISSS - Voice Agent Hotline | No Keyboard Required',
     template: '%s | VOISSS',
   },
-  description: 'Talk to verified AI agents. Pay per second via x402 micropayments on Celo. Delegate agents to take actions with ERC-8004 permissions.',
-  keywords: ['AI agents', 'voice calls', 'Celo', 'x402', 'micropayments', 'ERC-8004', 'blockchain', 'Web3'],
+  description: 'A hands-free AI agent marketplace powered by ElevenLabs. Call specialized AI agents by voice — no keyboard required. Built with Cursor + ElevenLabs Conversational AI.',
+  keywords: ['AI agents', 'voice AI', 'ElevenLabs', 'hands-free', 'no keyboard', 'voice calls', 'conversational AI', 'speech-to-text', 'text-to-speech', 'Cursor'],
   authors: [{ name: 'VOISSS Team' }],
   creator: 'VOISSS',
   publisher: 'VOISSS',
@@ -47,14 +47,14 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://voisss-agent-hotline.vercel.app',
     siteName: 'VOISSS - Voice Agent Hotline',
-    title: 'VOISSS - Voice Agent Hotline',
-    description: 'Talk to verified AI agents. Pay per second via x402 micropayments on Celo.',
+    title: 'VOISSS - AI Agents You Can Call (No Keyboard Required)',
+    description: 'A hands-free AI agent marketplace powered by ElevenLabs Conversational AI. Tap an agent, talk naturally, get things done — without ever touching a keyboard.',
     images: [
       {
         url: '/og-image.svg',
         width: 1200,
         height: 630,
-        alt: 'VOISSS - Voice Agent Hotline',
+        alt: 'VOISSS - Voice Agent Hotline - No Keyboard Required',
         type: 'image/svg+xml',
       },
     ],
@@ -63,8 +63,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@voisss',
     creator: '@voisss',
-    title: 'VOISSS - Voice Agent Hotline',
-    description: 'Talk to verified AI agents. Pay per second via x402 micropayments on Celo.',
+    title: 'VOISSS - AI Agents You Can Call (No Keyboard Required)',
+    description: 'A hands-free AI agent marketplace powered by ElevenLabs. Tap, talk, get things done. Built with Cursor + ElevenLabs for #ElevenHacks.',
     images: ['/og-image.svg'],
   },
   icons: {

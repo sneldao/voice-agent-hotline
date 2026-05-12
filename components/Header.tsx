@@ -45,12 +45,12 @@ export function Header({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-bold text-lg">Voice Hotline</h1>
-              <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-[10px] font-bold text-white">
-                💰 REAL-WORLD PAYMENTS
+              <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 text-[10px] font-bold text-white">
+                🎙️ NO KEYBOARD NEEDED
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              AI-Powered Voice Agents{' '}
+              Powered by ElevenLabs{' '}
               <Link href="/list-your-agent" className="text-cyan-500 hover:text-cyan-400 transition-colors">
                 · List your agent
               </Link>
