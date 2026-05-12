@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useCallback } from 'react';
 import { Search, Star } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
@@ -16,55 +15,6 @@ const CATEGORIES = [
   { id: 'gaming', name: 'Gaming', icon: '🎮' },
   { id: 'general', name: 'General', icon: '🤖' },
 ];
-
-// Virtualized list for large agent lists
-function VirtualList({ agents, onSelect }: { agents: Agent[]; onSelect: (a: Agent) => void }) {
-  const parentRef = useRef<HTMLDivElement>(null);
-  
-  const virtualizer = useVirtualizer({
-    count: agents.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 130,
-    overscan: 5,
-  });
-
-  const items = virtualizer.getVirtualItems();
-
-  return (
-    <div
-      ref={parentRef}
-      className="h-[600px] overflow-auto"
-      style={{ contain: 'strict' }}
-    >
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-          width: '100%',
-          position: 'relative',
-        }}
-      >
-        {items.map((virtualRow) => (
-          <div
-            key={virtualRow.key}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              transform: `translateY(${virtualRow.start}px)`,
-            }}
-            data-index={virtualRow.index}
-          >
-            <AgentCard
-              agent={agents[virtualRow.index]}
-              onClick={() => onSelect(agents[virtualRow.index])}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 interface DiscoverTabProps {
   agents: Agent[];
@@ -221,19 +171,13 @@ export function DiscoverTab({
             <span className="ml-2 text-xs text-gray-500">({agents.length})</span>
           </h2>
           <div className="space-y-3 min-h-[400px]">
-            {agents.length > 20 ? (
-              // Use virtualization for large lists
-              <VirtualList agents={agents} onSelect={onSelect} />
-            ) : (
-              // Render normally for small lists
-              agents.map(agent => (
-                <AgentCard
-                  key={agent.id}
-                  agent={agent}
-                  onClick={() => onSelect(agent)}
-                />
-              ))
-            )}
+            {agents.map(agent => (
+              <AgentCard
+                key={agent.id}
+                agent={agent}
+                onClick={() => onSelect(agent)}
+              />
+            ))}
           </div>
           {hasMore && (
             <button
