@@ -123,7 +123,15 @@ export function WidgetEngineProvider({ children }: { children: ReactNode }) {
     const el = widgetRef.current as any;
     if (!el) return false;
 
-    // Try known start methods
+    // Strategy based on probe results (2026-05-13):
+    // The widget does NOT expose startConversation/endConversation on the host
+    // element. It uses a Lit VDOM internally. The only reliable entry point is
+    // clicking the button inside the open shadowRoot.
+    //
+    // However, the button only renders once the widget has a valid agent-id or
+    // signed-url attribute. So we wait briefly for the shadow DOM to populate.
+
+    // First try imperative methods (in case a future widget version exposes them)
     for (const method of START_CANDIDATES) {
       if (typeof el[method] === 'function') {
         try {
@@ -136,18 +144,27 @@ export function WidgetEngineProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Fallback: click the shadow DOM button
-    const shadowRoot = el.shadowRoot;
-    if (shadowRoot) {
+    // Primary strategy: click the shadow DOM button
+    const clickShadowButton = (): boolean => {
+      const shadowRoot = el.shadowRoot;
+      if (!shadowRoot) return false;
       const button = shadowRoot.querySelector('button') as HTMLButtonElement | null;
-      if (button) {
-        button.click();
-        setIsActive(true);
-        return true;
-      }
+      if (!button) return false;
+      button.click();
+      setIsActive(true);
+      return true;
+    };
+
+    if (clickShadowButton()) return true;
+
+    // The button may not be rendered yet — wait for the widget to initialize
+    // with the new agent-id/signed-url attribute, then retry
+    for (let attempt = 0; attempt < 10; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (clickShadowButton()) return true;
     }
 
-    console.error('[WidgetEngine] No start method available on widget');
+    console.error('[WidgetEngine] No start method or shadow button available after retries');
     return false;
   }, []);
 
@@ -155,6 +172,7 @@ export function WidgetEngineProvider({ children }: { children: ReactNode }) {
     const el = widgetRef.current as any;
     if (!el) return;
 
+    // Try imperative methods first
     for (const method of END_CANDIDATES) {
       if (typeof el[method] === 'function') {
         try {
@@ -167,7 +185,18 @@ export function WidgetEngineProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Fallback: remove agent-id to force disconnect
+    // Primary strategy: click the shadow button again (toggles conversation)
+    const shadowRoot = el.shadowRoot;
+    if (shadowRoot) {
+      const button = shadowRoot.querySelector('button') as HTMLButtonElement | null;
+      if (button) {
+        button.click();
+        setIsActive(false);
+        return;
+      }
+    }
+
+    // Last resort: remove the source attribute to force disconnect
     el.removeAttribute('agent-id');
     el.removeAttribute('signed-url');
     setIsActive(false);

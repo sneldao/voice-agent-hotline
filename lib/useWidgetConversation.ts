@@ -43,7 +43,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     agentId,
     userId,
     ratePerMinute = 0.1,
-    useSignedUrl = false,
+    useSignedUrl = true, // Default to signed URLs — probe confirmed they work
     onTranscript,
     onError,
     onConnect,
@@ -71,12 +71,68 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
   const startTimeRef = useRef<number>(0);
   const intentionalEndRef = useRef(false);
   const eventCleanupRef = useRef<Array<() => void>>([]);
+  const connectedRef = useRef(false);
 
   // Resolve the ElevenLabs agent ID from our internal key
   const resolvedAgentId = AGENT_ID_MAP[agentId] || agentId;
 
+  // Centralized connection state handlers
+  const handleConnected = useCallback(() => {
+    if (connectedRef.current) return; // Deduplicate
+    connectedRef.current = true;
+    startTimeRef.current = Date.now();
+
+    setState((prev) => ({
+      ...prev,
+      isConnected: true,
+      isConnecting: false,
+      isReconnecting: false,
+      status: 'connected',
+      error: null,
+    }));
+
+    // Start duration counter
+    if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+    durationIntervalRef.current = setInterval(() => {
+      const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const cost = (duration / 60) * ratePerMinute;
+      setState((prev) => ({ ...prev, duration, cost }));
+    }, 1000);
+
+    onConnect?.();
+  }, [ratePerMinute, onConnect]);
+
+  const handleDisconnected = useCallback(() => {
+    if (!connectedRef.current) return; // Deduplicate
+    connectedRef.current = false;
+
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      isConnected: false,
+      isConnecting: false,
+      isReconnecting: false,
+      status: 'disconnected',
+      mode: 'idle',
+    }));
+
+    if (!intentionalEndRef.current) {
+      onDisconnect?.();
+    }
+    intentionalEndRef.current = false;
+  }, [onDisconnect]);
+
   /**
-   * Subscribe to widget events for state tracking
+   * Subscribe to widget events for state tracking.
+   * 
+   * Probe results (2026-05-13): The widget does NOT emit custom events on the
+   * host element. We listen anyway in case future versions add them, but the
+   * primary connection detection uses a MutationObserver on the shadow DOM
+   * and a polling check on the widget's internal state.
    */
   const attachEventListeners = useCallback(() => {
     // Clean up previous listeners
@@ -88,30 +144,12 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
       eventCleanupRef.current.push(cleanup);
     };
 
-    // Connection events
+    // Connection events (may not fire — kept for forward compatibility)
     const connectionEvents = ['connect', 'connected', 'conversation-start', 'conversationStarted'];
     connectionEvents.forEach((evt) => {
       listen(evt, () => {
         console.log(`[WidgetConversation] Event: ${evt}`);
-        startTimeRef.current = Date.now();
-        setState((prev) => ({
-          ...prev,
-          isConnected: true,
-          isConnecting: false,
-          isReconnecting: false,
-          status: 'connected',
-          error: null,
-        }));
-
-        // Start duration counter
-        if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-        durationIntervalRef.current = setInterval(() => {
-          const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-          const cost = (duration / 60) * ratePerMinute;
-          setState((prev) => ({ ...prev, duration, cost }));
-        }, 1000);
-
-        onConnect?.();
+        handleConnected();
       });
     });
 
@@ -120,24 +158,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     disconnectEvents.forEach((evt) => {
       listen(evt, () => {
         console.log(`[WidgetConversation] Event: ${evt}`);
-        if (durationIntervalRef.current) {
-          clearInterval(durationIntervalRef.current);
-          durationIntervalRef.current = null;
-        }
-
-        setState((prev) => ({
-          ...prev,
-          isConnected: false,
-          isConnecting: false,
-          isReconnecting: false,
-          status: 'disconnected',
-          mode: 'idle',
-        }));
-
-        if (!intentionalEndRef.current) {
-          onDisconnect?.();
-        }
-        intentionalEndRef.current = false;
+        handleDisconnected();
       });
     });
 
@@ -184,7 +205,38 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
         onError?.(message);
       }) as EventListener);
     });
-  }, [engine, ratePerMinute, onConnect, onDisconnect, onTranscript, onError]);
+
+    // Shadow DOM MutationObserver — detect when the widget's internal UI
+    // changes to indicate an active conversation (e.g. button state change,
+    // new child elements appearing)
+    const el = engine.getElement();
+    if (el?.shadowRoot) {
+      const observer = new MutationObserver(() => {
+        // Check if the shadow DOM now shows an "active" state
+        // The widget typically shows a different UI when connected
+        const shadowRoot = el.shadowRoot;
+        if (!shadowRoot) return;
+        
+        // Look for indicators of an active conversation
+        const buttons = shadowRoot.querySelectorAll('button');
+        const hasMultipleButtons = buttons.length > 1;
+        const hasActiveIndicator = shadowRoot.querySelector('[class*="active"], [class*="connected"], [data-state="active"]');
+        
+        if ((hasMultipleButtons || hasActiveIndicator) && !connectedRef.current) {
+          handleConnected();
+        }
+      });
+
+      observer.observe(el.shadowRoot, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'data-state'],
+      });
+
+      eventCleanupRef.current.push(() => observer.disconnect());
+    }
+  }, [engine, handleConnected, handleDisconnected, onTranscript, onError]);
 
   /**
    * Start a conversation through the widget
@@ -250,36 +302,15 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
         throw new Error('Widget failed to start conversation — no method or button available');
       }
 
-      // If no connection event fires within 15s, consider it failed
-      const timeout = setTimeout(() => {
-        if (!state.isConnected) {
-          setState((prev) => {
-            if (prev.isConnecting) {
-              return {
-                ...prev,
-                isConnecting: false,
-                error: 'Connection timed out. The widget did not connect within 15 seconds.',
-                status: 'disconnected',
-              };
-            }
-            return prev;
-          });
+      // Since the widget doesn't emit connection events (probe confirmed),
+      // we assume connected after a short delay if the button click succeeded.
+      // The MutationObserver may also trigger handleConnected if the shadow DOM changes.
+      setTimeout(() => {
+        if (!connectedRef.current) {
+          // Optimistic: assume connected since the button was clicked successfully
+          handleConnected();
         }
-      }, 15000);
-
-      // Clean up timeout if we connect
-      const cleanupTimeout = engine.addEventListener('connect', () => {
-        clearTimeout(timeout);
-        cleanupTimeout();
-      });
-      const cleanupTimeout2 = engine.addEventListener('connected', () => {
-        clearTimeout(timeout);
-        cleanupTimeout2();
-      });
-      const cleanupTimeout3 = engine.addEventListener('conversation-start', () => {
-        clearTimeout(timeout);
-        cleanupTimeout3();
-      });
+      }, 1500);
 
       return true;
     } catch (error) {
@@ -303,6 +334,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     resolvedAgentId,
     engine,
     attachEventListeners,
+    handleConnected,
     onError,
   ]);
 
@@ -318,6 +350,8 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
       clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = null;
     }
+
+    connectedRef.current = false;
 
     setState((prev) => ({
       ...prev,
