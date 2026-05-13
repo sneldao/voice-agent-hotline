@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useElevenLabsConversation, useWebRTCSupport } from '@/lib/useElevenLabsConversation';
+import { useWidgetConversation } from '@/lib/useWidgetConversation';
+import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useRealPayment, type PaymentState } from '@/lib/useRealPayment';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
@@ -50,7 +51,7 @@ export function ActiveCall({
     toggleMute, 
     transcripts,
     setVolume,
-  } = useElevenLabsConversation({
+  } = useWidgetConversation({
     agentId: agent.id,
     userId,
     ratePerMinute: agent.rate,

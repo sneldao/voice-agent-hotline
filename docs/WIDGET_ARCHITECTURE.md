@@ -2,15 +2,17 @@
 
 ## Status
 
-Current phase: **UI/UX redesign complete, voice plumbing pending**.
+Current phase: **Widget engine implemented, pending browser verification**.
 
-The app now presents the product as an immersive classic phone-operator switchboard:
-- `components/VoiceRouter.tsx` is a one-tap concierge launcher instead of browser `SpeechRecognition`.
-- `app/globals.css`, `components/DiscoverTab.tsx`, `app/page-components.tsx`, `components/Header.tsx`, `components/ActiveCall.tsx`, and `app/page.tsx` have been restyled around rotary-dial controls, line lamps, operator panels, patch-cord accents, and paper switchboard labels.
-- The legacy `useElevenLabsConversation` SDK path is still the active call plumbing for now, with a small compatibility patch (`connectionType: 'webrtc'`) so the app continues to typecheck while the widget controller is built.
-- `app/widget-probe/page.tsx` and `components/WidgetProbe.tsx` now provide an internal runtime probe for the real `<elevenlabs-convai>` custom element.
+The app now uses a controlled `<elevenlabs-convai>` widget engine:
+- `components/WidgetEngine.tsx` provides a global `WidgetEngineProvider` that mounts a single offscreen widget element and exposes imperative control via React context.
+- `lib/useWidgetConversation.ts` is the new conversation hook — same interface as the old `useElevenLabsConversation` but drives the widget instead of the raw SDK.
+- `components/ActiveCall.tsx` now uses `useWidgetConversation` instead of the legacy SDK hook.
+- `app/layout.tsx` wraps the app in `<WidgetEngineProvider>` — no more hardcoded visible widget.
+- The legacy `useElevenLabsConversation` hook is retained for reference/fallback but is no longer imported by ActiveCall.
+- `app/widget-probe/page.tsx` and `components/WidgetProbe.tsx` remain as the internal runtime probe for verifying widget behavior.
 
-Next phase: prove and implement the widget control layer, then swap `ActiveCall` from the SDK hook to the widget hook.
+Next phase: open `/widget-probe` in a real browser, verify which events fire, then confirm the full call flow works end-to-end through the new hook.
 
 ---
 
@@ -162,6 +164,7 @@ The `ActiveCall` component keeps its new operator-console UI (duration, waveform
 - **2026-05-13:** Switchboard UI redesign implemented across discovery, router, agent cards, header, nav, and active-call screens.
 - **2026-05-13:** Internal `/widget-probe` page added to inspect the widget runtime contract before building `useWidgetConversation`.
 - **2026-05-13:** Current verification passed: `npm run typecheck`, `npm test`, `npm run build`.
+- **2026-05-13:** Widget engine implemented: `WidgetEngineProvider` (global controlled widget), `useWidgetConversation` hook, `ActiveCall` swapped to widget hook, hardcoded layout widget removed.
 
 ---
 

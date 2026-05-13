@@ -3,6 +3,7 @@ import { Space_Grotesk, IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/lib/WalletContextNew';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { WidgetEngineProvider } from '@/components/WidgetEngine';
 
 // Google Fonts loaded via CDN for reliable delivery
 const displayFont = Space_Grotesk({
@@ -106,13 +107,11 @@ export default function RootLayout({
         
         <WalletProvider>
           <ThemeProvider>
-            <div>
-              {children}
-            </div>
-            {/* ElevenLabs Widget — floating conversation button (same as dashboard) */}
-            <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async></script>
-            {/* @ts-ignore */}
-            <elevenlabs-convai agent-id="agent_2101khgsyd02fnvshvr7rzb50qj6"></elevenlabs-convai>
+            <WidgetEngineProvider>
+              <div>
+                {children}
+              </div>
+            </WidgetEngineProvider>
           </ThemeProvider>
         </WalletProvider>
       </body>
