@@ -155,10 +155,9 @@ export function useElevenLabsConversation(options: ConversationOptions) {
       console.log('[ElevenLabs] Got token for agent:', tokenData.agentName);
 
       // Start session using @elevenlabs/client SDK
-      // Prefer WebRTC for lower latency, fallback to WebSocket
+      // Use agentId directly for simplest connection (matches dashboard behavior)
       const conversation = await Conversation.startSession({
-        conversationToken: tokenData.token,
-        connectionType: 'webrtc',
+        agentId: tokenData.elevenLabsAgentId,
         
         // Callbacks
           onConnect: () => {
