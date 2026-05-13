@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, Phone, Shield, Wallet, X } from 'lucide-react';
+import { CheckCircle, Phone, Radio, Shield, Sparkles, Wallet, X } from 'lucide-react';
 import type { Agent } from '@/lib/types';
 import { Button } from './ui/Button';
 
@@ -23,12 +23,29 @@ const EXAMPLES_BY_CATEGORY: Record<string, string[]> = {
   general: ['Brainstorm next steps', 'Practice a difficult conversation'],
 };
 
+const PREVIEW_PERSONAS: Record<string, { desk: string; voice: string; promise: string }> = {
+  solana_sage: { desk: 'Chain Desk', voice: 'Precise and technical', promise: 'Best when you need a plain-English read on wallets, DeFi, or transactions.' },
+  code_reviewer: { desk: 'Debug Desk', voice: 'Direct senior engineer', promise: 'Best when you need to talk through bugs, architecture, or review tradeoffs.' },
+  general_helper: { desk: 'Life Admin', voice: 'Warm concierge', promise: 'Best when you need a hands-free assistant for errands, reminders, or research.' },
+  tour_master: { desk: 'Travel Desk', voice: 'Upbeat local guide', promise: 'Best when you need ideas, routes, budgets, or itinerary planning.' },
+  web_researcher: { desk: 'Research Desk', voice: 'Thorough analyst', promise: 'Best when you need current information with sources and synthesis.' },
+  medical_advisor: { desk: 'Health Prep', voice: 'Calm and careful', promise: 'Best when you need educational health information or visit prep questions.' },
+};
+
 function getExamples(agent: Agent): string[] {
   const category = agent.category?.toLowerCase() || '';
   return EXAMPLES_BY_CATEGORY[category] || [
     `Ask about ${agent.specialty.toLowerCase()}`,
     'Get a quick second opinion before acting',
   ];
+}
+
+function getPreviewPersona(agent: Agent) {
+  return PREVIEW_PERSONAS[agent.id] || {
+    desk: agent.category ? `${agent.category} Desk` : 'Hotline Desk',
+    voice: 'Helpful voice agent',
+    promise: agent.bio || agent.specialty,
+  };
 }
 
 export function AgentPreviewSheet({
@@ -47,6 +64,7 @@ export function AgentPreviewSheet({
   const maxBudget = rate > 0 ? Math.max(rate * 5, 0.5) : 0;
   const hasEnoughBalance = !connected || userBalance >= Math.min(maxBudget, 0.5);
   const examples = getExamples(agent);
+  const persona = getPreviewPersona(agent);
 
   return (
     <div className="fixed inset-0 z-[60] flex h-dvh items-end justify-center overflow-y-auto bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4">
@@ -74,7 +92,19 @@ export function AgentPreviewSheet({
         </div>
 
         <div className="space-y-4 p-4">
-          <p className="text-sm leading-6 text-gray-300">{agent.bio || agent.specialty}</p>
+          <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-3">
+            <div className="mb-2 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
+                <Radio className="h-3.5 w-3.5" />
+                {persona.desk}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                {persona.voice}
+              </span>
+            </div>
+            <p className="text-sm leading-6 text-gray-300">{persona.promise}</p>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-3">
@@ -103,10 +133,10 @@ export function AgentPreviewSheet({
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                 <Wallet className="h-4 w-4" />
-                Wallet required for paid calls
+                Caller ID required for paid calls
               </p>
               <p className="mt-1 text-xs leading-5 text-amber-100/80">
-                Connect before starting so settlement has a real address.
+                Connect before starting so the hotline can settle against a real address.
               </p>
             </div>
           ) : !hasEnoughBalance ? (

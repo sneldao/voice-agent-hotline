@@ -100,18 +100,17 @@ function WelcomeStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
       </div>
       
       <h2 className="text-2xl font-bold text-white mb-3">
-        Welcome to Voice Agent Hotline
+        Welcome to VOISSS Hotline
       </h2>
       
       <p className="text-gray-400 mb-6">
-        Talk to AI experts in real-time. Pay per second with crypto. 
-        No subscriptions, no commitments.
+        Say what you need, get routed to the right AI voice, and talk it through without touching a keyboard.
       </p>
 
       <div className="space-y-3 mb-6">
-        <Feature icon="🎙️" text="Real-time voice conversations" />
-        <Feature icon="⚡" text="Pay only for what you use" />
-        <Feature icon="🔒" text="Secure crypto payments on Celo" />
+        <Feature icon="🎙️" text="Hands-free voice conversations" />
+        <Feature icon="📡" text="Hotline-style agent routing" />
+        <Feature icon="⚡" text="Pay only while the line is active" />
       </div>
 
       <div className="flex gap-3">
@@ -171,7 +170,7 @@ function WalletConnectStep({
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Connect Your Wallet</h2>
           <p className="text-gray-400 mb-6">
-            A crypto wallet is your identity on Voice Agent Hotline — no username or password needed.
+            A crypto wallet is your caller ID on VOISSS Hotline — no username or password needed.
           </p>
 
           {/* Wallet logos */}
@@ -337,7 +336,7 @@ function CompleteStep({ onClose }: { onClose: () => void }) {
       </p>
 
       <Button onClick={onClose} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500">
-        Start Using Voice Agent Hotline
+        Open the Hotline
       </Button>
     </div>
   );

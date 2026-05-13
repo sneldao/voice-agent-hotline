@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Star, Phone, ShieldCheck } from 'lucide-react';
+import { Radio, ShieldCheck, Star, PhoneForwarded } from 'lucide-react';
 import { Card, Badge, Avatar } from '@/components/ui';
 import type { Agent } from '@/lib/types';
 
@@ -29,6 +29,23 @@ const Stars = React.memo(function Stars({ rating }: { rating: number }) {
   );
 });
 
+const AGENT_PERSONAS: Record<string, { desk: string; tone: string; line: string }> = {
+  solana_sage: { desk: 'Chain Desk', tone: 'precise', line: 'Wallets, transactions, DeFi signals' },
+  code_reviewer: { desk: 'Debug Desk', tone: 'direct', line: 'Architecture, bugs, repo reviews' },
+  general_helper: { desk: 'Life Admin', tone: 'warm', line: 'Booking, reminders, everyday tasks' },
+  tour_master: { desk: 'Travel Desk', tone: 'upbeat', line: 'Trips, routes, local plans' },
+  web_researcher: { desk: 'Research Desk', tone: 'thorough', line: 'Sources, summaries, current info' },
+  medical_advisor: { desk: 'Health Prep', tone: 'calm', line: 'Questions, symptoms, visit prep' },
+};
+
+function getPersona(agent: Agent) {
+  return AGENT_PERSONAS[agent.id] || {
+    desk: agent.category ? `${agent.category} Desk` : 'Hotline Desk',
+    tone: 'helpful',
+    line: agent.specialty,
+  };
+}
+
 export const AgentCard = React.memo(function AgentCard({
   agent,
   onClick,
@@ -37,6 +54,7 @@ export const AgentCard = React.memo(function AgentCard({
   onClick: () => void;
 }) {
   const rating = Number(agent.rating) || 0;
+  const persona = getPersona(agent);
 
   return (
     <Card
@@ -59,7 +77,16 @@ export const AgentCard = React.memo(function AgentCard({
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed mb-2">{agent.bio || agent.specialty}</p>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-200">
+              <Radio className="h-3 w-3" />
+              {persona.desk}
+            </span>
+            <span className="rounded-full border border-gray-700 bg-gray-950/50 px-2 py-0.5 text-[11px] text-gray-400">
+              {persona.tone} voice
+            </span>
+          </div>
+          <p className="mb-2 line-clamp-2 text-sm leading-relaxed text-gray-300">{persona.line}</p>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1">
               <Stars rating={rating} />
@@ -75,7 +102,7 @@ export const AgentCard = React.memo(function AgentCard({
           </div>
           {/* Tap to call indicator */}
           <div className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 group-hover:bg-cyan-500/20 transition-colors">
-            <Phone className="w-3.5 h-3.5 text-cyan-400" />
+            <PhoneForwarded className="w-3.5 h-3.5 text-cyan-400" />
           </div>
         </div>
       </div>

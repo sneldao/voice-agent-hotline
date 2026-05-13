@@ -65,10 +65,41 @@
 
 body {
   color: rgb(var(--foreground));
-  background: rgb(var(--background));
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.98)),
+    linear-gradient(135deg, rgba(6, 182, 212, 0.10), transparent 34%, rgba(16, 185, 129, 0.08) 72%, transparent),
+    rgb(var(--background));
   font-family: var(--font-body), 'IBM Plex Sans', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.hotline-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.signal-scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.signal-scan::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.16), transparent);
+  transform: translateX(-100%);
+  animation: signal-scan 4s ease-in-out infinite;
+}
+
+@keyframes signal-scan {
+  0%, 35% { transform: translateX(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  75%, 100% { transform: translateX(100%); opacity: 0; }
 }
 
 h1, h2, h3, .font-display {

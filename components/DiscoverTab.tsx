@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Mic, Search, Sparkles, ShieldCheck, WalletCards } from 'lucide-react';
+import { Mic, Search } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { PullToRefresh, RefreshButton, showError, showSuccess } from '@/components/ui';
 import { AgentCard } from '@/app/page-components';
+import { VoiceRouter } from './VoiceRouter';
 import type { Agent } from '@/lib/types';
 
 const CATEGORIES = [
@@ -15,6 +16,13 @@ const CATEGORIES = [
   { id: 'tech', name: 'Tech', icon: '💻' },
   { id: 'blockchain', name: 'Crypto', icon: '🪙' },
   { id: 'general', name: 'General', icon: '🤖' },
+];
+
+const SPOKEN_DEMOS = [
+  'Find someone to debug this payment issue',
+  'Help me prep for a doctor visit',
+  'Plan a fast weekend trip',
+  'Explain this wallet transaction',
 ];
 
 type BrowserSpeechRecognition = {
@@ -161,28 +169,21 @@ export function DiscoverTab({
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="py-5 lg:grid lg:grid-cols-[320px_1fr] lg:gap-8 lg:py-8">
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-2xl border border-gray-800 bg-gray-900/70 p-5">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
-              <Sparkles className="h-3.5 w-3.5" />
-              Voice-first marketplace
-            </div>
-            <h2 className="text-2xl font-bold leading-tight text-white">Pick an expert and start a live voice call.</h2>
-            <p className="mt-3 text-sm leading-6 text-gray-400">
-              Browse specialized agents, confirm the rate, then connect your wallet only when you are ready to call.
-            </p>
-            <div className="mt-5 grid gap-2 text-sm text-gray-300">
-              <div className="flex items-center gap-2">
-                <Mic className="h-4 w-4 text-cyan-300" />
-                Real-time voice conversation
-              </div>
-              <div className="flex items-center gap-2">
-                <WalletCards className="h-4 w-4 text-emerald-300" />
-                Pay only for call duration
-              </div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-indigo-300" />
-                Verified agent profiles
-              </div>
+          <VoiceRouter agents={agents} onCallAgent={onSelect} />
+
+          <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Try saying</p>
+            <div className="space-y-2">
+              {SPOKEN_DEMOS.map((demo) => (
+                <button
+                  key={demo}
+                  type="button"
+                  onClick={() => onSearchChange(demo)}
+                  className="w-full rounded-xl border border-gray-800 bg-gray-950/50 px-3 py-2 text-left text-sm text-gray-300 transition-colors hover:border-cyan-500/40 hover:text-cyan-200"
+                >
+                  "{demo}"
+                </button>
+              ))}
             </div>
           </div>
 
@@ -215,7 +216,7 @@ export function DiscoverTab({
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search agents by specialty, task, or category..."
+                placeholder="Type or say what you need..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="w-full rounded-xl border border-gray-700/50 bg-gray-800/50 py-3 pl-10 pr-12 text-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
@@ -247,7 +248,7 @@ export function DiscoverTab({
                 className="inline-flex items-center gap-1 rounded-full border border-gray-700/50 bg-gray-900/70 px-3 py-1.5 text-xs text-gray-400 transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
               >
                 <Mic className="h-3 w-3" />
-                Show me {cat.name.toLowerCase()}
+                Route me to {cat.name.toLowerCase()}
               </button>
             ))}
           </div>
@@ -256,7 +257,7 @@ export function DiscoverTab({
             <div className="mb-3 flex items-end justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold text-white">{selectedLabel}</h2>
-                <p className="text-sm text-gray-500">{agents.length} available now</p>
+                <p className="text-sm text-gray-500">{agents.length} live lines available</p>
               </div>
             </div>
             <div className="grid min-h-[400px] gap-3 lg:grid-cols-2">

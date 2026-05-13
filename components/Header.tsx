@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Phone, Wallet, LogOut, ChevronDown } from 'lucide-react';
+import { PhoneCall, Wallet, LogOut, ChevronDown, Radio } from 'lucide-react';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -39,12 +39,15 @@ export function Header({
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/25" role="img" aria-label="VOISSS logo">
-            <Phone className="w-5 h-5 text-white" />
+          <div className="signal-scan flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/30 bg-gray-900 shadow-lg shadow-cyan-500/20" role="img" aria-label="VOISSS Hotline logo">
+            <PhoneCall className="h-5 w-5 text-cyan-200" />
           </div>
           <div>
-            <h1 className="font-bold text-lg">VOISSS</h1>
-            <p className="text-xs text-gray-500">Voice AI agents · Powered by ElevenLabs</p>
+            <h1 className="text-lg font-bold">VOISSS Hotline</h1>
+            <p className="hidden text-xs text-gray-500 sm:flex sm:items-center sm:gap-1.5">
+              <Radio className="h-3 w-3 text-emerald-300" />
+              Say it. Get connected. No keyboard required.
+            </p>
           </div>
         </div>
 
@@ -90,7 +93,7 @@ export function Header({
               disabled={isConnecting}
               className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 text-gray-400 text-xs font-medium hover:bg-gray-800 hover:text-white transition-colors disabled:opacity-50"
             >
-              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              {isConnecting ? 'Connecting...' : 'Connect caller ID'}
             </button>
           )}
         </div>

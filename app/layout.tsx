@@ -29,10 +29,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://voisss-agent-hotline.vercel.app'),
   title: {
-    default: 'VOISSS - Voice Agent Hotline | No Keyboard Required',
+    default: 'VOISSS Hotline | Say It. Get Connected.',
     template: '%s | VOISSS',
   },
-  description: 'A hands-free AI agent marketplace powered by ElevenLabs. Call specialized AI agents by voice — no keyboard required. Built with Cursor + ElevenLabs Conversational AI.',
+  description: 'A hands-free AI hotline powered by Cursor and ElevenLabs. Say what you need and get connected to a specialized voice agent — no keyboard required.',
   keywords: ['AI agents', 'voice AI', 'ElevenLabs', 'hands-free', 'no keyboard', 'voice calls', 'conversational AI', 'speech-to-text', 'text-to-speech', 'Cursor'],
   authors: [{ name: 'VOISSS Team' }],
   creator: 'VOISSS',
@@ -46,8 +46,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://voisss-agent-hotline.vercel.app',
     siteName: 'VOISSS - Voice Agent Hotline',
-    title: 'VOISSS - AI Agents You Can Call (No Keyboard Required)',
-    description: 'A hands-free AI agent marketplace powered by ElevenLabs Conversational AI. Tap an agent, talk naturally, get things done — without ever touching a keyboard.',
+    title: 'VOISSS Hotline - Say It. Get Connected.',
+    description: 'A hands-free AI hotline powered by Cursor and ElevenLabs. Speak naturally, get routed to a specialized voice agent, and handle tasks without touching a keyboard.',
     images: [
       {
         url: '/og-image.svg',
@@ -62,8 +62,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@voisss',
     creator: '@voisss',
-    title: 'VOISSS - AI Agents You Can Call (No Keyboard Required)',
-    description: 'A hands-free AI agent marketplace powered by ElevenLabs. Tap, talk, get things done. Built with Cursor + ElevenLabs for #ElevenHacks.',
+    title: 'VOISSS Hotline - Say It. Get Connected.',
+    description: 'A hands-free AI hotline powered by Cursor and ElevenLabs. Speak, get routed, and talk to specialized agents for #ElevenHacks.',
     images: ['/og-image.svg'],
   },
   icons: {

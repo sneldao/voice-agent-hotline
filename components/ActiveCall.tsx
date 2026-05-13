@@ -8,7 +8,7 @@ import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
 import type { Agent } from '@/lib/types';
 import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
-import { Mic, MicOff, Volume2, VolumeX, PhoneOff, AlertCircle, Phone } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, PhoneOff, AlertCircle, Radio } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 import { showError } from './ui';
@@ -453,12 +453,16 @@ export function ActiveCall({
             <h3 className="font-bold text-white text-sm">{agent.name}</h3>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className={`w-2 h-2 rounded-full ${call.isConnected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`} />
-              <span className="text-xs text-gray-400">{call.isConnected ? 'Connected' : 'Connecting'}</span>
+              <span className="text-xs text-gray-400">{call.isConnected ? 'Live line' : 'Connecting line'}</span>
             </div>
           </div>
           </div>
         
           <div className="flex items-center gap-2">
+            <div className={`hidden rounded-full border px-3 py-1.5 text-xs font-medium sm:inline-flex sm:items-center sm:gap-1.5 ${paymentBadge.className}`}>
+              <Radio className="h-3.5 w-3.5" />
+              {paymentBadge.label}
+            </div>
             <div className="px-3 py-1.5 bg-gray-800 rounded-full text-right">
               <span className="text-sm font-bold text-cyan-400 tabular-nums">${(call.cost || 0).toFixed(4)}</span>
             </div>
