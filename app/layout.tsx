@@ -109,6 +109,10 @@ export default function RootLayout({
             <div>
               {children}
             </div>
+            {/* ElevenLabs Widget — floating conversation button (same as dashboard) */}
+            <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async></script>
+            {/* @ts-ignore */}
+            <elevenlabs-convai agent-id="agent_2101khgsyd02fnvshvr7rzb50qj6"></elevenlabs-convai>
           </ThemeProvider>
         </WalletProvider>
       </body>
