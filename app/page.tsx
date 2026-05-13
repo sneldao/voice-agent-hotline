@@ -262,6 +262,16 @@ function HomeInner() {
           onConnect={connect}
           onDisconnect={disconnect}
         />
+        <Onboarding
+          isOpen={onboarding.isOpen}
+          currentStep={onboarding.currentStep}
+          walletConnected={connected}
+          walletBalance={userBalance || 0}
+          onClose={onboarding.closeOnboarding}
+          onNext={onboarding.nextStep}
+          onSkip={onboarding.skipOnboarding}
+          onConnect={connect}
+        />
         <main id="main-content" className="max-w-2xl mx-auto pb-28 px-4 sm:px-6" role="main">
           {inCall && selectedAgent && callId ? (
             <ActiveCall
@@ -333,6 +343,16 @@ function HomeInner() {
             </>
           )}
         </main>
+        <AgentPreviewSheet
+          agent={previewAgent}
+          connected={connected}
+          userBalance={userBalance || 0}
+          isConnectingWallet={isConnecting}
+          isStartingCall={isStartingCall}
+          onClose={() => dispatch({ type: 'PREVIEW_AGENT', agent: null })}
+          onConnect={connect}
+          onCallNow={startCallWithAgent}
+        />
         <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50" role="navigation" aria-label="Main navigation">
           <div className="max-w-2xl mx-auto px-4 py-2 flex justify-around">
             {[

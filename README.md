@@ -127,7 +127,21 @@ Then seed agents:
 curl -X POST http://localhost:3000/api/agents/seed
 ```
 
-Open `http://localhost:3000`, connect a wallet, and tap any agent to start a voice call.
+Open `http://localhost:3000`, tap any agent to start a voice call. No wallet required.
+
+---
+
+## Routes
+
+| Path | Purpose |
+|------|---------|
+| `/` | Main app — Discover agents, make calls, view history, profile (tabbed SPA) |
+| `/list-your-agent` | Developer self-registration form for listing ElevenLabs agents |
+| `/dashboard` | Agent owner analytics (call counts, revenue, ratings) |
+| `/admin` | Platform admin panel (approve/reject agents, manage users) |
+| `/marketplace` | Redirects to `/` (legacy) |
+| `/profile` | Redirects to `/` (consolidated into main app tabs) |
+| `/demo` | Redirects to `/` (legacy) |
 
 ---
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback } from 'react';
-import { Search, Star } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Mic, Search, Star } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
-import { PullToRefresh, RefreshButton, showSuccess } from '@/components/ui';
+import { PullToRefresh, RefreshButton, showError, showSuccess } from '@/components/ui';
 import { AgentCard, FeaturedCard } from '@/app/page-components';
 import type { Agent } from '@/lib/types';
 
@@ -16,6 +16,16 @@ const CATEGORIES = [
   { id: 'blockchain', name: 'Crypto', icon: '🪙' },
   { id: 'general', name: 'General', icon: '🤖' },
 ];
+
+type BrowserSpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: { results: { 0: { transcript: string } }[] }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+};
 
 interface DiscoverTabProps {
   agents: Agent[];
@@ -44,6 +54,8 @@ export function DiscoverTab({
   hasMore,
   onLoadMore,
 }: DiscoverTabProps) {
+  const [isListening, setIsListening] = useState(false);
+
   const handleRefresh = useCallback(async () => {
     try {
       await onRefresh();
@@ -57,6 +69,46 @@ export function DiscoverTab({
   const hasSearchQuery = searchQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
   const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
+
+  const handleVoiceSearch = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = (window as typeof window & {
+      webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
+      SpeechRecognition?: new () => BrowserSpeechRecognition;
+    }).SpeechRecognition || (window as typeof window & {
+      webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
+    }).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      showError('Voice search is not supported in this browser');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (!transcript) return;
+
+      const lower = transcript.toLowerCase();
+      const category = CATEGORIES.find((cat) => cat.id !== 'all' && lower.includes(cat.name.toLowerCase()));
+      if (category) {
+        onCategoryChange(category.id);
+      }
+      onSearchChange(transcript);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    setIsListening(true);
+    try {
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      showError('Could not start voice search');
+    }
+  }, [onCategoryChange, onSearchChange]);
 
   if (isLoading) {
     return (
@@ -127,8 +179,19 @@ export function DiscoverTab({
               placeholder="Search agents..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+              className="w-full pl-10 pr-12 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
             />
+            <button
+              type="button"
+              onClick={handleVoiceSearch}
+              className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 transition-colors ${
+                isListening ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+              }`}
+              aria-label="Search by voice"
+              title="Search by voice"
+            >
+              <Mic className="w-4 h-4" />
+            </button>
           </div>
           <RefreshButton onRefresh={handleRefresh} />
         </div>
@@ -150,6 +213,22 @@ export function DiscoverTab({
               >
                 <span className="mr-1">{cat.icon}</span>
                 <span>{cat.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {CATEGORIES.filter(cat => cat.id !== 'all').slice(0, 4).map(cat => (
+              <button
+                key={`voice-${cat.id}`}
+                type="button"
+                onClick={() => {
+                  onCategoryChange(cat.id);
+                  onSearchChange(`Show me ${cat.name.toLowerCase()}`);
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-gray-700/50 bg-gray-900/70 px-3 py-1.5 text-xs text-gray-400 transition-colors hover:border-cyan-500/40 hover:text-cyan-300"
+              >
+                <Mic className="h-3 w-3" />
+                Show me {cat.name.toLowerCase()}
               </button>
             ))}
           </div>

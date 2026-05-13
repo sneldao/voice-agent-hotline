@@ -75,7 +75,6 @@ export function ActiveCall({
   const [showSummary, setShowSummary] = useState(false);
   const [speakerVolume, setSpeakerVolume] = useState(2); // 0=mute, 1=low, 2=full
   const [savedCallId, setSavedCallId] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   // #20: Keep a ref to transcripts so handleEnd always reads the latest
@@ -97,6 +96,37 @@ export function ActiveCall({
     }
   }, [agent.id]);
 
+  // #27: Prevent accidental navigation during an active call
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (call.isConnected && !isFinalizing) {
+        e.preventDefault();
+        // Modern browsers ignore custom messages but still show a confirmation dialog
+        e.returnValue = 'You have an active call. Are you sure you want to leave?';
+      }
+    };
+
+    // Also intercept browser back button via popstate
+    const handlePopState = () => {
+      if (call.isConnected && !isFinalizing) {
+        // Push state back to prevent navigation
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    // Push an extra history entry so back button triggers popstate instead of leaving
+    if (call.isConnected) {
+      window.history.pushState(null, '', window.location.href);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [call.isConnected, isFinalizing]);
+
   useEffect(() => {
     if (showTranscript && transcriptEndRef.current) {
       transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -114,13 +144,6 @@ export function ActiveCall({
       setHasStarted(true);
     }
   }, [hasStarted, isSupported, resetPayment]);
-
-  // Update connecting state when call is active or errored
-  useEffect(() => {
-    if (call.isConnected || call.duration > 0 || call.status === 'connected' || call.error) {
-      setIsConnecting(false);
-    }
-  }, [call.isConnected, call.duration, call.status, call.error]);
 
   useEffect(() => {
     if (paymentMode !== 'streaming' || !call.isConnected || streamingStartedRef.current) {
@@ -382,28 +405,6 @@ export function ActiveCall({
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
-      {/* Connecting Overlay */}
-      {isConnecting && (
-        <div className="absolute inset-0 z-50 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center">
-          <div className="text-center">
-            <div className="relative w-24 h-24 mx-auto mb-6">
-              <div className="absolute inset-0 rounded-full border-4 border-cyan-500/30" />
-              <div className="absolute inset-0 rounded-full border-4 border-cyan-500 border-t-transparent animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Phone className="w-8 h-8 text-cyan-400 animate-pulse" />
-              </div>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">Connecting to {agent.name}...</h3>
-            <p className="text-sm text-gray-400">Establishing secure voice connection</p>
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
-              <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-800">
         <div className="flex items-center gap-3">

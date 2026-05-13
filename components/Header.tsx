@@ -48,7 +48,7 @@ export function Header({
           </div>
         </div>
 
-        {/* Wallet (optional — not required to use the app) */}
+        {/* Wallet */}
         <div className="flex items-center gap-2" role="group" aria-label="User wallet">
           {connected ? (
             <div className="relative" ref={menuRef}>
