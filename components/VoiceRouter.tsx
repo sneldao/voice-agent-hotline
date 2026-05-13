@@ -77,7 +77,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
 
         clientTools: {
           // The Router Agent calls this when it identifies the right specialist
-          route_to_agent: async ({ agent_key, reason }: { agent_key: string; reason: string }) => {
+          route_to_agent: async ({ agent_key, reason }: { agent_key: string; reason: string }): Promise<string> => {
             const matched = agents.find(a =>
               a.id === agent_key ||
               a.id.includes(agent_key) ||
@@ -88,10 +88,9 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
               setMatchedAgent(matched);
               setRouteReason(reason || matched.specialty);
               setState('matched');
-              // End the router session — we're done routing
               try { conversationRef.current?.endSession(); } catch {}
               conversationRef.current = null;
-              return { success: true, routed_to: matched.name };
+              return `Routed to ${matched.name}`;
             }
 
             // Fallback: route to first available agent
@@ -102,10 +101,10 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
               setState('matched');
               try { conversationRef.current?.endSession(); } catch {}
               conversationRef.current = null;
-              return { success: true, routed_to: fallback.name };
+              return `Routed to ${fallback.name}`;
             }
 
-            return { success: false, error: 'No agents available' };
+            return 'No agents available';
           },
         },
 
