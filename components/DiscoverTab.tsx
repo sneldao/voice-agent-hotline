@@ -70,6 +70,8 @@ export function DiscoverTab({
 
   const handleDialClick = useCallback(() => {
     if (!concierge || isConnecting) return;
+    // Haptic feedback on mobile
+    try { navigator.vibrate?.(50); } catch { /* unsupported */ }
     setIsConnecting(true);
     onVoiceCall(concierge);
     setTimeout(() => setIsConnecting(false), 2000);
@@ -133,7 +135,7 @@ export function DiscoverTab({
           <button
             onClick={handleDialClick}
             disabled={!concierge || isConnecting}
-            className="rotary-dial relative z-10 flex h-40 w-40 items-center justify-center rounded-full transition-all duration-300 hover:scale-[1.04] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:h-48 sm:w-48"
+            className="rotary-dial relative z-10 flex h-40 w-40 animate-scaleIn items-center justify-center rounded-full transition-all duration-300 hover:scale-[1.04] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:h-48 sm:w-48"
             aria-label="Pick up the line — start a voice call"
           >
             <span className="absolute inset-5 rounded-full border border-amber-100/20" />
@@ -146,15 +148,15 @@ export function DiscoverTab({
           </button>
 
           {/* Copy */}
-          <h1 className="relative z-10 mt-8 text-3xl font-bold text-amber-50 sm:text-4xl">
+          <h1 className="relative z-10 mt-8 animate-fadeIn text-3xl font-bold text-amber-50 sm:text-4xl [animation-delay:200ms]">
             {isConnecting ? 'Connecting...' : 'Pick up the line.'}
           </h1>
-          <p className="relative z-10 mt-3 max-w-xs text-base text-amber-100/60">
+          <p className="relative z-10 mt-3 max-w-xs animate-fadeIn text-base text-amber-100/60 [animation-delay:400ms]">
             {isConnecting
               ? 'Patching you through to the AI concierge'
               : 'Tap the dial to talk. No typing, no forms — just speak.'}
           </p>
-          <p className="relative z-10 mt-2 text-sm text-amber-100/40">
+          <p className="relative z-10 mt-2 animate-fadeIn text-sm text-amber-100/40 [animation-delay:600ms]">
             {agents.length} specialist{agents.length !== 1 ? 's' : ''} standing by
           </p>
 
