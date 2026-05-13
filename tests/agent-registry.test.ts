@@ -6,16 +6,17 @@ import assert from 'node:assert/strict';
 // ============================================
 
 describe('Agent Registry', () => {
-  it('should export AGENT_REGISTRY with 6 agents', async () => {
+  it('should export AGENT_REGISTRY with 7 agents', async () => {
     const { AGENT_REGISTRY } = await import('../lib/agent-registry');
     const keys = Object.keys(AGENT_REGISTRY);
-    assert.equal(keys.length, 6, 'Should have 6 canonical agents');
+    assert.equal(keys.length, 7, 'Should have 7 canonical agents (6 specialists + 1 router)');
     assert.ok(keys.includes('solana_sage'));
     assert.ok(keys.includes('code_reviewer'));
     assert.ok(keys.includes('general_helper'));
     assert.ok(keys.includes('tour_master'));
     assert.ok(keys.includes('web_researcher'));
     assert.ok(keys.includes('medical_advisor'));
+    assert.ok(keys.includes('voice_router'));
   });
 
   it('each agent should have required fields', async () => {

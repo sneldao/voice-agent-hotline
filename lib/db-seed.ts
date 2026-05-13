@@ -92,6 +92,9 @@ export async function seedAgents() {
   let skipped = 0;
 
   for (const entry of Object.values(AGENT_REGISTRY)) {
+    // Skip the voice router — it's not a user-facing agent
+    if (entry.key === 'voice_router') continue;
+
     // Only seed agents that have a working ElevenLabs agent ID
     if (!entry.elevenLabsAgentId) {
       console.log(`  ⏭️  Skipping ${entry.name} — no ElevenLabs agent ID configured`);
