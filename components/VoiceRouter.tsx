@@ -224,7 +224,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     recognition.lang = 'en-US';
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.continuous = false;
+    recognition.continuous = true; // Keep listening until user stops speaking
 
     setState('listening');
     setTranscript('');
@@ -234,6 +234,13 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     setActivationText('Listening started. Speak your request now.');
     latestIntentRef.current = '';
     ignoreRecognitionEndRef.current = false;
+
+    // Auto-stop after 8 seconds of listening to prevent hanging
+    const autoStopTimer = setTimeout(() => {
+      if (recognitionRef.current && !ignoreRecognitionEndRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
+    }, 8000);
 
     recognition.onresult = (event: any) => {
       let finalTranscript = '';
@@ -248,9 +255,18 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
       const nextTranscript = (finalTranscript || interimTranscript).trim();
       latestIntentRef.current = nextTranscript;
       setTranscript(nextTranscript);
+
+      // If we got a final result, stop listening and route
+      if (finalTranscript.trim()) {
+        clearTimeout(autoStopTimer);
+        ignoreRecognitionEndRef.current = true;
+        try { recognitionRef.current?.stop(); } catch {}
+        void routeIntent(finalTranscript.trim());
+      }
     };
 
     recognition.onend = () => {
+      clearTimeout(autoStopTimer);
       if (ignoreRecognitionEndRef.current) return;
       const intent = latestIntentRef.current.trim();
       if (intent) {
@@ -262,11 +278,27 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
       }
     };
 
-    recognition.onerror = () => {
-      setState('idle');
-      setTranscript('');
-      setActivationText('');
-      setErrorText('Microphone listening stopped. Tap the mic to try again.');
+    recognition.onerror = (event: any) => {
+      clearTimeout(autoStopTimer);
+      const errorType = event?.error || '';
+      // 'no-speech' means the mic is working but user didn't say anything
+      // 'not-allowed' means mic permission was denied
+      if (errorType === 'not-allowed' || errorType === 'permission-denied') {
+        setState('idle');
+        setTranscript('');
+        setActivationText('');
+        setErrorText('Microphone permission denied. Allow mic access in your browser settings.');
+      } else if (errorType === 'no-speech') {
+        setState('idle');
+        setTranscript('');
+        setActivationText('');
+        setErrorText('No speech detected. Tap the mic and speak clearly.');
+      } else {
+        setState('idle');
+        setTranscript('');
+        setActivationText('');
+        setErrorText('Microphone listening stopped. Tap the mic to try again.');
+      }
     };
 
     try {
