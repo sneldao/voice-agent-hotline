@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWidgetConversation } from '@/lib/useWidgetConversation';
-import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
+import { useWebRTCSupport } from '@/lib/useWebRTCSupport';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useRealPayment, type PaymentState } from '@/lib/useRealPayment';
 import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';

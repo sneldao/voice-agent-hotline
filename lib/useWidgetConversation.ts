@@ -11,10 +11,29 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWidgetEngine } from '@/components/WidgetEngine';
-import type { ConversationState, TranscriptMessage } from './useElevenLabsConversation';
 
-// Re-export types so consumers can import from either hook
-export type { ConversationState, TranscriptMessage };
+// Re-export types for consumers
+export interface ConversationState {
+  isConnected: boolean;
+  isConnecting: boolean;
+  isReconnecting: boolean;
+  duration: number;
+  cost: number;
+  error: string | null;
+  status: 'disconnected' | 'connecting' | 'connected';
+  mode: 'listening' | 'speaking' | 'idle';
+  metrics: {
+    latency: number;
+    audioLevel: number;
+  };
+}
+
+export interface TranscriptMessage {
+  text: string;
+  speaker: 'user' | 'agent';
+  timestamp: number;
+  isFinal: boolean;
+}
 
 // Agent ID mapping — same as in useElevenLabsConversation
 const AGENT_ID_MAP: Record<string, string> = {

@@ -50,8 +50,8 @@ VOISSS uses ElevenLabs across the full stack:
 
 - The visible product now uses a switchboard-style UI: operator console, rotary call control, line lamps, patch-cord accents, agent line cards, and an analog in-call console.
 - `VoiceRouter` no longer uses browser `SpeechRecognition`; tapping it starts the General Helper concierge line.
-- `ActiveCall` still uses the legacy `useElevenLabsConversation` SDK hook while the widget controller is being built.
-- The old SDK hook has a temporary `connectionType: 'webrtc'` compatibility patch so the app continues to typecheck.
+- `ActiveCall` uses the `useWidgetConversation` hook which controls the global `<elevenlabs-convai>` widget engine.
+- The widget is mounted offscreen by `WidgetEngineProvider` in the layout and controlled programmatically via shadow DOM button clicks and signed URLs.
 
 ### How It Works
 
@@ -73,14 +73,15 @@ User speaks → ElevenLabs STT → LLM processes → Tool call (if needed) → E
 ### Key Files
 
 - `components/VoiceRouter.tsx` — One-tap AI concierge launcher
-- `components/ActiveCall.tsx` — Custom operator-style call UI; currently still backed by the legacy SDK hook
+- `components/ActiveCall.tsx` — Custom operator-style call UI backed by the widget hook
+- `components/WidgetEngine.tsx` — Global `<elevenlabs-convai>` widget provider (offscreen, controlled)
+- `lib/useWidgetConversation.ts` — Conversation hook controlling the widget engine
+- `lib/useWebRTCSupport.ts` — Browser capability check (WebRTC + microphone)
 - `app/widget-probe/page.tsx` — Internal widget-control spike page
 - `components/WidgetProbe.tsx` — Runtime introspection UI for the `<elevenlabs-convai>` element
-- `components/ElevenLabsWidget.tsx` — Early widget wrapper/test component
-- `lib/useElevenLabsConversation.ts` — Temporary SDK hook until widget parity is implemented
-- `lib/useWidgetConversation.ts` — Planned hook controlling the widget engine
 - `lib/agent-registry.ts` — Canonical registry mapping agents to ElevenLabs IDs + voice configs
 - `app/api/webhooks/elevenlabs/route.ts` — Webhook handler for mid-conversation tool execution
+- `app/api/webrtc/signal/route.ts` — Signed URL + token endpoint for authenticated sessions
 - `docs/WIDGET_ARCHITECTURE.md` — Full architecture documentation
 
 ### Why the Widget?
@@ -93,12 +94,13 @@ We use the official `<elevenlabs-convai>` widget rather than the raw `@elevenlab
 
 ### Next Voice Plumbing Steps
 
-1. Prove widget imperative control on the real custom element.
-2. Record `/widget-probe` results: methods, events, visibility mode, transcript path.
-3. Replace the hardcoded visible widget with one controlled widget engine.
-4. Build `useWidgetConversation`.
-5. Swap `ActiveCall` from `useElevenLabsConversation` to `useWidgetConversation`.
-6. Use signed URLs/session metadata if wallet-aware receipts or billing correlation require it.
+1. ~~Prove widget imperative control on the real custom element.~~ ✅ Done
+2. ~~Record `/widget-probe` results.~~ ✅ Shadow button is the control path; no imperative methods; signed URLs work.
+3. ~~Replace the hardcoded visible widget with one controlled widget engine.~~ ✅ Done
+4. ~~Build `useWidgetConversation`.~~ ✅ Done
+5. ~~Swap `ActiveCall` from `useElevenLabsConversation` to `useWidgetConversation`.~~ ✅ Done
+6. Transcript source of truth: widget emits no transcript events; use ElevenLabs webhook reconciliation for final records.
+7. Signed URLs enabled by default; `/api/webrtc/signal` provides them.
 
 ---
 

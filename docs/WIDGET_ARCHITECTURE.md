@@ -9,7 +9,7 @@ The app now uses a controlled `<elevenlabs-convai>` widget engine:
 - `lib/useWidgetConversation.ts` is the new conversation hook — same interface as the old `useElevenLabsConversation` but drives the widget instead of the raw SDK.
 - `components/ActiveCall.tsx` now uses `useWidgetConversation` instead of the legacy SDK hook.
 - `app/layout.tsx` wraps the app in `<WidgetEngineProvider>` — no more hardcoded visible widget.
-- The legacy `useElevenLabsConversation` hook is retained for reference/fallback but is no longer imported by ActiveCall.
+- The legacy `useElevenLabsConversation` hook and `ElevenLabsWidget` component have been removed.
 - `app/widget-probe/page.tsx` and `components/WidgetProbe.tsx` remain as the internal runtime probe for verifying widget behavior.
 
 Next phase: open `/widget-probe` in a real browser, verify which events fire, then confirm the full call flow works end-to-end through the new hook.
@@ -102,12 +102,12 @@ The `ActiveCall` component keeps its new operator-console UI (duration, waveform
 
 | Component | Before | After |
 |-----------|--------|-------|
-| Voice engine | `Conversation.startSession()` | `<elevenlabs-convai>` widget |
-| Connection management | Our code (broken) | Widget internal (works) |
-| Hook | `useElevenLabsConversation` | `useWidgetConversation` (same interface) |
-| Layout | Hardcoded visible test widget | Single controlled widget engine + script |
-| ActiveCall | Uses old hook | Uses new hook after parity |
-| VoiceRouter | Calls `onCallAgent` | Same — just triggers the widget |
+| Voice engine | `Conversation.startSession()` | `<elevenlabs-convai>` widget ✅ |
+| Connection management | Our code (broken) | Widget internal (works) ✅ |
+| Hook | `useElevenLabsConversation` | `useWidgetConversation` ✅ |
+| Layout | Hardcoded visible test widget | `WidgetEngineProvider` (offscreen) ✅ |
+| ActiveCall | Uses old hook | Uses `useWidgetConversation` ✅ |
+| VoiceRouter | Calls `onCallAgent` | Same — just triggers the widget ✅ |
 
 ## What Stays The Same
 
@@ -119,6 +119,32 @@ The `ActiveCall` component keeps its new operator-console UI (duration, waveform
 - ActiveCall UI (operator console, duration, controls, transcript)
 - Payment settlement
 - Call history
+
+---
+
+## Probe Results (2026-05-13)
+
+Browser test at `/widget-probe` confirmed:
+
+| Question | Answer |
+|----------|--------|
+| Imperative methods on host element? | **No** — only lifecycle callbacks (`connectedCallback`, `disconnectedCallback`, `attributeChangedCallback`, `_vdomComponent`) |
+| Shadow DOM? | **Open** shadowRoot with 1 button, 0 inputs |
+| Start conversation how? | Click the shadow DOM button (toggles conversation on/off) |
+| End conversation how? | Click the same shadow DOM button again |
+| Mute/volume methods? | **Not exposed** on host element |
+| Custom events emitted? | **None** observed on host element |
+| Signed URL mode? | **Works** — backend returns valid `wss://` signed URL |
+| Widget works offscreen? | **Yes** — renders and responds when positioned off-viewport |
+| Transcript events? | **Not emitted** — use webhook reconciliation for final records |
+
+### Implications for Architecture
+
+- `WidgetEngine.startConversation()` retries shadow button click with polling (widget needs time to render after attribute change)
+- `WidgetEngine.endConversation()` clicks the same button to toggle off
+- Connection state is detected via MutationObserver on shadow DOM + optimistic timeout
+- Transcripts come from ElevenLabs webhook, not widget events
+- Mute/volume controls are best-effort (try methods, no guarantee)
 
 ---
 
@@ -140,7 +166,7 @@ The `ActiveCall` component keeps its new operator-console UI (duration, waveform
    - widget events if reliable
    - ElevenLabs webhook reconciliation if widget events are incomplete
 7. **Add signed-url/session metadata** if wallet-aware call history, usage tracking, or billing correlation is needed.
-8. **Remove old `useElevenLabsConversation` and `/api/webrtc/signal`** only after widget parity.
+8. **~~Remove old `useElevenLabsConversation` and `ElevenLabsWidget`~~** ✅ Done — deleted after widget parity confirmed.
 9. **Test end-to-end** — tap agent → operator UI opens → widget starts → voice works → call ends → receipt/transcript persists.
 
 ---
@@ -165,6 +191,8 @@ The `ActiveCall` component keeps its new operator-console UI (duration, waveform
 - **2026-05-13:** Internal `/widget-probe` page added to inspect the widget runtime contract before building `useWidgetConversation`.
 - **2026-05-13:** Current verification passed: `npm run typecheck`, `npm test`, `npm run build`.
 - **2026-05-13:** Widget engine implemented: `WidgetEngineProvider` (global controlled widget), `useWidgetConversation` hook, `ActiveCall` swapped to widget hook, hardcoded layout widget removed.
+- **2026-05-13:** Browser probe completed: shadow button is the control path, no imperative methods, signed URLs work, no custom events emitted.
+- **2026-05-13:** Old SDK plumbing removed: deleted `useElevenLabsConversation`, deleted `ElevenLabsWidget`, extracted `useWebRTCSupport` to its own file. All docs updated to "implemented" status.
 
 ---
 

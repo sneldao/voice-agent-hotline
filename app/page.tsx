@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import { ToastProvider, showError, showInfo } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
-import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
+import { useWebRTCSupport } from '@/lib/useWebRTCSupport';
 import { useUserBalance, useAgents } from '@/lib/useSWR';
 import { Search, Phone, User } from 'lucide-react';
 import { generateCallId } from '@/lib/ids';
@@ -144,8 +144,8 @@ function HomeInner() {
     dispatch({ type: 'CONSUME_LAUNCH' });
   }, []);
 
-  // #19: Removed preflight — useElevenLabsConversation already calls /api/webrtc/signal
-  // to get the token. A separate availability check is a wasted round-trip.
+  // #19: Removed preflight — useWidgetConversation fetches a signed URL via
+  // /api/webrtc/signal when starting. A separate availability check is a wasted round-trip.
   // The hook will surface an error if the agent is unavailable.
   const startCallWithAgentRef = useRef<(agent: Agent) => Promise<void>>();
   startCallWithAgentRef.current = async (agent: Agent) => {

@@ -8,7 +8,7 @@ The platform is a voice agent marketplace where:
 - **Developers** can self-register their own agents via `/list-your-agent`
 - **OpenClaw** acts as the platform's social agent, posting updates and milestones
 
-Voice transport note: the agent lifecycle below is still the correct product architecture. The lower-level voice connection method is being refactored from the legacy `@elevenlabs/client` SDK hook to an official `<elevenlabs-convai>` widget engine. See `docs/WIDGET_ARCHITECTURE.md` for current status.
+Voice transport note: the agent lifecycle below is still the correct product architecture. The voice connection uses the official `<elevenlabs-convai>` widget engine, controlled programmatically via `useWidgetConversation`. See `docs/WIDGET_ARCHITECTURE.md` for details.
 
 ---
 
@@ -32,8 +32,8 @@ status="active" → appears in GET /api/agents
         ▼
 User calls agent → ElevenLabs Conversational AI session
         │
-        ├─ Current temporary path: `useElevenLabsConversation` SDK hook
-        └─ Target path: controlled `<elevenlabs-convai>` widget engine
+        ├─ Controlled via `<elevenlabs-convai>` widget engine (implemented)
+        └─ `useWidgetConversation` hook drives shadow DOM button + signed URLs
         │
         ▼
 Call ends → POST /api/webhooks/elevenlabs
