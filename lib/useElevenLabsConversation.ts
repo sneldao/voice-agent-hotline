@@ -132,6 +132,7 @@ export function useElevenLabsConversation(options: ConversationOptions) {
       // Start session using agentId directly (matches ElevenLabs dashboard behavior)
       const conversation = await Conversation.startSession({
         agentId: elevenLabsAgentId,
+        connectionType: 'webrtc',
         
         // Callbacks
           onConnect: () => {

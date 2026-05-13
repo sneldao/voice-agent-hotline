@@ -17,13 +17,14 @@
 - The entire user journey (discover → call → interact → pay → rate) requires zero keyboard input
 - Agents execute real actions mid-conversation (web search, booking, blockchain lookups)
 - Not just a chatbot with TTS — it's a full marketplace with voice-driven tool execution
+- The redesigned UI now feels like an AI phone-operator switchboard: tap a line, get patched through, keep talking
 
 ### For the "ElevenLabs Integration" Requirement
-- Uses the official ElevenLabs `<elevenlabs-convai>` widget for reliable voice sessions
+- Target architecture uses the official ElevenLabs `<elevenlabs-convai>` widget for reliable voice sessions
 - Each agent has a unique ElevenLabs voice (6 different voices)
 - Conversational AI handles both STT (input) and TTS (output)
 - Webhook-based tool execution during live conversations
-- Widget controlled programmatically — our UI wraps the voice engine
+- Widget-controlled voice engine is the active refactor plan; current app still has temporary SDK plumbing while the custom UI is finalized
 - Voice Router: one-tap mic connects to AI concierge instantly
 
 ### For the "Built with Cursor" Requirement
@@ -34,6 +35,8 @@
 ---
 
 ## Demo Video Script (60 seconds, viral style)
+
+Recommended visual angle: lean into the switchboard. Show the operator console, glowing line lamps, rotary-style call control, and patched-line active call view before explaining the backend.
 
 ### Option A: "The No-Keyboard Challenge"
 

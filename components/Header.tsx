@@ -35,18 +35,18 @@ export function Header({
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/50" role="banner">
+    <header className="sticky top-0 z-50 border-b border-amber-100/15 bg-[#120d0a]/88 backdrop-blur-xl" role="banner">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="signal-scan flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/30 bg-gray-900 shadow-lg shadow-cyan-500/20" role="img" aria-label="VOISSS Hotline logo">
-            <PhoneCall className="h-5 w-5 text-cyan-200" />
+          <div className="signal-scan flex h-10 w-10 items-center justify-center rounded-xl border border-amber-100/25 bg-red-950/50 shadow-lg shadow-red-950/30" role="img" aria-label="VOISSS Hotline logo">
+            <PhoneCall className="h-5 w-5 text-amber-100" />
           </div>
           <div>
-            <h1 className="text-lg font-bold">VOISSS</h1>
-            <p className="hidden text-xs text-gray-500 sm:flex sm:items-center sm:gap-1.5">
+            <h1 className="text-lg font-bold text-amber-50">VOISSS</h1>
+            <p className="hidden text-xs text-amber-100/45 sm:flex sm:items-center sm:gap-1.5">
               <Radio className="h-3 w-3 text-emerald-300" />
-              A phonebook for AI you can talk to
+              Operator switchboard for AI lines
             </p>
           </div>
         </div>
@@ -57,29 +57,29 @@ export function Header({
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowMenu(prev => !prev)}
-                className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center gap-2 hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-2 rounded-full border border-amber-100/20 bg-black/25 px-3 py-1.5 transition-colors hover:bg-amber-100/10"
                 aria-label="Wallet menu"
               >
-                <Wallet className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs text-gray-400">{formatAddress()}</span>
-                <ChevronDown className="w-3 h-3 text-gray-500" />
+                <Wallet className="h-4 w-4 text-amber-200" />
+                <span className="text-xs text-amber-100/65">{formatAddress()}</span>
+                <ChevronDown className="h-3 w-3 text-amber-100/40" />
               </button>
               {showMenu && (
-                <div className="absolute right-0 mt-2 w-44 rounded-xl bg-gray-900 border border-gray-700/50 shadow-xl z-50 overflow-hidden">
-                  <div className="px-3 py-2 border-b border-gray-800">
-                    <p className="text-xs text-gray-500">Balance</p>
-                    <p className="text-sm font-medium text-cyan-400">${(userBalance || 0).toFixed(2)}</p>
+                <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border border-amber-100/20 bg-[#17100d] shadow-xl">
+                  <div className="border-b border-amber-100/10 px-3 py-2">
+                    <p className="text-xs text-amber-100/45">Balance</p>
+                    <p className="text-sm font-medium text-amber-200">${(userBalance || 0).toFixed(2)}</p>
                   </div>
                   <Link
                     href="/dashboard"
                     onClick={() => setShowMenu(false)}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 transition-colors"
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-amber-100/70 transition-colors hover:bg-amber-100/10"
                   >
                     📊 Dashboard
                   </Link>
                   <button
                     onClick={() => { setShowMenu(false); onDisconnect?.(); }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-400 hover:bg-gray-800 transition-colors border-t border-gray-800"
+                    className="flex w-full items-center gap-2 border-t border-amber-100/10 px-3 py-2.5 text-sm text-red-300 transition-colors hover:bg-red-500/10"
                   >
                     <LogOut className="w-4 h-4" />
                     Disconnect
@@ -91,7 +91,7 @@ export function Header({
             <button
               onClick={onConnect}
               disabled={isConnecting}
-              className="px-3 py-1.5 rounded-full bg-gray-800/50 border border-gray-700/50 text-gray-400 text-xs font-medium hover:bg-gray-800 hover:text-white transition-colors disabled:opacity-50"
+              className="rounded-full border border-amber-100/20 bg-black/25 px-3 py-1.5 text-xs font-bold text-amber-100/65 transition-colors hover:bg-amber-100/10 hover:text-amber-50 disabled:opacity-50"
             >
               {isConnecting ? 'Connecting...' : 'Connect caller ID'}
             </button>

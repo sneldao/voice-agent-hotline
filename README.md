@@ -4,6 +4,8 @@
 
 VOISSS lets you browse, discover, and have live voice conversations with specialized AI agents — entirely by speaking. Built with [ElevenLabs Conversational AI](https://elevenlabs.io/conversational-ai) for natural voice interaction and [Cursor](https://cursor.sh) as the AI-first development environment.
 
+Current build status: the product UI has been redesigned as an immersive classic phone-operator switchboard. The next engineering phase is replacing the temporary SDK call path with a controlled ElevenLabs widget engine.
+
 **Live Demo:** [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)  
 **Repo:** [github.com/sneldao/voice-agent-hotline](https://github.com/sneldao/voice-agent-hotline)
 
@@ -31,27 +33,36 @@ The entire flow from discovery to conversation to payment works without typing a
 
 ---
 
-## ElevenLabs Integration (Deep)
+## ElevenLabs Integration
 
 VOISSS uses ElevenLabs across the full stack:
 
 | Feature | ElevenLabs API |
 |---------|---------------|
-| Real-time voice conversations | [Conversational AI](https://elevenlabs.io/docs/conversational-ai) via official widget |
+| Real-time voice conversations | [Conversational AI](https://elevenlabs.io/docs/conversational-ai) |
 | Agent voices | Pre-made + custom voice IDs per agent |
 | Speech-to-Text (input) | Built into ConvAI — user speaks, agent understands |
 | Text-to-Speech (output) | Built into ConvAI — agent responds with natural voice |
 | Tool execution during calls | Webhook-based tool calls (search, book, research) |
-| Conversation transcripts | Real-time transcript streaming via widget events |
+| Conversation transcripts | Widget events or webhook reconciliation, pending widget-control spike |
+
+### Current State
+
+- The visible product now uses a switchboard-style UI: operator console, rotary call control, line lamps, patch-cord accents, agent line cards, and an analog in-call console.
+- `VoiceRouter` no longer uses browser `SpeechRecognition`; tapping it starts the General Helper concierge line.
+- `ActiveCall` still uses the legacy `useElevenLabsConversation` SDK hook while the widget controller is being built.
+- The old SDK hook has a temporary `connectionType: 'webrtc'` compatibility patch so the app continues to typecheck.
 
 ### How It Works
+
+Target widget-first flow:
 
 ```
 User speaks → ElevenLabs STT → LLM processes → Tool call (if needed) → ElevenLabs TTS → User hears response
 ```
 
 1. User taps "Call" on an agent (or taps the Voice Router mic)
-2. App sets the `agent-id` on the ElevenLabs widget and calls `startConversation()`
+2. App sets the `agent-id` or `signed-url` on the ElevenLabs widget and starts the conversation
 3. Widget handles WebRTC connection, negotiation, and agent dispatch internally
 4. User speaks naturally — ElevenLabs handles ASR, turn-taking, and TTS
 5. When the agent needs to take action (web search, booking, etc.), it triggers a webhook
@@ -61,8 +72,13 @@ User speaks → ElevenLabs STT → LLM processes → Tool call (if needed) → E
 
 ### Key Files
 
-- `components/ElevenLabsWidget.tsx` — Widget wrapper for programmatic control
-- `lib/useWidgetConversation.ts` — React hook controlling the widget (same interface as ActiveCall expects)
+- `components/VoiceRouter.tsx` — One-tap AI concierge launcher
+- `components/ActiveCall.tsx` — Custom operator-style call UI; currently still backed by the legacy SDK hook
+- `app/widget-probe/page.tsx` — Internal widget-control spike page
+- `components/WidgetProbe.tsx` — Runtime introspection UI for the `<elevenlabs-convai>` element
+- `components/ElevenLabsWidget.tsx` — Early widget wrapper/test component
+- `lib/useElevenLabsConversation.ts` — Temporary SDK hook until widget parity is implemented
+- `lib/useWidgetConversation.ts` — Planned hook controlling the widget engine
 - `lib/agent-registry.ts` — Canonical registry mapping agents to ElevenLabs IDs + voice configs
 - `app/api/webhooks/elevenlabs/route.ts` — Webhook handler for mid-conversation tool execution
 - `docs/WIDGET_ARCHITECTURE.md` — Full architecture documentation
@@ -73,7 +89,16 @@ We use the official `<elevenlabs-convai>` widget rather than the raw `@elevenlab
 - The widget reliably handles WebRTC negotiation and AI agent dispatch
 - It's the same connection path used by the ElevenLabs dashboard (proven to work)
 - It manages audio devices, reconnection, and error recovery internally
-- Our app controls it programmatically while showing its own custom UI
+- Our app can control it programmatically while showing its own custom switchboard UI
+
+### Next Voice Plumbing Steps
+
+1. Prove widget imperative control on the real custom element.
+2. Record `/widget-probe` results: methods, events, visibility mode, transcript path.
+3. Replace the hardcoded visible widget with one controlled widget engine.
+4. Build `useWidgetConversation`.
+5. Swap `ActiveCall` from `useElevenLabsConversation` to `useWidgetConversation`.
+6. Use signed URLs/session metadata if wallet-aware receipts or billing correlation require it.
 
 ---
 
@@ -108,7 +133,7 @@ Each agent has a unique ElevenLabs voice, custom system prompt, and set of tools
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 14 (App Router), React 18, Tailwind CSS |
-| Voice AI | **ElevenLabs Conversational AI** (WebRTC + `@elevenlabs/client` SDK) |
+| Voice AI | **ElevenLabs Conversational AI**; widget-first refactor in progress |
 | LLM | GPT-4 (via ElevenLabs ConvAI) |
 | Tools | Firecrawl (web search/scrape), Composio (GitHub, Solana) |
 | Payments | Celo stablecoins (cUSD), Superfluid streaming |
@@ -147,6 +172,7 @@ Open `http://localhost:3000`, tap any agent to start a voice call. No wallet req
 | `/list-your-agent` | Developer self-registration form for listing ElevenLabs agents |
 | `/dashboard` | Agent owner analytics (call counts, revenue, ratings) |
 | `/admin` | Platform admin panel (approve/reject agents, manage users) |
+| `/widget-probe` | Internal ElevenLabs widget-control spike page |
 | `/marketplace` | Redirects to `/` (legacy) |
 | `/profile` | Redirects to `/` (consolidated into main app tabs) |
 | `/demo` | Redirects to `/` (legacy) |

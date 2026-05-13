@@ -1,5 +1,19 @@
 # Widget-First Architecture Plan
 
+## Status
+
+Current phase: **UI/UX redesign complete, voice plumbing pending**.
+
+The app now presents the product as an immersive classic phone-operator switchboard:
+- `components/VoiceRouter.tsx` is a one-tap concierge launcher instead of browser `SpeechRecognition`.
+- `app/globals.css`, `components/DiscoverTab.tsx`, `app/page-components.tsx`, `components/Header.tsx`, `components/ActiveCall.tsx`, and `app/page.tsx` have been restyled around rotary-dial controls, line lamps, operator panels, patch-cord accents, and paper switchboard labels.
+- The legacy `useElevenLabsConversation` SDK path is still the active call plumbing for now, with a small compatibility patch (`connectionType: 'webrtc'`) so the app continues to typecheck while the widget controller is built.
+- `app/widget-probe/page.tsx` and `components/WidgetProbe.tsx` now provide an internal runtime probe for the real `<elevenlabs-convai>` custom element.
+
+Next phase: prove and implement the widget control layer, then swap `ActiveCall` from the SDK hook to the widget hook.
+
+---
+
 ## Context
 
 We discovered that ElevenLabs' `Conversation.startSession()` SDK method fails with "negotiation timed out" on our domain, but the official `<elevenlabs-convai>` widget works perfectly. The widget uses the same underlying infrastructure but handles WebRTC negotiation, token management, and agent dispatch internally.
@@ -33,16 +47,18 @@ User taps agent → Widget controller sets agent-id → widget.startConversation
 
 ## Architecture
 
-### Layer 1: Widget Instance (hidden, global)
+### Layer 1: Widget Instance (global, visually suppressed)
 
-A single `<elevenlabs-convai>` element lives in the layout, hidden from view. It's the actual voice engine. We control it programmatically.
+A single `<elevenlabs-convai>` element lives in the layout/provider. It is the actual voice engine. We control it programmatically while the custom VOISSS UI remains the visible experience.
+
+Important: do **not** assume `display: none` is safe. First prove the widget can start, capture audio, emit state, and end while visually suppressed. Prefer an offscreen or zero-opacity mounted container if the widget needs layout/audio lifecycle hooks.
 
 ```tsx
 // In layout or a global provider
 <elevenlabs-convai
   id="voisss-widget"
   agent-id=""           // Set dynamically before starting
-  style={{ display: 'none' }}  // Hidden — our UI replaces it
+  className="sr-only-widget-engine"
 />
 ```
 
@@ -76,7 +92,7 @@ The existing flow stays the same:
 
 ### Layer 4: ActiveCall UI (unchanged)
 
-The `ActiveCall` component keeps its current UI (duration, waveform, mute, end call). It just uses the new hook instead of the old one.
+The `ActiveCall` component keeps its new operator-console UI (duration, waveform, mute, end call). It should use the new hook instead of the old SDK hook once widget control is proven.
 
 ---
 
@@ -87,8 +103,8 @@ The `ActiveCall` component keeps its current UI (duration, waveform, mute, end c
 | Voice engine | `Conversation.startSession()` | `<elevenlabs-convai>` widget |
 | Connection management | Our code (broken) | Widget internal (works) |
 | Hook | `useElevenLabsConversation` | `useWidgetConversation` (same interface) |
-| Layout | No widget | Hidden widget element + script |
-| ActiveCall | Uses old hook | Uses new hook (drop-in) |
+| Layout | Hardcoded visible test widget | Single controlled widget engine + script |
+| ActiveCall | Uses old hook | Uses new hook after parity |
 | VoiceRouter | Calls `onCallAgent` | Same — just triggers the widget |
 
 ## What Stays The Same
@@ -98,7 +114,7 @@ The `ActiveCall` component keeps its current UI (duration, waveform, mute, end c
 - DiscoverTab UI
 - AgentPreviewSheet
 - VoiceRouter (one-tap concierge)
-- ActiveCall UI (duration, controls, transcript)
+- ActiveCall UI (operator console, duration, controls, transcript)
 - Payment settlement
 - Call history
 
@@ -106,12 +122,24 @@ The `ActiveCall` component keeps its current UI (duration, waveform, mute, end c
 
 ## Implementation Steps
 
-1. **Add widget script + hidden element to layout** (~5 min)
-2. **Create `useWidgetConversation` hook** with same interface as old hook (~30 min)
-3. **Update `ActiveCall` to use new hook** (swap import, ~5 min)
-4. **Remove old `useElevenLabsConversation` hook** (cleanup)
-5. **Test end-to-end** — tap agent → widget starts → voice works
-6. **Remove the visible floating widget** (it was just for testing)
+1. **Spike widget control** — use `/widget-probe` to verify methods/events on the real custom element:
+   - dynamic `agent-id` or `signed-url`
+   - start conversation
+   - end conversation
+   - mute/unmute if exposed
+   - state/connection events
+   - transcript events or webhook-only transcript fallback
+   - behavior when visually suppressed
+2. **Record the probe results** in this document: detected methods, observed events, usable visibility mode, and transcript strategy.
+3. **Replace the hardcoded layout widget** with a single controlled widget engine.
+4. **Create `useWidgetConversation` hook** with the same public shape `ActiveCall` expects where possible.
+5. **Update `ActiveCall` to use `useWidgetConversation`**.
+6. **Decide transcript source of truth**:
+   - widget events if reliable
+   - ElevenLabs webhook reconciliation if widget events are incomplete
+7. **Add signed-url/session metadata** if wallet-aware call history, usage tracking, or billing correlation is needed.
+8. **Remove old `useElevenLabsConversation` and `/api/webrtc/signal`** only after widget parity.
+9. **Test end-to-end** — tap agent → operator UI opens → widget starts → voice works → call ends → receipt/transcript persists.
 
 ---
 
@@ -119,16 +147,30 @@ The `ActiveCall` component keeps its current UI (duration, waveform, mute, end c
 
 | Risk | Mitigation |
 |------|-----------|
-| Widget doesn't expose enough events for our UI | Use MutationObserver on widget DOM + polling for state |
-| Widget styling conflicts with our UI | Keep it `display: none` — we only use it as an audio engine |
-| Widget doesn't support programmatic mute/volume | Fall back to Web Audio API on the output stream |
+| Widget doesn't expose enough events for our UI | Prefer official events; use webhook reconciliation for transcripts; MutationObserver is last resort |
+| Widget fails when `display: none` | Keep it mounted but visually suppressed/offscreen instead of display-none |
+| Widget doesn't support programmatic mute/volume | Hide unsupported controls or fall back only if we can access media safely |
 | Multiple simultaneous widgets needed | Only one call at a time — swap agent-id between calls |
+| Public `agent-id` limits tracking | Move to signed-url flow with call/session metadata |
 
 ---
 
-## Timeline
+## Progress Log
 
-~45 minutes total for a working implementation. The key insight is that the widget is a black box that handles the hard part (WebRTC + agent dispatch), and we just need to control it programmatically while showing our own UI.
+- **2026-05-13:** Browser `SpeechRecognition` router issue identified. Direction changed to delegate voice handling to ElevenLabs.
+- **2026-05-13:** Voice Router simplified to one-tap concierge launcher.
+- **2026-05-13:** Switchboard UI redesign implemented across discovery, router, agent cards, header, nav, and active-call screens.
+- **2026-05-13:** Internal `/widget-probe` page added to inspect the widget runtime contract before building `useWidgetConversation`.
+- **2026-05-13:** Current verification passed: `npm run typecheck`, `npm test`, `npm run build`.
+
+---
+
+## Timeline Estimate
+
+The old 45-minute estimate was too optimistic because the widget control/event contract still needs proof. Treat the next phase as:
+- 30-60 minutes for the widget control spike
+- 1-2 hours for `useWidgetConversation` plus `ActiveCall` swap if events are clean
+- additional time if transcript, mute, or signed-url behavior needs server-side reconciliation
 
 ---
 
@@ -141,4 +183,4 @@ Backend: GET /api/get-signed-url?agentId=X → calls ElevenLabs API → returns 
 Frontend: widget.setAttribute('signed-url', url) → widget.startConversation()
 ```
 
-This would let us track usage per wallet address. But for the hackathon demo, public agent-id is sufficient.
+This would let us track usage per wallet address and correlate ElevenLabs conversations with VOISSS call IDs. Public `agent-id` may be enough for a demo, but signed URLs are preferred before relying on receipts, billing, or per-user analytics.

@@ -388,11 +388,11 @@ export function ActiveCall({
 
   if (!isSupported) {
     return (
-      <div className="fixed inset-0 z-50 flex h-dvh items-center justify-center bg-gray-900 p-4">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">WebRTC Not Supported</h3>
-          <p className="text-gray-400 mb-4">Your browser does not support voice calls.</p>
+      <div className="fixed inset-0 z-50 flex h-dvh items-center justify-center bg-[#0b0806] p-4">
+        <div className="operator-panel max-w-md rounded-[1.5rem] p-8 text-center">
+          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-300" />
+          <h3 className="mb-2 text-xl font-bold text-amber-50">Voice Line Unavailable</h3>
+          <p className="mb-4 text-amber-100/60">Your browser does not support voice calls.</p>
           <Button onClick={handleEnd} variant="destructive">Go Back</Button>
         </div>
       </div>
@@ -401,20 +401,22 @@ export function ActiveCall({
 
   if (call.isConnecting) {
     return (
-      <div className="fixed inset-0 z-50 flex h-dvh flex-col items-center justify-center bg-gray-900 p-4">
+      <div className="switchboard-shell fixed inset-0 z-50 flex h-dvh flex-col items-center justify-center bg-[#0b0806] p-4">
         <div className="mx-auto max-w-md text-center">
-          <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center mb-6 animate-pulse">
-            <span className="text-4xl">{agent.avatar || agent.name.charAt(0)}</span>
+          <div className="operator-panel mx-auto mb-6 flex h-28 w-28 animate-pulse items-center justify-center rounded-full">
+            <div className="rotary-dial flex h-24 w-24 items-center justify-center rounded-full">
+              <span className="text-4xl">{agent.avatar || agent.name.charAt(0)}</span>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">{agent.name}</h2>
-          <p className="text-gray-400 mb-6">{agent.specialty}</p>
+          <h2 className="mb-2 text-2xl font-bold text-amber-50">{agent.name}</h2>
+          <p className="mb-6 text-amber-100/60">{agent.specialty}</p>
           <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            <span className="text-gray-400 ml-2">Connecting...</span>
+            <div className="h-2 w-2 animate-bounce rounded-full bg-red-300" />
+            <div className="h-2 w-2 animate-bounce rounded-full bg-amber-200" style={{ animationDelay: '150ms' }} />
+            <div className="h-2 w-2 animate-bounce rounded-full bg-emerald-300" style={{ animationDelay: '300ms' }} />
+            <span className="ml-2 text-amber-100/60">Patching line...</span>
           </div>
-          <p className="mt-4 text-xs leading-5 text-gray-500">
+          <p className="mt-4 text-xs leading-5 text-amber-100/45">
             Keep this tab focused while we prepare the voice session and microphone stream.
           </p>
         </div>
@@ -424,11 +426,11 @@ export function ActiveCall({
 
   if (call.error) {
     return (
-      <div className="fixed inset-0 z-50 flex h-dvh items-center justify-center bg-gray-900 p-4">
-        <div className="mx-auto max-w-md text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">Call Failed</h3>
-          <p className="text-gray-400 mb-5">{call.error}</p>
+      <div className="fixed inset-0 z-50 flex h-dvh items-center justify-center bg-[#0b0806] p-4">
+        <div className="operator-panel mx-auto max-w-md rounded-[1.5rem] p-8 text-center">
+          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-300" />
+          <h3 className="mb-2 text-xl font-bold text-amber-50">Call Failed</h3>
+          <p className="mb-5 text-amber-100/60">{call.error}</p>
           <div className="grid grid-cols-2 gap-3">
             <Button onClick={handleEnd} variant="outline">Close</Button>
             <Button onClick={handleRetry} isLoading={isRetrying}>
@@ -441,19 +443,18 @@ export function ActiveCall({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-gray-900">
-      {/* Header — #8: Simplified to avatar+name, status dot, cost ticker */}
-      <div className="w-full border-b border-gray-800">
+    <div className="switchboard-shell fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-[#0b0806]">
+      <div className="w-full border-b border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between p-4">
           <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} flex items-center justify-center`}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-amber-100/25 bg-red-950/45">
             <span className="text-lg">{agent.avatar || agent.name.charAt(0)}</span>
           </div>
           <div>
-            <h3 className="font-bold text-white text-sm">{agent.name}</h3>
+            <h3 className="text-sm font-bold text-amber-50">{agent.name}</h3>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`w-2 h-2 rounded-full ${call.isConnected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`} />
-              <span className="text-xs text-gray-400">{call.isConnected ? 'Live line' : 'Connecting line'}</span>
+              <span className={`line-lamp h-2 w-2 rounded-full ${call.isConnected ? 'bg-emerald-300 text-emerald-300' : 'animate-pulse bg-amber-300 text-amber-300'}`} />
+              <span className="text-xs text-amber-100/55">{call.isConnected ? 'Live patched line' : 'Connecting line'}</span>
             </div>
           </div>
           </div>
@@ -463,23 +464,23 @@ export function ActiveCall({
               <Radio className="h-3.5 w-3.5" />
               {paymentBadge.label}
             </div>
-            <div className="px-3 py-1.5 bg-gray-800 rounded-full text-right">
-              <span className="text-sm font-bold text-cyan-400 tabular-nums">${(call.cost || 0).toFixed(4)}</span>
+            <div className="rounded-full border border-amber-100/15 bg-black/25 px-3 py-1.5 text-right">
+              <span className="text-sm font-bold tabular-nums text-amber-200">${(call.cost || 0).toFixed(4)}</span>
             </div>
           </div>
         </div>
       </div>
 
       {paymentMode === 'streaming' && streamingPreflight && (
-        <div className="px-4 py-2 border-b border-gray-800/60 bg-gray-900/70">
+        <div className="border-b border-amber-100/10 bg-[#17100d]/85 px-4 py-2">
           <div className="flex flex-wrap gap-2 text-[11px]">
-            <span className="px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-200">
+            <span className="rounded-full border border-amber-100/15 bg-black/25 px-2 py-1 text-amber-100/70">
               Chain: {streamingPreflight.chainName}
             </span>
-            <span className="px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-200">
+            <span className="rounded-full border border-amber-100/15 bg-black/25 px-2 py-1 text-amber-100/70">
               Token: {streamingPreflight.tokenSymbol}
             </span>
-            <span className="px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-200">
+            <span className="rounded-full border border-amber-100/15 bg-black/25 px-2 py-1 text-amber-100/70">
               Payout: {shortAddress(streamingPreflight.payoutAddress)}
             </span>
             {typeof streamingPreflight.availableBalance === 'number' && typeof streamingPreflight.requiredBalance === 'number' && (
@@ -500,7 +501,7 @@ export function ActiveCall({
       {/* Main Content */}
       <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-center overflow-y-auto p-4">
         {isFinalizing && (
-          <div className="w-full max-w-md mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center">
+          <div className="mb-4 w-full max-w-md rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center">
             <p className="text-sm font-medium text-amber-200">Finalizing payment on Celo</p>
             <p className="mt-1 text-xs text-amber-300/80">
               Waiting for settlement before opening the receipt.
@@ -508,32 +509,34 @@ export function ActiveCall({
           </div>
         )}
         <div className="relative mb-8">
-          <div className={`w-32 h-32 rounded-full bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} flex items-center justify-center`}>
-            <span className="text-5xl">{agent.avatar || agent.name.charAt(0)}</span>
+          <div className="operator-panel flex h-36 w-36 items-center justify-center rounded-full">
+            <div className="rotary-dial flex h-32 w-32 items-center justify-center rounded-full">
+              <span className="text-5xl">{agent.avatar || agent.name.charAt(0)}</span>
+            </div>
           </div>
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
-            <div className="w-3 h-3 bg-white rounded-full" />
+          <div className="line-lamp absolute -bottom-2 -right-2 flex h-8 w-8 animate-pulse items-center justify-center rounded-full bg-emerald-300 text-emerald-300">
+            <div className="h-3 w-3 rounded-full bg-white" />
           </div>
         </div>
 
         <button
           onClick={() => setShowTranscript(!showTranscript)}
-          className="text-sm text-gray-400 hover:text-white transition-colors mb-4"
+          className="mb-4 rounded-full border border-amber-100/15 bg-black/20 px-4 py-2 text-sm font-semibold text-amber-100/60 transition-colors hover:text-amber-50"
         >
           {showTranscript ? 'Hide' : 'Show'} Transcript ({transcripts.length} messages)
         </button>
 
         {showTranscript && (
-          <div className="w-full max-w-md h-48 overflow-y-auto bg-gray-800/50 rounded-xl p-4 mb-4">
+          <div className="mb-4 h-48 w-full max-w-md overflow-y-auto rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-4">
             {transcripts.length === 0 ? (
-              <p className="text-gray-500 text-center text-sm">Conversation will appear here...</p>
+              <p className="text-center text-sm text-amber-100/45">Conversation will appear here...</p>
             ) : (
               transcripts.map((t, i) => (
                 <div key={i} className={`mb-2 ${t.speaker === 'user' ? 'text-right' : 'text-left'}`}>
                   <span className={`inline-block px-3 py-1.5 rounded-lg text-sm ${
                     t.speaker === 'user' 
-                      ? 'bg-cyan-500/20 text-cyan-300' 
-                      : 'bg-gray-700 text-gray-300'
+                      ? 'bg-red-500/20 text-red-100' 
+                      : 'bg-amber-100/10 text-amber-100/75'
                   }`}>
                     {t.text}
                   </span>
@@ -551,7 +554,7 @@ export function ActiveCall({
           aria-live="polite"
           aria-label="Call duration"
         >
-          <p className="text-4xl font-mono text-white tabular-nums mb-2">
+          <p className="mb-2 font-mono text-5xl text-amber-50 tabular-nums">
             {formatDuration(call.duration)}
           </p>
           {/* Simple waveform indicator — shows the call is active */}
@@ -559,7 +562,7 @@ export function ActiveCall({
             {[0, 1, 2, 3, 4].map(i => (
               <div
                 key={i}
-                className="w-1 bg-cyan-400 rounded-full transition-all duration-300"
+                className="w-1 rounded-full bg-amber-200 transition-all duration-300"
                 style={{
                   height: call.isConnected && !isMuted
                     ? `${Math.max(4, Math.min(24, call.metrics.audioLevel * 100 + Math.sin(Date.now() / 200 + i) * 8))}px`
@@ -573,7 +576,7 @@ export function ActiveCall({
       </div>
 
       {/* Controls */}
-      <div className="w-full border-t border-gray-800">
+      <div className="w-full border-t border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl">
         <div className="mx-auto w-full max-w-2xl p-6">
         <div className="flex items-center justify-center gap-4">
           <button
@@ -584,7 +587,7 @@ export function ActiveCall({
               disabled:opacity-50 disabled:cursor-not-allowed
               ${isMuted 
                 ? 'bg-red-500 text-white shadow-lg shadow-red-500/40' 
-                : 'bg-gray-800 text-white hover:bg-gray-700'
+                : 'bg-black/30 text-amber-50 hover:bg-amber-100/10'
               }
             `}
             title={isMuted ? 'Unmute' : 'Mute'}
@@ -595,7 +598,7 @@ export function ActiveCall({
           <button
             onClick={handleEnd}
             disabled={isFinalizing}
-            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all active:scale-90 shadow-lg shadow-red-500/25 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-red-950/40 transition-all hover:bg-red-500 active:scale-90 disabled:cursor-not-allowed disabled:opacity-60"
             title="End Call"
           >
             <PhoneOff className="w-8 h-8" />
@@ -610,7 +613,7 @@ export function ActiveCall({
             }}
             disabled={isFinalizing}
             className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed ${
-              speakerVolume === 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              speakerVolume === 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-black/30 text-amber-100/70 hover:bg-amber-100/10'
             }`}
             title={speakerVolume === 0 ? 'Unmute speaker' : 'Mute speaker'}
           >
@@ -625,14 +628,14 @@ export function ActiveCall({
             aria-live="polite"
             aria-label="Call cost"
           >
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <div className="mb-1 flex items-center justify-between text-xs text-amber-100/45">
               <span>{isMuted ? '🔇 Muted' : '🎤 Active'}</span>
               <span className="tabular-nums">
                 ${(call.cost || 0).toFixed(4)} / ${(agent.rate * 5).toFixed(2)} cap
               </span>
             </div>
             <div 
-              className="h-1 bg-gray-800 rounded-full overflow-hidden"
+              className="h-1 overflow-hidden rounded-full bg-black/45"
               role="progressbar"
               aria-valuenow={Math.min(100, (call.cost / (agent.rate * 5)) * 100)}
               aria-valuemin={0}
@@ -640,7 +643,7 @@ export function ActiveCall({
               aria-label="Budget usage"
             >
               <div
-                className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
+                className="h-full rounded-full bg-gradient-to-r from-amber-300 to-red-500 transition-all duration-1000"
                 style={{ width: `${Math.min(100, (call.cost / (agent.rate * 5)) * 100)}%` }}
               />
             </div>

@@ -66,9 +66,10 @@
 body {
   color: rgb(var(--foreground));
   background:
-    linear-gradient(rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.98)),
-    linear-gradient(135deg, rgba(6, 182, 212, 0.10), transparent 34%, rgba(16, 185, 129, 0.08) 72%, transparent),
-    rgb(var(--background));
+    radial-gradient(circle at 50% -12%, rgba(213, 0, 0, 0.22), transparent 34rem),
+    radial-gradient(circle at 12% 8%, rgba(237, 214, 152, 0.20), transparent 22rem),
+    linear-gradient(180deg, rgba(35, 19, 12, 0.88), rgba(8, 9, 12, 0.98)),
+    #0b0806;
   font-family: var(--font-body), 'IBM Plex Sans', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -76,9 +77,10 @@ body {
 
 .hotline-grid {
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
-  background-size: 28px 28px;
+    linear-gradient(rgba(237, 214, 152, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237, 214, 152, 0.06) 1px, transparent 1px),
+    radial-gradient(circle at 16px 16px, rgba(237, 214, 152, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px, 32px 32px, 32px 32px;
 }
 
 .signal-scan {
@@ -163,10 +165,101 @@ nav, header, main, footer,
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  background: linear-gradient(135deg, #f7d27a, #ef4444);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.switchboard-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.switchboard-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 6px 6px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.switchboard-shell::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 85% 16%, rgba(245, 158, 11, 0.10), transparent 20rem),
+    linear-gradient(120deg, transparent 0 46%, rgba(237, 214, 152, 0.05) 47% 48%, transparent 49% 100%);
+}
+
+.operator-panel {
+  border: 1px solid rgba(237, 214, 152, 0.18);
+  background:
+    linear-gradient(180deg, rgba(61, 37, 25, 0.90), rgba(18, 14, 12, 0.96)),
+    radial-gradient(circle at top left, rgba(239, 68, 68, 0.14), transparent 22rem);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -18px 32px rgba(0, 0, 0, 0.20),
+    0 24px 60px rgba(0, 0, 0, 0.30);
+}
+
+.operator-label {
+  border: 1px solid rgba(237, 214, 152, 0.34);
+  background: linear-gradient(180deg, rgba(244, 227, 180, 0.94), rgba(197, 161, 93, 0.92));
+  color: #2a1510;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 10px rgba(0, 0, 0, 0.20);
+}
+
+.line-lamp {
+  position: relative;
+  box-shadow: 0 0 0 4px rgba(14, 10, 8, 0.9), 0 0 18px currentColor;
+}
+
+.line-lamp::after {
+  content: '';
+  position: absolute;
+  inset: 24%;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.55);
+  filter: blur(1px);
+}
+
+.rotary-dial {
+  background:
+    radial-gradient(circle at 50% 50%, #21130f 0 26%, transparent 27%),
+    conic-gradient(from -12deg, rgba(237, 214, 152, 0.28), rgba(127, 29, 29, 0.24), rgba(237, 214, 152, 0.24), rgba(51, 24, 16, 0.70), rgba(237, 214, 152, 0.28)),
+    radial-gradient(circle at 34% 25%, rgba(255, 255, 255, 0.18), transparent 28%),
+    linear-gradient(145deg, #d50000, #5f1410 70%);
+  box-shadow:
+    inset 0 0 0 7px rgba(29, 17, 13, 0.86),
+    inset 0 0 0 11px rgba(244, 227, 180, 0.32),
+    inset 0 -18px 28px rgba(0, 0, 0, 0.34),
+    0 18px 40px rgba(0, 0, 0, 0.42);
+}
+
+.patch-cord {
+  background: linear-gradient(90deg, transparent, rgba(244, 227, 180, 0.36), rgba(213, 0, 0, 0.42), transparent);
+  height: 2px;
+  opacity: 0.8;
+}
+
+.paper-input {
+  background: linear-gradient(180deg, rgba(249, 239, 205, 0.94), rgba(219, 190, 130, 0.92));
+  border-color: rgba(88, 50, 30, 0.70);
+  color: #2a1510;
+  box-shadow: inset 0 1px 5px rgba(68, 35, 18, 0.16);
+}
+
+.paper-input::placeholder {
+  color: rgba(42, 21, 16, 0.58);
 }
 
 /* Glass effect */

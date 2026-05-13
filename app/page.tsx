@@ -273,7 +273,7 @@ function HomeInner() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-950 text-white font-sans">
+      <div className="switchboard-shell min-h-screen text-white font-sans">
         <OfflineBanner />
         <ToastProvider />
         <Header
@@ -376,7 +376,7 @@ function HomeInner() {
           onConnect={connect}
           onCallNow={startCallWithAgent}
         />
-        <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50" role="navigation" aria-label="Main navigation">
+        <nav className="fixed bottom-0 left-0 right-0 border-t border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl" role="navigation" aria-label="Main navigation">
           <div className="mx-auto flex max-w-2xl justify-around px-4 py-2">
             {[
               { id: 'discover', label: 'Discover', Icon: Search },
@@ -387,8 +387,8 @@ function HomeInner() {
                 key={tab.id}
                 onClick={() => dispatch({ type: 'SET_TAB', tab: tab.id as PageState['activeTab'] })}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
-                className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
-                  activeTab === tab.id ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-500 hover:text-gray-300'
+                className={`flex flex-col items-center gap-1 rounded-xl px-6 py-2 transition-all ${
+                  activeTab === tab.id ? 'bg-red-500/15 text-amber-100' : 'text-amber-100/40 hover:text-amber-100/75'
                 }`}
               >
                 <tab.Icon className="w-5 h-5" />
@@ -405,8 +405,8 @@ function HomeInner() {
 function TabLoading() {
   return (
     <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
-      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-      <p className="text-gray-400 text-sm mt-4">Loading...</p>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
+      <p className="mt-4 text-sm text-amber-100/55">Loading switchboard...</p>
     </div>
   );
 }
@@ -414,10 +414,10 @@ function TabLoading() {
 function TabError({ label, onRetry }: { label: string; onRetry: () => void }) {
   return (
     <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
-      <p className="text-red-400 text-sm mb-4">Something went wrong loading {label}.</p>
+      <p className="mb-4 text-sm text-red-300">Something went wrong loading {label}.</p>
       <button
         onClick={onRetry}
-        className="px-4 py-2 text-sm font-medium text-cyan-400 bg-cyan-500/10 rounded-lg hover:bg-cyan-500/20 transition-colors"
+        className="rounded-lg border border-amber-100/20 bg-amber-100/10 px-4 py-2 text-sm font-bold text-amber-100 transition-colors hover:bg-amber-100/15"
       >
         Try Again
       </button>

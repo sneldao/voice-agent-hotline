@@ -12,6 +12,9 @@ out/
 .env.production
 .env.hetzner
 
+# Sensitive docs
+docs/DEPLOYMENT.md
+
 # OS files
 .DS_Store
 Thumbs.db

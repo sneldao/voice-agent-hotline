@@ -60,49 +60,52 @@ export const AgentCard = React.memo(function AgentCard({
     <button
       type="button"
       onClick={onClick}
-      className="group relative h-full w-full overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/50 p-4 text-left transition-all duration-200 hover:border-cyan-500/30 hover:bg-gray-900/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 active:scale-[0.99]"
+      className="group operator-panel relative h-full w-full overflow-hidden rounded-[1.25rem] p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-red-300/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0806] active:scale-[0.99]"
       aria-label={`Open ${agent.name}`}
     >
-      <div className="flex items-start gap-4 relative">
+      <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-amber-200/60 via-red-500/80 to-black/20" />
+      <div className="absolute bottom-4 left-4 right-16 patch-cord opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="relative flex items-start gap-4">
         <div className="relative flex-shrink-0">
-          <Avatar size="lg" online={agent.online}>{agent.avatar}</Avatar>
-          {agent.online && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full" />}
+          <div className="rounded-full border border-amber-100/25 bg-black/30 p-1 shadow-inner">
+            <Avatar size="lg" online={agent.online}>{agent.avatar}</Avatar>
+          </div>
+          {agent.online && <div className="line-lamp absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-300 text-emerald-300" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="mb-1 flex items-center gap-2">
-            <span className="min-w-0 truncate font-bold text-white">{agent.name}</span>
+            <span className="min-w-0 truncate font-bold text-amber-50">{agent.name}</span>
             {agent.verified && (
-              <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-300" title="Verified agent">
+              <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-300" title="Verified agent">
                 <ShieldCheck className="h-3.5 w-3.5" />
               </span>
             )}
           </div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-200">
+            <span className="inline-flex items-center gap-1 rounded-md border border-amber-100/20 bg-black/25 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-100/80">
               <Radio className="h-3 w-3" />
               {persona.desk}
             </span>
-            <span className="rounded-full border border-gray-700 bg-gray-950/50 px-2 py-0.5 text-[11px] text-gray-400">
+            <span className="rounded-md border border-red-300/20 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-100/80">
               {persona.tone} voice
             </span>
           </div>
-          <p className="mb-2 line-clamp-2 text-sm leading-relaxed text-gray-300">{persona.line}</p>
+          <p className="mb-2 line-clamp-2 text-sm leading-relaxed text-amber-100/70">{persona.line}</p>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1">
               <Stars rating={rating} />
-              <span className="text-xs text-gray-400">{rating.toFixed(1)}</span>
+              <span className="text-xs text-amber-100/55">{rating.toFixed(1)}</span>
             </div>
             {agent.category && <Badge variant="default" size="sm">{agent.category}</Badge>}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <div className="text-right tabular-nums">
-            <div className="text-lg font-bold text-cyan-400">${Number(agent.rate).toFixed(2)}</div>
-            <div className="text-[10px] uppercase tracking-wide text-gray-500">/min</div>
+            <div className="text-lg font-bold text-amber-200">${Number(agent.rate).toFixed(2)}</div>
+            <div className="text-[10px] uppercase tracking-wide text-amber-100/40">/min</div>
           </div>
-          {/* Tap to call indicator */}
-          <div className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 group-hover:bg-cyan-500/20 transition-colors">
-            <PhoneForwarded className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="rounded-full border border-red-300/30 bg-red-500/15 px-3 py-1.5 transition-colors group-hover:bg-red-500/25">
+            <PhoneForwarded className="h-3.5 w-3.5 text-red-100" />
           </div>
         </div>
       </div>
