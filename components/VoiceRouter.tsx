@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Headphones, Loader2, Mic, Phone, Radio, X } from 'lucide-react';
 import type { Agent } from '@/lib/types';
-import { showInfo } from '@/components/ui';
 
 type RouterState = 'idle' | 'listening' | 'routing' | 'matched' | 'confirming';
 
@@ -212,10 +211,22 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     listenForConfirmation(agent);
   }, [agents, listenForConfirmation, speakText]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const recognition = getSpeechRecognition();
     if (!recognition) {
       setErrorText('Voice input is not available in this browser. Chrome desktop gives the best demo path.');
+      setActivationText('');
+      return;
+    }
+
+    // Request mic permission FIRST before starting recognition
+    // This ensures the browser prompt is resolved before SpeechRecognition tries to use the mic
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Got permission — stop the stream immediately (SpeechRecognition manages its own)
+      stream.getTracks().forEach(t => t.stop());
+    } catch {
+      setErrorText('Microphone permission denied. Allow mic access in your browser settings.');
       setActivationText('');
       return;
     }
@@ -224,14 +235,14 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     recognition.lang = 'en-US';
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.continuous = true; // Keep listening until user stops speaking
+    recognition.continuous = true;
 
     setState('listening');
     setTranscript('');
     setMatchedAgent(null);
     setConfirmText('');
     setErrorText('');
-    setActivationText('Listening started. Speak your request now.');
+    setActivationText('');
     latestIntentRef.current = '';
     ignoreRecognitionEndRef.current = false;
 
@@ -312,8 +323,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
 
   const handleMicClick = useCallback(() => {
     if (state === 'idle') {
-      showInfo('Voice Router is listening. Speak your request after the browser mic prompt.');
-      startListening();
+      void startListening();
     } else {
       reset();
     }
