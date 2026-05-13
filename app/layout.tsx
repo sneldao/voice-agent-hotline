@@ -3,7 +3,6 @@ import { Space_Grotesk, IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/lib/WalletContextNew';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { DarkModeToggle } from '@/components/DarkModeToggle';
 
 // Google Fonts loaded via CDN for reliable delivery
 const displayFont = Space_Grotesk({
@@ -107,7 +106,6 @@ export default function RootLayout({
         
         <WalletProvider>
           <ThemeProvider>
-            <DarkModeToggle />
             <main id="main-content">
               {children}
             </main>

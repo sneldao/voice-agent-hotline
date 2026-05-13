@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Mic, Search, Star } from 'lucide-react';
+import { Mic, Search } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { PullToRefresh, RefreshButton, showError, showSuccess } from '@/components/ui';
-import { AgentCard, FeaturedCard } from '@/app/page-components';
+import { AgentCard } from '@/app/page-components';
 import type { Agent } from '@/lib/types';
 
 const CATEGORIES = [
@@ -65,7 +65,6 @@ export function DiscoverTab({
     }
   }, [onRefresh]);
 
-  const onlineAgents = agents.filter(a => a.online);
   const hasSearchQuery = searchQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
   const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
@@ -233,24 +232,6 @@ export function DiscoverTab({
             ))}
           </div>
         </div>
-
-        {/* Featured Agents — online only, max 10 */}
-        {onlineAgents.length > 0 && (
-          <section>
-            <h2 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
-              <Star className="w-4 h-4 text-yellow-400" /> Featured
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {onlineAgents.slice(0, 10).map(agent => (
-                <FeaturedCard
-                  key={agent.id}
-                  agent={agent}
-                  onClick={() => onSelect(agent)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* All Agents */}
         <section aria-label="Agent list">

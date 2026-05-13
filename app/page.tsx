@@ -363,6 +363,7 @@ function HomeInner() {
               <button
                 key={tab.id}
                 onClick={() => dispatch({ type: 'SET_TAB', tab: tab.id as PageState['activeTab'] })}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
                 className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
                   activeTab === tab.id ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-500 hover:text-gray-300'
                 }`}

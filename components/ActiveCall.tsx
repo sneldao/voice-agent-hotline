@@ -8,7 +8,7 @@ import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
 import type { Agent } from '@/lib/types';
 import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
-import { Mic, MicOff, Volume2, Volume1, VolumeX, PhoneOff, Clock, Signal, AlertCircle, Phone, Wifi } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, PhoneOff, AlertCircle, Phone } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 import { showError } from './ui';
@@ -405,34 +405,23 @@ export function ActiveCall({
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
-      {/* Header */}
+      {/* Header — #8: Simplified to avatar+name, status dot, cost ticker */}
       <div className="flex items-center justify-between p-4 border-b border-gray-800">
         <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} flex items-center justify-center`}>
-            <span className="text-xl">{agent.avatar || agent.name.charAt(0)}</span>
+          <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} flex items-center justify-center`}>
+            <span className="text-lg">{agent.avatar || agent.name.charAt(0)}</span>
           </div>
           <div>
-            <h3 className="font-bold text-white">{agent.name}</h3>
-            <p className="text-xs text-gray-400">{agent.specialty}</p>
+            <h3 className="font-bold text-white text-sm">{agent.name}</h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={`w-2 h-2 rounded-full ${call.isConnected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`} />
+              <span className="text-xs text-gray-400">{call.isConnected ? 'Connected' : 'Connecting'}</span>
+            </div>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Quality indicator */}
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full bg-gray-800/80 ${quality.color}`}>
-            <Signal className="w-3 h-3" />
-            <span className="text-xs">{quality.label}</span>
-          </div>
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full border ${paymentBadge.className}`}>
-            <span className="text-[10px] font-bold uppercase tracking-wide">{paymentBadge.label}</span>
-          </div>
-          {/* Live badge */}
-          <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wide">Live</span>
-          </span>
-          {/* Animated cost ticker */}
-          <div className="px-3 py-1.5 bg-gray-800 rounded-full min-w-[70px] text-right">
+          <div className="px-3 py-1.5 bg-gray-800 rounded-full text-right">
             <span className="text-sm font-bold text-cyan-400 tabular-nums">${(call.cost || 0).toFixed(4)}</span>
           </div>
         </div>
@@ -506,44 +495,30 @@ export function ActiveCall({
           </div>
         )}
 
+        {/* #9: Single large duration counter + live indicator */}
         <div 
-          className="flex gap-6 text-center"
+          className="text-center"
           role="status"
           aria-live="polite"
-          aria-label="Call metrics"
+          aria-label="Call duration"
         >
-          <div>
-            <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
-              <Clock className="w-3 h-3" />
-              <span id="duration-label">Duration</span>
-            </div>
-            <p 
-              className="text-2xl font-mono text-white"
-              aria-labelledby="duration-label"
-              aria-atomic="true"
-            >
-              {formatDuration(call.duration)}
-            </p>
-          </div>
-          <div>
-            <div className="text-gray-400 text-xs mb-1" id="latency-label">Latency</div>
-            <p 
-              className="text-2xl font-mono text-white"
-              aria-labelledby="latency-label"
-              aria-atomic="true"
-            >
-              {Math.round(call.metrics.latency)}ms
-            </p>
-          </div>
-          <div>
-            <div className="text-gray-400 text-xs mb-1" id="audio-label">Audio</div>
-            <p 
-              className="text-2xl font-mono text-white"
-              aria-labelledby="audio-label"
-              aria-atomic="true"
-            >
-              {Math.round(call.metrics.audioLevel * 100)}%
-            </p>
+          <p className="text-4xl font-mono text-white tabular-nums mb-2">
+            {formatDuration(call.duration)}
+          </p>
+          {/* Simple waveform indicator — shows the call is active */}
+          <div className="flex items-center justify-center gap-1 h-6">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div
+                key={i}
+                className="w-1 bg-cyan-400 rounded-full transition-all duration-300"
+                style={{
+                  height: call.isConnected && !isMuted
+                    ? `${Math.max(4, Math.min(24, call.metrics.audioLevel * 100 + Math.sin(Date.now() / 200 + i) * 8))}px`
+                    : '4px',
+                  opacity: call.isConnected ? 1 : 0.3,
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -576,26 +551,24 @@ export function ActiveCall({
             <PhoneOff className="w-8 h-8" />
           </button>
 
-          {/* Speaker toggle — cycles through volume levels */}
+          {/* #10: Speaker toggle — simple on/off */}
           <button
             onClick={() => {
-              setSpeakerVolume(v => {
-                const next = v >= 2 ? 0 : v + 1;
-                // Map volume levels: 0=0%, 1=50%, 2=100%
-                const volumeLevels = [0, 0.5, 1];
-                setVolume(volumeLevels[next]);
-                return next;
-              });
+              const newVol = speakerVolume > 0 ? 0 : 2;
+              setSpeakerVolume(newVol);
+              setVolume(newVol > 0 ? 1 : 0);
             }}
             disabled={isFinalizing}
-            className="w-14 h-14 rounded-full bg-gray-800 text-gray-300 flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={['Mute speaker', 'Low volume', 'Full volume'][speakerVolume]}
+            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed ${
+              speakerVolume === 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+            title={speakerVolume === 0 ? 'Unmute speaker' : 'Mute speaker'}
           >
-            {[<VolumeX key="x" className="w-6 h-6" />, <Volume1 key="1" className="w-6 h-6" />, <Volume2 key="2" className="w-6 h-6" />][speakerVolume]}
+            {speakerVolume === 0 ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
           </button>
         </div>
 
-          {/* Budget progress bar */}
+          {/* #11: Budget bar tied to 5-minute suggested cap */}
           <div 
             className="mt-4"
             role="status"
@@ -603,33 +576,24 @@ export function ActiveCall({
             aria-label="Call cost"
           >
             <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-              <span aria-label={isMuted ? 'Microphone muted' : 'Microphone active'}>
-                {isMuted ? '🔇 Muted' : '🎤 Mic active'}
-              </span>
-              <span 
-                className="tabular-nums"
-                aria-atomic="true"
-                aria-label={`Cost: ${(call.cost || 0).toFixed(4)} dollars`}
-              >
-                ${(call.cost || 0).toFixed(4)} spent
+              <span>{isMuted ? '🔇 Muted' : '🎤 Active'}</span>
+              <span className="tabular-nums">
+                ${(call.cost || 0).toFixed(4)} / ${(agent.rate * 5).toFixed(2)} cap
               </span>
             </div>
             <div 
               className="h-1 bg-gray-800 rounded-full overflow-hidden"
               role="progressbar"
-              aria-valuenow={Math.min(100, (call.cost / (agent.rate * 10)) * 100)}
+              aria-valuenow={Math.min(100, (call.cost / (agent.rate * 5)) * 100)}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label="Budget usage"
             >
               <div
                 className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-1000"
-                style={{ width: `${Math.min(100, (call.cost / (agent.rate * 10)) * 100)}%` }}
+                style={{ width: `${Math.min(100, (call.cost / (agent.rate * 5)) * 100)}%` }}
               />
             </div>
-            <p className="text-center text-xs text-gray-600 mt-1">
-              {permissions.microphone === 'granted' ? '✓ Mic permission granted' : '⚠ Mic permission needed'}
-            </p>
           </div>
       </div>
 
