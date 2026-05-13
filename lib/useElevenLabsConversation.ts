@@ -7,7 +7,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { signMessage } from './WalletContextNew';
 import { generateCallId } from './ids';
 
 export interface ConversationState {
@@ -114,45 +113,20 @@ export function useElevenLabsConversation(options: ConversationOptions) {
       // Dynamically import the SDK to avoid SSR issues
       const { Conversation } = await import('@elevenlabs/client');
 
-      // Resolve the ElevenLabs agent ID
-      // The agentId passed to this hook is the registry key (e.g., 'general_helper')
-      // We need to resolve it to the actual ElevenLabs agent ID
-      let elevenLabsAgentId = agentId;
+      // Map our internal agent keys to ElevenLabs agent IDs
+      // These are the production agent IDs configured in the ElevenLabs dashboard
+      const AGENT_ID_MAP: Record<string, string> = {
+        'general_helper': 'agent_2101khgsyd02fnvshvr7rzb50qj6',
+        'solana_sage': 'agent_9001khs0795af6ntqsskx7zk4yqp',
+        'code_reviewer': 'agent_9301khs07adxf6qrsyfst7xjv5aa',
+        'tour_master': 'agent_7701khqafe2fet2vq9m3m88896xv',
+        'web_researcher': 'agent_5301kmcn9c3sf2cswtga84kpcfk8',
+        'medical_advisor': 'agent_0601krex7tg2f43rjz96gvtxwwpk',
+        'voice_router': 'agent_1301krgw7ctveryscr9z894hmz6r',
+      };
 
-      // Try to get the ElevenLabs agent ID from our signal endpoint
-      try {
-        const response = await fetch(`/api/webrtc/signal?agentId=${encodeURIComponent(agentId)}`);
-        if (response.ok) {
-          const data = await response.json();
-          // If the endpoint returns agent details, use them
-          if (data.elevenLabsAgentId) {
-            elevenLabsAgentId = data.elevenLabsAgentId;
-          }
-        }
-      } catch {
-        // If signal endpoint fails, try using agentId directly
-        // (it might already be an ElevenLabs agent ID)
-      }
-
-      // Fetch a token for authenticated connection
-      const tokenRes = await fetch(`/api/webrtc/signal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'get-token',
-          callId: generateCallId(),
-          agentId,
-          userId,
-        }),
-      });
-
-      if (tokenRes.ok) {
-        const tokenData = await tokenRes.json();
-        if (tokenData.elevenLabsAgentId) {
-          elevenLabsAgentId = tokenData.elevenLabsAgentId;
-        }
-      }
-
+      // Resolve the ElevenLabs agent ID from our mapping
+      const elevenLabsAgentId = AGENT_ID_MAP[agentId] || agentId;
       console.log('[ElevenLabs] Starting session with agent:', elevenLabsAgentId);
 
       // Start session using agentId directly (matches ElevenLabs dashboard behavior)
