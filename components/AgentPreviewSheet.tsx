@@ -34,8 +34,9 @@ const PREVIEW_PERSONAS: Record<string, { desk: string; voice: string; promise: s
 
 function getExamples(agent: Agent): string[] {
   const category = agent.category?.toLowerCase() || '';
+  const specialty = agent.specialty || agent.category || 'this agent';
   return EXAMPLES_BY_CATEGORY[category] || [
-    `Ask about ${agent.specialty.toLowerCase()}`,
+    `Ask about ${specialty.toLowerCase()}`,
     'Get a quick second opinion before acting',
   ];
 }

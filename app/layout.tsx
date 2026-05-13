@@ -29,10 +29,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://voisss-agent-hotline.vercel.app'),
   title: {
-    default: 'VOISSS Hotline | Say It. Get Connected.',
+    default: 'VOISSS — A phonebook for AI you can talk to',
     template: '%s | VOISSS',
   },
-  description: 'A hands-free AI hotline powered by Cursor and ElevenLabs. Say what you need and get connected to a specialized voice agent — no keyboard required.',
+  description: 'Say what you need. VOISSS connects the right voice. Hands-free AI agents powered by ElevenLabs — no keyboard required. Built with Cursor.',
   keywords: ['AI agents', 'voice AI', 'ElevenLabs', 'hands-free', 'no keyboard', 'voice calls', 'conversational AI', 'speech-to-text', 'text-to-speech', 'Cursor'],
   authors: [{ name: 'VOISSS Team' }],
   creator: 'VOISSS',
@@ -45,9 +45,9 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://voisss-agent-hotline.vercel.app',
-    siteName: 'VOISSS - Voice Agent Hotline',
-    title: 'VOISSS Hotline - Say It. Get Connected.',
-    description: 'A hands-free AI hotline powered by Cursor and ElevenLabs. Speak naturally, get routed to a specialized voice agent, and handle tasks without touching a keyboard.',
+    siteName: 'VOISSS',
+    title: 'VOISSS — A phonebook for AI you can talk to',
+    description: 'Say what you need. VOISSS connects the right voice. No keyboard, no forms — just speak and get things done.',
     images: [
       {
         url: '/og-image.svg',
@@ -62,8 +62,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@voisss',
     creator: '@voisss',
-    title: 'VOISSS Hotline - Say It. Get Connected.',
-    description: 'A hands-free AI hotline powered by Cursor and ElevenLabs. Speak, get routed, and talk to specialized agents for #ElevenHacks.',
+    title: 'VOISSS — A phonebook for AI you can talk to',
+    description: 'Say what you need. Get connected to the right voice. No keyboard required. Built with Cursor + ElevenLabs for #ElevenHacks.',
     images: ['/og-image.svg'],
   },
   icons: {

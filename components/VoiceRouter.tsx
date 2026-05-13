@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Mic, Phone, X, Loader2 } from 'lucide-react';
+import { Headphones, Loader2, Mic, Phone, Radio, X } from 'lucide-react';
 import type { Agent } from '@/lib/types';
 
 type RouterState = 'idle' | 'listening' | 'routing' | 'matched' | 'confirming';
@@ -36,7 +36,9 @@ function matchAgentToIntent(intent: string, agents: Agent[]): Agent | null {
     healthcare: ['doctor', 'health', 'medical', 'symptom', 'medicine', 'wellness', 'sick', 'pain', 'appointment', 'diagnosis', 'nutrition', 'diet', 'exercise', 'mental'],
     research: ['research', 'find', 'search', 'look up', 'compare', 'article', 'paper', 'news', 'information', 'learn', 'explain', 'laptop', 'review'],
     tech: ['code', 'debug', 'programming', 'bug', 'error', 'deploy', 'github', 'api', 'server', 'database', 'next.js', 'react', 'typescript', 'payment'],
+    code: ['code', 'debug', 'programming', 'bug', 'error', 'deploy', 'github', 'api', 'server', 'database', 'next.js', 'react', 'typescript', 'payment'],
     blockchain: ['crypto', 'wallet', 'transaction', 'blockchain', 'token', 'defi', 'solana', 'celo', 'ethereum', 'nft', 'swap'],
+    finance: ['finance', 'money', 'stablecoin', 'stablecoins', 'portfolio', 'risk', 'wealth', 'celo', 'base', 'usdc', 'usdt', 'cusd'],
     general: ['help', 'plan', 'book', 'schedule', 'remind', 'order', 'trip', 'travel', 'recipe', 'cook', 'dinner', 'weekend'],
   };
 
@@ -58,9 +60,13 @@ function matchAgentToIntent(intent: string, agents: Agent[]): Agent | null {
       if (lower.includes(keyword)) score += 3;
     }
 
-    // Check tokens against specialty and bio
+    // Check tokens against name, specialty, tags, and bio
+    const name = (agent.name || '').toLowerCase();
+    const tags = (agent.tags || []).join(' ').toLowerCase();
     for (const token of tokens) {
+      if (name.includes(token)) score += 3;
       if (specialty.includes(token)) score += 2;
+      if (tags.includes(token)) score += 2;
       if (bio.includes(token)) score += 1;
     }
 
@@ -87,9 +93,12 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
   const [transcript, setTranscript] = useState('');
   const [matchedAgent, setMatchedAgent] = useState<Agent | null>(null);
   const [confirmText, setConfirmText] = useState('');
+  const [errorText, setErrorText] = useState('');
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const confirmRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const latestIntentRef = useRef('');
+  const ignoreRecognitionEndRef = useRef(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -109,7 +118,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
 
   const speakText = useCallback((text: string): Promise<void> => {
     return new Promise((resolve) => {
-      if (!window.speechSynthesis) { resolve(); return; }
+      if (typeof window === 'undefined' || !window.speechSynthesis) { resolve(); return; }
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.1;
@@ -121,88 +130,23 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     });
   }, []);
 
-  const startListening = useCallback(() => {
-    const recognition = getSpeechRecognition();
-    if (!recognition) return;
-
-    recognitionRef.current = recognition;
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    recognition.continuous = false;
-
-    setState('listening');
+  const reset = useCallback(() => {
+    ignoreRecognitionEndRef.current = true;
+    recognitionRef.current?.abort();
+    confirmRecognitionRef.current?.abort();
+    window.speechSynthesis?.cancel();
+    latestIntentRef.current = '';
+    setState('idle');
     setTranscript('');
     setMatchedAgent(null);
     setConfirmText('');
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-      for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-      setTranscript(finalTranscript || interimTranscript);
-    };
-
-    recognition.onend = () => {
-      // When speech ends, route the intent
-      setTranscript(prev => {
-        if (prev.trim()) {
-          routeIntent(prev.trim());
-        } else {
-          setState('idle');
-        }
-        return prev;
-      });
-    };
-
-    recognition.onerror = () => {
-      setState('idle');
-      setTranscript('');
-    };
-
-    try {
-      recognition.start();
-    } catch {
-      setState('idle');
-    }
-  }, [agents, getSpeechRecognition]);
-
-  const routeIntent = useCallback(async (intent: string) => {
-    setState('routing');
-
-    // Brief pause for dramatic effect
-    await new Promise(r => setTimeout(r, 800));
-
-    const agent = matchAgentToIntent(intent, agents);
-    if (!agent) {
-      setState('idle');
-      setTranscript('');
-      return;
-    }
-
-    setMatchedAgent(agent);
-    setState('matched');
-
-    // Speak the match
-    const confirmMessage = `I found ${agent.name}. ${agent.specialty}. Say yes to connect, or cancel.`;
-    setConfirmText(confirmMessage);
-    await speakText(confirmMessage);
-
-    // Listen for "yes" confirmation
-    setState('confirming');
-    listenForConfirmation(agent);
-  }, [agents, speakText]);
+    setErrorText('');
+  }, []);
 
   const listenForConfirmation = useCallback((agent: Agent) => {
     const recognition = getSpeechRecognition();
     if (!recognition) {
-      // No speech recognition for confirmation — just wait for tap
+      setErrorText('Voice confirmation is unavailable in this browser. Tap the phone button to connect.');
       return;
     }
 
@@ -219,28 +163,111 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
         reset();
       } else if (result.includes('no') || result.includes('cancel') || result.includes('stop') || result.includes('nevermind')) {
         reset();
+      } else {
+        setErrorText('I did not catch yes or cancel. Say yes to connect, or tap the phone button.');
       }
     };
 
-    recognition.onerror = () => {};
+    recognition.onerror = () => {
+      setErrorText('I could not hear the confirmation. Say yes again or tap the phone button.');
+    };
     recognition.onend = () => {};
 
     try {
       recognition.start();
     } catch {
-      // Fallback: user can tap the button
+      setErrorText('Voice confirmation is paused. Tap the phone button to connect.');
     }
-  }, [getSpeechRecognition, onCallAgent]);
+  }, [getSpeechRecognition, onCallAgent, reset]);
 
-  const reset = useCallback(() => {
-    recognitionRef.current?.abort();
-    confirmRecognitionRef.current?.abort();
-    window.speechSynthesis?.cancel();
-    setState('idle');
+  const routeIntent = useCallback(async (intent: string) => {
+    setState('routing');
+    setErrorText('');
+
+    // Brief pause for dramatic effect
+    await new Promise(r => setTimeout(r, 800));
+
+    const agent = matchAgentToIntent(intent, agents);
+    if (!agent) {
+      setState('idle');
+      setTranscript('');
+      setErrorText('No live agent matched that request. Try a broader request.');
+      return;
+    }
+
+    setMatchedAgent(agent);
+    setState('matched');
+
+    // Speak the match
+    const confirmMessage = `I found ${agent.name}. ${agent.specialty}. Say yes to connect, or cancel.`;
+    setConfirmText(confirmMessage);
+    await speakText(confirmMessage);
+
+    // Listen for "yes" confirmation
+    setState('confirming');
+    listenForConfirmation(agent);
+  }, [agents, listenForConfirmation, speakText]);
+
+  const startListening = useCallback(() => {
+    const recognition = getSpeechRecognition();
+    if (!recognition) {
+      setErrorText('Voice input is not available in this browser. Chrome desktop gives the best demo path.');
+      return;
+    }
+
+    recognitionRef.current = recognition;
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
+    setState('listening');
     setTranscript('');
     setMatchedAgent(null);
     setConfirmText('');
-  }, []);
+    setErrorText('');
+    latestIntentRef.current = '';
+    ignoreRecognitionEndRef.current = false;
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      const nextTranscript = (finalTranscript || interimTranscript).trim();
+      latestIntentRef.current = nextTranscript;
+      setTranscript(nextTranscript);
+    };
+
+    recognition.onend = () => {
+      if (ignoreRecognitionEndRef.current) return;
+      const intent = latestIntentRef.current.trim();
+      if (intent) {
+        void routeIntent(intent);
+      } else {
+        setState('idle');
+        setErrorText('I did not hear a request. Tap the mic and try again.');
+      }
+    };
+
+    recognition.onerror = () => {
+      setState('idle');
+      setTranscript('');
+      setErrorText('Microphone listening stopped. Tap the mic to try again.');
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      setState('idle');
+      setErrorText('Could not start microphone listening. Check browser permissions.');
+    }
+  }, [getSpeechRecognition, routeIntent]);
 
   const handleMicClick = useCallback(() => {
     if (state === 'idle') {
@@ -261,14 +288,19 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
 
   const statusText = {
     idle: 'Tap to speak your request',
-    listening: 'Listening...',
+    listening: 'Operator listening...',
     routing: 'Finding the right voice...',
-    matched: 'Match found',
+    matched: 'Line matched',
     confirming: 'Say "yes" to connect',
   };
 
   return (
-    <div className="relative rounded-2xl border border-gray-800 bg-gray-900/90 p-6 text-center">
+    <div className="hotline-grid relative rounded-2xl border border-cyan-500/20 bg-gray-900/90 p-6 text-center shadow-2xl shadow-cyan-950/20">
+      <div className="relative z-10 mb-4 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wide text-cyan-200">
+        <Radio className="h-3.5 w-3.5" />
+        Voice Router
+      </div>
+
       {/* Routing lines animation */}
       {(state === 'routing' || state === 'matched' || state === 'confirming') && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
@@ -291,7 +323,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
           ) : state === 'listening' ? (
             <Mic className="h-10 w-10 text-white" />
           ) : (
-            <Phone className="h-8 w-8 text-white" />
+            <Headphones className="h-8 w-8 text-white" />
           )}
         </button>
       </div>
@@ -308,6 +340,18 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
         </div>
       )}
 
+      {errorText && (
+        <div className="relative z-10 mx-auto mb-3 max-w-sm rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2">
+          <p className="text-xs leading-5 text-amber-100">{errorText}</p>
+        </div>
+      )}
+
+      {confirmText && (state === 'matched' || state === 'confirming') && (
+        <p className="relative z-10 mx-auto mb-3 max-w-sm text-xs leading-5 text-gray-400">
+          {confirmText}
+        </p>
+      )}
+
       {/* Matched agent card */}
       {matchedAgent && (state === 'matched' || state === 'confirming') && (
         <div className="relative z-10 mx-auto mb-3 max-w-sm rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
@@ -320,7 +364,10 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
               <p className="truncate text-xs text-emerald-200">{matchedAgent.specialty}</p>
             </div>
             <button
-              onClick={() => onCallAgent(matchedAgent)}
+              onClick={() => {
+                onCallAgent(matchedAgent);
+                reset();
+              }}
               className="ml-auto flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white transition-colors hover:bg-emerald-400"
               aria-label="Connect now"
             >

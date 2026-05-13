@@ -5,6 +5,7 @@ import { composioService } from './composio';
 export interface AgentSeed {
   id: string;
   name: string;
+  specialty: string;
   description: string;
   voice: string;
   voiceId: string;
@@ -26,6 +27,7 @@ export const SEED_AGENTS: AgentSeed[] = [
   {
     id: "agent_2101khgsy8aqfxv8yr3r9548bqrx",
     name: "Solana Sage",
+    specialty: "Solana Ecosystem",
     description: "Expert blockchain analyst for Solana network queries, wallet balances, NFT lookups, and token price tracking",
     voice: "Roger",
     voiceId: "CwhRBWXzGAHq8TQ4Fs17",
@@ -43,13 +45,14 @@ export const SEED_AGENTS: AgentSeed[] = [
   {
     id: "agent_0201khgsya1dfcgv6p5ch10995b9",
     name: "Code Reviewer",
+    specialty: "Software Engineering",
     description: "Senior software engineer for GitHub operations, code reviews, repository analysis, and development workflows",
     voice: "Sarah",
     voiceId: "EXAVITQu4vr4xnSDxMaL",
     elevenlabs_agent_id: "",
     rate: 0.15,
     avatar: "💻",
-    category: "code",
+    category: "tech",
     skills: ["research"],
     system_prompt: "You are Sarah, a confident and professional Senior Software Engineer. You help users review code, browse GitHub repositories, and manage issues. You are precise, helpful, and always look for best practices.",
     active: true,
@@ -60,6 +63,7 @@ export const SEED_AGENTS: AgentSeed[] = [
   {
     id: "agent_diversifi_prod_001",
     name: "Diversifi",
+    specialty: "Crypto Finance",
     description: "Professional advisor specializing in stablecoins (cUSD, USDC, USDT) and wealth diversification strategies on Celo and Base.",
     voice: "Rachel",
     voiceId: "21m00Tcm4TlvDq8ikWAM",
@@ -79,6 +83,7 @@ export const SEED_AGENTS: AgentSeed[] = [
   {
     id: "agent_clawdy_prod_001",
     name: "Clawdy",
+    specialty: "Agentic Infrastructure",
     description: "Specialist in agentic infrastructure, including OpenClaw, Kilocode Cloud Agents, ERC-8004, and decentralized inference providers.",
     voice: "Adam",
     voiceId: "pNInz6obpgnuMvscWqt5",
@@ -98,6 +103,7 @@ export const SEED_AGENTS: AgentSeed[] = [
   {
     id: "agent_web_researcher",
     name: "Web Researcher",
+    specialty: "Content Extraction",
     description: "Deep web research agent powered by Firecrawl. Searches the web in real-time and extracts clean content from any URL during voice calls.",
     voice: "Steve",
     voiceId: "pqHfZKP75CvOlQylNhV4",
@@ -115,6 +121,7 @@ export const SEED_AGENTS: AgentSeed[] = [
   {
     id: "agent_medical_advisor_prod_001",
     name: "Dr. Maya",
+    specialty: "Health Information",
     description: "AI-powered medical information advisor. Provides evidence-based health information, explains medical concepts, helps interpret symptoms, and offers wellness guidance. Not a substitute for professional medical advice.",
     voice: "Sarah",
     voiceId: "EXAVITQu4vr4xnSDxMaL",

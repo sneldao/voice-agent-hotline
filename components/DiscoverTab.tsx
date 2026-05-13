@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { Mic, Search } from 'lucide-react';
+import { useCallback } from 'react';
+import { Mic, Search, Sparkles, ShieldCheck, WalletCards } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
-import { PullToRefresh, RefreshButton, showError, showSuccess } from '@/components/ui';
+import { PullToRefresh, RefreshButton, showSuccess } from '@/components/ui';
 import { AgentCard } from '@/app/page-components';
 import { VoiceRouter } from './VoiceRouter';
 import type { Agent } from '@/lib/types';
@@ -19,27 +19,18 @@ const CATEGORIES = [
 ];
 
 const SPOKEN_DEMOS = [
-  'Find someone to debug this payment issue',
-  'Help me prep for a doctor visit',
-  'Plan a fast weekend trip',
-  'Explain this wallet transaction',
+  { text: 'Find someone to debug this payment issue', category: 'all', filter: 'Code Reviewer' },
+  { text: 'Help me prep for a doctor visit', category: 'healthcare', filter: '' },
+  { text: 'Plan a fast weekend trip', category: 'all', filter: 'Tour' },
+  { text: 'Explain this wallet transaction', category: 'blockchain', filter: '' },
 ];
-
-type BrowserSpeechRecognition = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onresult: ((event: { results: { 0: { transcript: string } }[] }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-};
 
 interface DiscoverTabProps {
   agents: Agent[];
   isLoading: boolean;
   error: string | null;
   onSelect: (a: Agent) => void;
+  onVoiceCall: (a: Agent) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedCategory: string;
@@ -54,6 +45,7 @@ export function DiscoverTab({
   isLoading,
   error,
   onSelect,
+  onVoiceCall,
   searchQuery,
   onSearchChange,
   selectedCategory,
@@ -62,8 +54,6 @@ export function DiscoverTab({
   hasMore,
   onLoadMore,
 }: DiscoverTabProps) {
-  const [isListening, setIsListening] = useState(false);
-
   const handleRefresh = useCallback(async () => {
     try {
       await onRefresh();
@@ -76,46 +66,6 @@ export function DiscoverTab({
   const hasSearchQuery = searchQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
   const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
-
-  const handleVoiceSearch = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognition = (window as typeof window & {
-      webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
-      SpeechRecognition?: new () => BrowserSpeechRecognition;
-    }).SpeechRecognition || (window as typeof window & {
-      webkitSpeechRecognition?: new () => BrowserSpeechRecognition;
-    }).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      showError('Voice search is not supported in this browser');
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript?.trim();
-      if (!transcript) return;
-
-      const lower = transcript.toLowerCase();
-      const category = CATEGORIES.find((cat) => cat.id !== 'all' && lower.includes(cat.name.toLowerCase()));
-      if (category) {
-        onCategoryChange(category.id);
-      }
-      onSearchChange(transcript);
-    };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    setIsListening(true);
-    try {
-      recognition.start();
-    } catch {
-      setIsListening(false);
-      showError('Could not start voice search');
-    }
-  }, [onCategoryChange, onSearchChange]);
 
   if (isLoading) {
     return (
@@ -149,18 +99,6 @@ export function DiscoverTab({
     );
   }
 
-  if (hasNoSearchResults) {
-    return (
-      <EmptyState
-        type="search"
-        title="No agents found"
-        description={`No results for "${searchQuery}"`}
-        actionLabel="Clear Search"
-        onAction={() => onSearchChange('')}
-      />
-    );
-  }
-
   const selectedLabel = selectedCategory === 'all'
     ? 'All Agents'
     : CATEGORIES.find(c => c.id === selectedCategory)?.name || 'Agents';
@@ -169,19 +107,47 @@ export function DiscoverTab({
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="py-5 lg:grid lg:grid-cols-[320px_1fr] lg:gap-8 lg:py-8">
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <VoiceRouter agents={agents} onCallAgent={onSelect} />
+          <VoiceRouter agents={agents} onCallAgent={onVoiceCall} />
+
+          <div className="hotline-grid rounded-2xl border border-gray-800 bg-gray-900/80 p-5">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
+              <Sparkles className="h-3.5 w-3.5" />
+              Live AI switchboard
+            </div>
+            <h2 className="text-2xl font-bold leading-tight text-white">Say what you need. VOISSS connects the right voice.</h2>
+            <p className="mt-3 text-sm leading-6 text-gray-400">
+              Built for the moments when typing is awkward, impossible, or just too slow. Speak a request, get routed, and talk it through.
+            </p>
+            <div className="mt-5 grid gap-2 text-sm text-gray-300">
+              <div className="flex items-center gap-2">
+                <Mic className="h-4 w-4 text-cyan-300" />
+                Hands-free intake and live calls
+              </div>
+              <div className="flex items-center gap-2">
+                <WalletCards className="h-4 w-4 text-emerald-300" />
+                Pay only while the line is active
+              </div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-indigo-300" />
+                Specialized voices for real tasks
+              </div>
+            </div>
+          </div>
 
           <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Try saying</p>
             <div className="space-y-2">
               {SPOKEN_DEMOS.map((demo) => (
                 <button
-                  key={demo}
+                  key={demo.text}
                   type="button"
-                  onClick={() => onSearchChange(demo)}
+                  onClick={() => {
+                    onCategoryChange(demo.category);
+                    onSearchChange(demo.filter);
+                  }}
                   className="w-full rounded-xl border border-gray-800 bg-gray-950/50 px-3 py-2 text-left text-sm text-gray-300 transition-colors hover:border-cyan-500/40 hover:text-cyan-200"
                 >
-                  "{demo}"
+                  "{demo.text}"
                 </button>
               ))}
             </div>
@@ -221,17 +187,16 @@ export function DiscoverTab({
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="w-full rounded-xl border border-gray-700/50 bg-gray-800/50 py-3 pl-10 pr-12 text-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
               />
-              <button
-                type="button"
-                onClick={handleVoiceSearch}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 transition-colors ${
-                  isListening ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-                }`}
-                aria-label="Search by voice"
-                title="Search by voice"
-              >
-                <Mic className="h-4 w-4" />
-              </button>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-medium text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+                  aria-label="Clear search"
+                >
+                  Clear
+                </button>
+              )}
             </div>
             <RefreshButton onRefresh={handleRefresh} />
           </div>
@@ -260,15 +225,29 @@ export function DiscoverTab({
                 <p className="text-sm text-gray-500">{agents.length} live lines available</p>
               </div>
             </div>
-            <div className="grid min-h-[400px] gap-3 lg:grid-cols-2">
-              {agents.map(agent => (
-                <AgentCard
-                  key={agent.id}
-                  agent={agent}
-                  onClick={() => onSelect(agent)}
-                />
-              ))}
-            </div>
+            {hasNoSearchResults ? (
+              <div className="min-h-[300px] rounded-2xl border border-gray-800 bg-gray-900/50 p-8 text-center">
+                <p className="text-base font-semibold text-white">No lines matched that filter.</p>
+                <p className="mt-2 text-sm text-gray-400">Clear the filter or use the Voice Router to connect by intent.</p>
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  className="mt-5 rounded-xl bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20"
+                >
+                  Clear filter
+                </button>
+              </div>
+            ) : (
+              <div className="grid min-h-[400px] gap-3 lg:grid-cols-2">
+                {agents.map(agent => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    onClick={() => onSelect(agent)}
+                  />
+                ))}
+              </div>
+            )}
             {hasMore && (
               <button
                 onClick={onLoadMore}

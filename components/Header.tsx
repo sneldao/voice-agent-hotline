@@ -43,10 +43,10 @@ export function Header({
             <PhoneCall className="h-5 w-5 text-cyan-200" />
           </div>
           <div>
-            <h1 className="text-lg font-bold">VOISSS Hotline</h1>
+            <h1 className="text-lg font-bold">VOISSS</h1>
             <p className="hidden text-xs text-gray-500 sm:flex sm:items-center sm:gap-1.5">
               <Radio className="h-3 w-3 text-emerald-300" />
-              Say it. Get connected. No keyboard required.
+              A phonebook for AI you can talk to
             </p>
           </div>
         </div>

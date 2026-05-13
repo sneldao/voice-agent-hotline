@@ -149,7 +149,10 @@ function HomeInner() {
   // The hook will surface an error if the agent is unavailable.
   const startCallWithAgentRef = useRef<(agent: Agent) => Promise<void>>();
   startCallWithAgentRef.current = async (agent: Agent) => {
-    if (!connected || !address) {
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+    // In demo mode, skip wallet requirement entirely
+    if (!isDemoMode && (!connected || !address)) {
       dispatch({ type: 'PREVIEW_AGENT', agent });
       showError('Connect your wallet before starting a paid call');
       return;
@@ -303,6 +306,7 @@ function HomeInner() {
                     isLoading={isLoadingAgents && displayedAgents.length === 0}
                     error={agentsError}
                     onSelect={handleSelectAgent}
+                    onVoiceCall={startCallWithAgent}
                     searchQuery={searchQuery}
                     onSearchChange={handleSearchChange}
                     selectedCategory={selectedCategory}
