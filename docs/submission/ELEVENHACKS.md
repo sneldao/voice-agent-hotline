@@ -19,12 +19,12 @@
 - Not just a chatbot with TTS — it's a full marketplace with voice-driven tool execution
 
 ### For the "ElevenLabs Integration" Requirement
-- Uses `@elevenlabs/client` SDK for WebRTC voice sessions
+- Uses the official ElevenLabs `<elevenlabs-convai>` widget for reliable voice sessions
 - Each agent has a unique ElevenLabs voice (6 different voices)
 - Conversational AI handles both STT (input) and TTS (output)
 - Webhook-based tool execution during live conversations
-- Real-time transcript streaming
-- Agent creation API (`/convai/agents/create`) for the self-registration flow
+- Widget controlled programmatically — our UI wraps the voice engine
+- Voice Router: one-tap mic connects to AI concierge instantly
 
 ### For the "Built with Cursor" Requirement
 - All code written with Cursor AI assistance

@@ -37,12 +37,12 @@ VOISSS uses ElevenLabs across the full stack:
 
 | Feature | ElevenLabs API |
 |---------|---------------|
-| Real-time voice conversations | [Conversational AI](https://elevenlabs.io/docs/conversational-ai) (WebRTC) |
+| Real-time voice conversations | [Conversational AI](https://elevenlabs.io/docs/conversational-ai) via official widget |
 | Agent voices | Pre-made + custom voice IDs per agent |
 | Speech-to-Text (input) | Built into ConvAI — user speaks, agent understands |
 | Text-to-Speech (output) | Built into ConvAI — agent responds with natural voice |
 | Tool execution during calls | Webhook-based tool calls (search, book, research) |
-| Conversation transcripts | Real-time transcript streaming via SDK callbacks |
+| Conversation transcripts | Real-time transcript streaming via widget events |
 
 ### How It Works
 
@@ -50,10 +50,10 @@ VOISSS uses ElevenLabs across the full stack:
 User speaks → ElevenLabs STT → LLM processes → Tool call (if needed) → ElevenLabs TTS → User hears response
 ```
 
-1. User taps "Call" on an agent
-2. App fetches a conversation token from ElevenLabs (`/convai/conversation/token`)
-3. `@elevenlabs/client` SDK establishes a WebRTC session
-4. User speaks naturally — ElevenLabs handles STT in real-time
+1. User taps "Call" on an agent (or taps the Voice Router mic)
+2. App sets the `agent-id` on the ElevenLabs widget and calls `startConversation()`
+3. Widget handles WebRTC connection, negotiation, and agent dispatch internally
+4. User speaks naturally — ElevenLabs handles ASR, turn-taking, and TTS
 5. When the agent needs to take action (web search, booking, etc.), it triggers a webhook
 6. Our server executes the tool and returns a narration string
 7. ElevenLabs speaks the result back to the user
@@ -61,11 +61,19 @@ User speaks → ElevenLabs STT → LLM processes → Tool call (if needed) → E
 
 ### Key Files
 
-- `lib/useElevenLabsConversation.ts` — React hook managing the full voice session lifecycle
-- `lib/elevenlabs.ts` — Server-side ElevenLabs service (TTS, agent creation, tool registration)
-- `app/api/webrtc/signal/route.ts` — Token endpoint bridging frontend to ElevenLabs ConvAI
-- `app/api/webhooks/elevenlabs/route.ts` — Webhook handler for mid-conversation tool execution
+- `components/ElevenLabsWidget.tsx` — Widget wrapper for programmatic control
+- `lib/useWidgetConversation.ts` — React hook controlling the widget (same interface as ActiveCall expects)
 - `lib/agent-registry.ts` — Canonical registry mapping agents to ElevenLabs IDs + voice configs
+- `app/api/webhooks/elevenlabs/route.ts` — Webhook handler for mid-conversation tool execution
+- `docs/WIDGET_ARCHITECTURE.md` — Full architecture documentation
+
+### Why the Widget?
+
+We use the official `<elevenlabs-convai>` widget rather than the raw `@elevenlabs/client` SDK because:
+- The widget reliably handles WebRTC negotiation and AI agent dispatch
+- It's the same connection path used by the ElevenLabs dashboard (proven to work)
+- It manages audio devices, reconnection, and error recovery internally
+- Our app controls it programmatically while showing its own custom UI
 
 ---
 
