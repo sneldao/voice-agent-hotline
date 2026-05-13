@@ -113,51 +113,51 @@ export function useElevenLabsConversation(options: ConversationOptions) {
     try {
       // Dynamically import the SDK to avoid SSR issues
       const { Conversation } = await import('@elevenlabs/client');
-      
-      // Get conversation token from our signaling endpoint
-      const callId = generateCallId();
-      const timestamp = Math.floor(Date.now() / 1000).toString();
 
-      // Sign the call request with the connected wallet
-      let authHeaders: Record<string, string> = {};
+      // Resolve the ElevenLabs agent ID
+      // The agentId passed to this hook is the registry key (e.g., 'general_helper')
+      // We need to resolve it to the actual ElevenLabs agent ID
+      let elevenLabsAgentId = agentId;
+
+      // Try to get the ElevenLabs agent ID from our signal endpoint
       try {
-        const message = `voice-call:${callId}:${agentId}:${timestamp}`;
-        const signature = await signMessage(message);
-        const accounts = await (window as any).ethereum?.request({ method: 'eth_accounts' });
-        if (accounts?.[0] && signature) {
-          authHeaders = {
-            'X-Wallet-Address': accounts[0],
-            'X-Signature': signature,
-            'X-Timestamp': timestamp,
-          };
+        const response = await fetch(`/api/webrtc/signal?agentId=${encodeURIComponent(agentId)}`);
+        if (response.ok) {
+          const data = await response.json();
+          // If the endpoint returns agent details, use them
+          if (data.elevenLabsAgentId) {
+            elevenLabsAgentId = data.elevenLabsAgentId;
+          }
         }
       } catch {
-        // Signing failed or user rejected — proceed without auth (rate-limited)
+        // If signal endpoint fails, try using agentId directly
+        // (it might already be an ElevenLabs agent ID)
       }
 
-      const response = await fetch('/api/webrtc/signal', {
+      // Fetch a token for authenticated connection
+      const tokenRes = await fetch(`/api/webrtc/signal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'get-token',
-          callId,
+          callId: generateCallId(),
           agentId,
           userId,
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get conversation token');
+      if (tokenRes.ok) {
+        const tokenData = await tokenRes.json();
+        if (tokenData.elevenLabsAgentId) {
+          elevenLabsAgentId = tokenData.elevenLabsAgentId;
+        }
       }
 
-      const tokenData: TokenResponse = await response.json();
-      console.log('[ElevenLabs] Got token for agent:', tokenData.agentName);
+      console.log('[ElevenLabs] Starting session with agent:', elevenLabsAgentId);
 
-      // Start session using @elevenlabs/client SDK
-      // Use agentId directly for simplest connection (matches dashboard behavior)
+      // Start session using agentId directly (matches ElevenLabs dashboard behavior)
       const conversation = await Conversation.startSession({
-        agentId: tokenData.elevenLabsAgentId,
+        agentId: elevenLabsAgentId,
         
         // Callbacks
           onConnect: () => {
