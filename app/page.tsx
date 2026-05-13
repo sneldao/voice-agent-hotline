@@ -7,7 +7,7 @@ import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef, useState
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ToastProvider, showError } from '@/components/ui';
+import { ToastProvider, showError, showInfo } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
@@ -154,17 +154,30 @@ function HomeInner() {
     // In demo mode, skip wallet requirement entirely
     if (!isDemoMode && (!connected || !address)) {
       dispatch({ type: 'PREVIEW_AGENT', agent });
-      showError('Connect your wallet before starting a paid call');
+      showInfo('Caller ID needed first. Connect your wallet, then the call can start.');
       return;
     }
 
     setIsStartingCall(true);
     try {
-      if (!isWebRTCSupported) { showError('Your browser does not support voice calls'); return; }
-      if (micPermissions.microphone === 'denied') { showError('Microphone access is blocked. Please allow it in browser settings.'); return; }
+      if (!isWebRTCSupported) {
+        dispatch({ type: 'PREVIEW_AGENT', agent });
+        showError('Your browser does not support voice calls. Try Chrome desktop for the demo.');
+        return;
+      }
+      if (micPermissions.microphone === 'denied') {
+        dispatch({ type: 'PREVIEW_AGENT', agent });
+        showError('Microphone access is blocked. Please allow it in browser settings.');
+        return;
+      }
       if (micPermissions.microphone === 'prompt') {
+        showInfo('Allow microphone access to open the voice line.');
         const granted = await requestMicrophonePermission();
-        if (!granted) { showError('Microphone permission is required for voice calls'); return; }
+        if (!granted) {
+          dispatch({ type: 'PREVIEW_AGENT', agent });
+          showError('Microphone permission is required for voice calls');
+          return;
+        }
       }
 
       dispatch({ type: 'SELECT_AGENT', agent });
@@ -187,9 +200,15 @@ function HomeInner() {
 
   const handleSelectAgent = useCallback((agent: Agent | null) => {
     if (agent) {
-      dispatch({ type: 'PREVIEW_AGENT', agent });
+      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+      if (isDemoMode) {
+        // In demo mode, skip the preview sheet and start the call directly
+        startCallWithAgent(agent);
+      } else {
+        dispatch({ type: 'PREVIEW_AGENT', agent });
+      }
     }
-  }, []);
+  }, [startCallWithAgent]);
 
   const handleSelectRelatedAgent = useCallback((agentId: string) => {
     const agent = agents.find((a) => a.id === agentId);

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Radio, ShieldCheck, Star, PhoneForwarded } from 'lucide-react';
-import { Card, Badge, Avatar } from '@/components/ui';
+import { Badge, Avatar } from '@/components/ui';
 import type { Agent } from '@/lib/types';
 
 const STAR_COLORS = [
@@ -57,11 +57,11 @@ export const AgentCard = React.memo(function AgentCard({
   const persona = getPersona(agent);
 
   return (
-    <Card
-      interactive
-      variant="default"
-      className="group relative h-full overflow-hidden p-4 transition-all duration-200 hover:border-cyan-500/30 hover:bg-gray-900/80"
+    <button
+      type="button"
       onClick={onClick}
+      className="group relative h-full w-full overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/50 p-4 text-left transition-all duration-200 hover:border-cyan-500/30 hover:bg-gray-900/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 active:scale-[0.99]"
+      aria-label={`Open ${agent.name}`}
     >
       <div className="flex items-start gap-4 relative">
         <div className="relative flex-shrink-0">
@@ -106,7 +106,7 @@ export const AgentCard = React.memo(function AgentCard({
           </div>
         </div>
       </div>
-    </Card>
+    </button>
   );
 });
 

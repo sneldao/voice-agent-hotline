@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Headphones, Loader2, Mic, Phone, Radio, X } from 'lucide-react';
 import type { Agent } from '@/lib/types';
+import { showInfo } from '@/components/ui';
 
 type RouterState = 'idle' | 'listening' | 'routing' | 'matched' | 'confirming';
 
@@ -94,6 +95,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
   const [matchedAgent, setMatchedAgent] = useState<Agent | null>(null);
   const [confirmText, setConfirmText] = useState('');
   const [errorText, setErrorText] = useState('');
+  const [activationText, setActivationText] = useState('');
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const confirmRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -141,6 +143,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     setMatchedAgent(null);
     setConfirmText('');
     setErrorText('');
+    setActivationText('');
   }, []);
 
   const listenForConfirmation = useCallback((agent: Agent) => {
@@ -183,6 +186,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
   const routeIntent = useCallback(async (intent: string) => {
     setState('routing');
     setErrorText('');
+    setActivationText('');
 
     // Brief pause for dramatic effect
     await new Promise(r => setTimeout(r, 800));
@@ -212,6 +216,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     const recognition = getSpeechRecognition();
     if (!recognition) {
       setErrorText('Voice input is not available in this browser. Chrome desktop gives the best demo path.');
+      setActivationText('');
       return;
     }
 
@@ -226,6 +231,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     setMatchedAgent(null);
     setConfirmText('');
     setErrorText('');
+    setActivationText('Listening started. Speak your request now.');
     latestIntentRef.current = '';
     ignoreRecognitionEndRef.current = false;
 
@@ -251,6 +257,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
         void routeIntent(intent);
       } else {
         setState('idle');
+        setActivationText('');
         setErrorText('I did not hear a request. Tap the mic and try again.');
       }
     };
@@ -258,6 +265,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
     recognition.onerror = () => {
       setState('idle');
       setTranscript('');
+      setActivationText('');
       setErrorText('Microphone listening stopped. Tap the mic to try again.');
     };
 
@@ -265,12 +273,14 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
       recognition.start();
     } catch {
       setState('idle');
+      setActivationText('');
       setErrorText('Could not start microphone listening. Check browser permissions.');
     }
   }, [getSpeechRecognition, routeIntent]);
 
   const handleMicClick = useCallback(() => {
     if (state === 'idle') {
+      showInfo('Voice Router is listening. Speak your request after the browser mic prompt.');
       startListening();
     } else {
       reset();
@@ -312,7 +322,7 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
       {/* Mic button */}
       <div className="relative z-10 mb-4 flex justify-center">
         <button
-          onClick={handleMicClick}
+      onClick={handleMicClick}
           className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${micStyles[state]}`}
           aria-label={state === 'idle' ? 'Start voice request' : 'Cancel'}
         >
@@ -332,6 +342,12 @@ export function VoiceRouter({ agents, onCallAgent }: VoiceRouterProps) {
       <p className="relative z-10 mb-2 text-sm font-medium text-gray-300">
         {statusText[state]}
       </p>
+
+      {activationText && (
+        <p className="relative z-10 mx-auto mb-3 max-w-sm text-xs leading-5 text-cyan-100">
+          {activationText}
+        </p>
+      )}
 
       {/* Transcript */}
       {transcript && (
