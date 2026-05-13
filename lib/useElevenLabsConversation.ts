@@ -13,6 +13,8 @@ import { generateCallId } from './ids';
 export interface ConversationState {
   isConnected: boolean;
   isConnecting: boolean;
+  /** True when we are auto-recovering from an unexpected disconnect. */
+  isReconnecting: boolean;
   duration: number;
   cost: number;
   error: string | null;
@@ -56,6 +58,7 @@ export function useElevenLabsConversation(options: ConversationOptions) {
   const [state, setState] = useState<ConversationState>({
     isConnected: false,
     isConnecting: false,
+    isReconnecting: false,
     duration: 0,
     cost: 0,
     error: null,
@@ -72,10 +75,18 @@ export function useElevenLabsConversation(options: ConversationOptions) {
 
   const conversationRef = useRef<any>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
+  // Cumulative billable seconds across reconnects within the same call.
+  const accumulatedSecondsRef = useRef<number>(0);
+  // When the *current* connection started (resets on each (re)connect).
+  const segmentStartRef = useRef<number>(0);
   const intentionalDisconnectRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectGiveUpTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // 1 retry, ~1.2s delay → first attempt within ~1.5s, hard fail at 5s.
   const MAX_RECONNECT_ATTEMPTS = 1;
+  const RECONNECT_DELAY_MS = 1200;
+  const RECONNECT_HARD_TIMEOUT_MS = 5000;
 
   /**
    * Start conversation with ElevenLabs agent
@@ -152,22 +163,36 @@ export function useElevenLabsConversation(options: ConversationOptions) {
         // Callbacks
           onConnect: () => {
             console.log('[ElevenLabs] Connected');
-            startTimeRef.current = Date.now();
+            const isReconnect = reconnectAttemptsRef.current > 0;
+            // Start a new billable segment. accumulatedSecondsRef preserves
+            // duration across reconnects so the user isn't billed for outage time.
+            segmentStartRef.current = Date.now();
             reconnectAttemptsRef.current = 0;
-          
+            // Cancel any pending hard-failure timer.
+            if (reconnectGiveUpTimerRef.current) {
+              clearTimeout(reconnectGiveUpTimerRef.current);
+              reconnectGiveUpTimerRef.current = null;
+            }
+
           setState(prev => ({
             ...prev,
             isConnected: true,
             isConnecting: false,
+            isReconnecting: false,
             status: 'connected',
-            error: null,
+            // Clear "Reconnecting…" sentinel; preserve real errors.
+            error: isReconnect ? null : prev.error,
           }));
 
-          // Start duration counter
+          // Start duration counter (continues from accumulated seconds).
+          if (durationIntervalRef.current) {
+            clearInterval(durationIntervalRef.current);
+          }
           durationIntervalRef.current = setInterval(() => {
-            const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+            const segment = Math.floor((Date.now() - segmentStartRef.current) / 1000);
+            const duration = accumulatedSecondsRef.current + segment;
             const cost = (duration / 60) * ratePerMinute;
-            
+
             setState(prev => ({
               ...prev,
               duration,
@@ -181,6 +206,13 @@ export function useElevenLabsConversation(options: ConversationOptions) {
         onDisconnect: () => {
           console.log('[ElevenLabs] Disconnected');
 
+          // Freeze duration: roll the live segment into the accumulated total
+          // and stop the counter. Cost will not advance during the outage.
+          if (segmentStartRef.current > 0) {
+            const segment = Math.floor((Date.now() - segmentStartRef.current) / 1000);
+            accumulatedSecondsRef.current += Math.max(0, segment);
+            segmentStartRef.current = 0;
+          }
           if (durationIntervalRef.current) {
             clearInterval(durationIntervalRef.current);
             durationIntervalRef.current = null;
@@ -196,14 +228,36 @@ export function useElevenLabsConversation(options: ConversationOptions) {
             setState(prev => ({
               ...prev,
               isConnected: false,
-              isConnecting: true,
+              isConnecting: false,
+              isReconnecting: true,
               status: 'connecting',
-              error: 'Reconnecting...',
+              // Don't surface as a hard error — UI shows a banner instead.
+              error: null,
             }));
 
-            setTimeout(() => {
+            // Hard ceiling: if we don't recover within RECONNECT_HARD_TIMEOUT_MS,
+            // give up and show the failure UI.
+            reconnectGiveUpTimerRef.current = setTimeout(() => {
+              if (!conversationRef.current) {
+                console.warn('[ElevenLabs] Reconnect window expired');
+                reconnectAttemptsRef.current = 0;
+                intentionalDisconnectRef.current = false;
+                setState(prev => ({
+                  ...prev,
+                  isConnected: false,
+                  isConnecting: false,
+                  isReconnecting: false,
+                  status: 'disconnected',
+                  mode: 'idle',
+                  error: 'Connection lost. Please try again.',
+                }));
+                onDisconnect?.();
+              }
+            }, RECONNECT_HARD_TIMEOUT_MS);
+
+            reconnectTimerRef.current = setTimeout(() => {
               startConversation();
-            }, 3000);
+            }, RECONNECT_DELAY_MS);
             return;
           }
 
@@ -214,6 +268,7 @@ export function useElevenLabsConversation(options: ConversationOptions) {
             ...prev,
             isConnected: false,
             isConnecting: false,
+            isReconnecting: false,
             status: 'disconnected',
             mode: 'idle',
           }));
@@ -294,6 +349,16 @@ export function useElevenLabsConversation(options: ConversationOptions) {
     intentionalDisconnectRef.current = true;
     reconnectAttemptsRef.current = 0;
 
+    // Cancel any pending reconnect / give-up timers.
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    if (reconnectGiveUpTimerRef.current) {
+      clearTimeout(reconnectGiveUpTimerRef.current);
+      reconnectGiveUpTimerRef.current = null;
+    }
+
     if (conversationRef.current) {
       try {
         await conversationRef.current.endSession();
@@ -308,13 +373,25 @@ export function useElevenLabsConversation(options: ConversationOptions) {
       durationIntervalRef.current = null;
     }
 
+    // Final flush: roll any in-flight segment into accumulated seconds so the
+    // caller (ActiveCall.handleEnd) sees the right `duration` / `cost`.
+    if (segmentStartRef.current > 0) {
+      const segment = Math.floor((Date.now() - segmentStartRef.current) / 1000);
+      accumulatedSecondsRef.current += Math.max(0, segment);
+      segmentStartRef.current = 0;
+    }
+
     setState(prev => ({
       ...prev,
       isConnected: false,
       isConnecting: false,
+      isReconnecting: false,
       status: 'disconnected',
       mode: 'idle',
     }));
+
+    // Reset for next conversation.
+    accumulatedSecondsRef.current = 0;
   }, []);
 
   /**

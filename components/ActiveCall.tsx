@@ -8,11 +8,12 @@ import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
 import type { Agent } from '@/lib/types';
 import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
-import { Mic, MicOff, Volume2, Volume1, VolumeX, PhoneOff, Clock, Signal, AlertCircle, Phone } from 'lucide-react';
+import { Mic, MicOff, Volume2, Volume1, VolumeX, PhoneOff, Clock, Signal, AlertCircle, Phone, Wifi } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 import { showError } from './ui';
 import { parseEther } from 'viem';
+import { postReceiptOrQueue } from '@/lib/callReceiptQueue';
 
 interface ActiveCallProps {
   agent: Agent;
@@ -77,6 +78,9 @@ export function ActiveCall({
   const [isConnecting, setIsConnecting] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  // #20: Keep a ref to transcripts so handleEnd always reads the latest
+  const transcriptsRef = useRef(transcripts);
+  transcriptsRef.current = transcripts;
   const streamingStartedRef = useRef(false);
   const agentPayoutAddress = agent.wallet_address || agent.wallet || '';
   const platformAddress = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
@@ -84,19 +88,32 @@ export function ActiveCall({
   const payoutAddress = agentPayoutAddress || platformAddress;
   const monthlyStreamingRate = agent.rate * 60 * 24 * 30;
 
+  // #22: Reset streaming ref when agent changes (e.g. related-agent switch)
+  const prevAgentIdRef = useRef(agent.id);
+  useEffect(() => {
+    if (prevAgentIdRef.current !== agent.id) {
+      streamingStartedRef.current = false;
+      prevAgentIdRef.current = agent.id;
+    }
+  }, [agent.id]);
+
   useEffect(() => {
     if (showTranscript && transcriptEndRef.current) {
       transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [transcripts, showTranscript]);
 
+  // #23: Use a ref for startCall to avoid effect re-triggers from dependency changes
+  const startCallRef = useRef(startCall);
+  startCallRef.current = startCall;
+
   useEffect(() => {
     if (!hasStarted && isSupported) {
       resetPayment();
-      startCall();
+      startCallRef.current();
       setHasStarted(true);
     }
-  }, [hasStarted, isSupported, startCall, resetPayment]);
+  }, [hasStarted, isSupported, resetPayment]);
 
   // Update connecting state when call is active or errored
   useEffect(() => {
@@ -151,8 +168,14 @@ export function ActiveCall({
 
     setIsFinalizing(true);
     vibrate([100, 50, 100]); // double-pulse on hang-up
+
+    // #20: Small delay to let the SDK flush final transcript events
+    await new Promise(resolve => setTimeout(resolve, 200));
+
     endCall();
 
+    // Read transcripts from ref to get the absolute latest (including final words)
+    const finalTranscripts = transcriptsRef.current;
     const totalCost = Number.isFinite(call.cost) ? call.cost : 0;
     const id = saveCall({
       agentId: agent.id,
@@ -160,28 +183,29 @@ export function ActiveCall({
       agentSpecialty: agent.specialty,
       duration: call.duration,
       cost: call.cost,
-      transcripts,
+      transcripts: finalTranscripts,
     });
     setSavedCallId(id);
 
-    // Save to server (fire-and-forget, local is source of truth)
-    fetch('/api/calls', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        agent_id: agent.id,
-        agent_name: agent.name,
-        agent_specialty: agent.specialty,
-        caller_address: userId,
-        duration: call.duration,
-        cost: call.cost,
-        transcripts,
-      }),
-    }).catch(() => {}); // best-effort
+    // Save to server. If the network is down, queue locally and replay on
+    // next app load so we don't lose receipts.
+    void postReceiptOrQueue({
+      id,
+      agent_id: agent.id,
+      agent_name: agent.name,
+      agent_specialty: agent.specialty,
+      caller_address: userId,
+      duration: call.duration,
+      cost: call.cost,
+      transcripts: finalTranscripts,
+    });
 
     if (paymentMode === 'streaming' && payoutAddress) {
-      const stopTxHash = await stopStream(payoutAddress, agentPayoutAddress ? platformAddress : undefined);
+      const stopTxHash = await stopStream(
+        payoutAddress,
+        agentPayoutAddress ? platformAddress : undefined,
+        { callId: id, estimatedCost: totalCost },
+      );
       if (stopTxHash) {
         updateCallReceipt(id, { txHash: stopTxHash, cost: totalCost });
       }
@@ -217,7 +241,6 @@ export function ActiveCall({
     saveCall,
     settlePayment,
     stopStream,
-    transcripts,
     updateCallReceipt,
     userId,
   ]);

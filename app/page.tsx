@@ -15,43 +15,54 @@ import { useUserBalance, useAgents } from '@/lib/useSWR';
 import { Search, Phone, User } from 'lucide-react';
 import { generateCallId } from '@/lib/ids';
 import type { Agent } from '@/lib/types';
-// Dynamic import for ActiveCall with SSR disabled to avoid ElevenLabs SDK issues
-const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
 import { Header } from '@/components/Header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { AgentPreviewSheet } from '@/components/AgentPreviewSheet';
+import { Onboarding } from '@/components/Onboarding';
 import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
 import { readCallLaunchParams } from '@/lib/product-launch';
+import { useOnboarding } from '@/lib/useOnboarding';
 
-// Eager load tabs
+// #17: Lazy-load all heavy components — only DiscoverTab is needed on first paint
+const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
+const CallsHistoryTab = dynamic(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
+const ProfileTab = dynamic(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
+
+// DiscoverTab is the landing view — keep it eager
 import { DiscoverTab } from '@/components/DiscoverTab';
-import { CallsHistoryTab } from '@/components/CallsHistoryTab';
-import { ProfileTab } from '@/components/ProfileTab';
 
 interface PageState {
   activeTab: 'discover' | 'calls' | 'profile';
   selectedAgent: Agent | null;
+  previewAgent: Agent | null;
   inCall: boolean;
   callId: string | null;
   searchQuery: string;
   selectedCategory: string;
+  pendingLaunch: { agentId: string; autoStart: boolean } | null;
 }
 
 type PageAction =
   | { type: 'SET_TAB'; tab: PageState['activeTab'] }
   | { type: 'SELECT_AGENT'; agent: Agent | null }
+  | { type: 'PREVIEW_AGENT'; agent: Agent | null }
   | { type: 'START_CALL'; callId: string }
   | { type: 'END_CALL' }
   | { type: 'SET_SEARCH'; query: string }
-  | { type: 'SET_CATEGORY'; category: string };
+  | { type: 'SET_CATEGORY'; category: string }
+  | { type: 'SET_LAUNCH'; launch: { agentId: string; autoStart: boolean } | null }
+  | { type: 'CONSUME_LAUNCH' };
 
 const initialPageState: PageState = {
   activeTab: 'discover',
   selectedAgent: null,
+  previewAgent: null,
   inCall: false,
   callId: null,
   searchQuery: '',
   selectedCategory: 'all',
+  pendingLaunch: null,
 };
 
 function pageReducer(state: PageState, action: PageAction): PageState {
@@ -60,14 +71,20 @@ function pageReducer(state: PageState, action: PageAction): PageState {
       return { ...state, activeTab: action.tab };
     case 'SELECT_AGENT':
       return { ...state, selectedAgent: action.agent };
+    case 'PREVIEW_AGENT':
+      return { ...state, previewAgent: action.agent };
     case 'START_CALL':
-      return { ...state, inCall: true, callId: action.callId };
+      return { ...state, inCall: true, previewAgent: null, callId: action.callId };
     case 'END_CALL':
-      return { ...state, inCall: false, selectedAgent: null, callId: null };
+      return { ...state, inCall: false, selectedAgent: null, previewAgent: null, callId: null };
     case 'SET_SEARCH':
       return { ...state, searchQuery: action.query };
     case 'SET_CATEGORY':
       return { ...state, selectedCategory: action.category };
+    case 'SET_LAUNCH':
+      return { ...state, pendingLaunch: action.launch };
+    case 'CONSUME_LAUNCH':
+      return { ...state, pendingLaunch: null };
     default:
       return state;
   }
@@ -84,37 +101,38 @@ export default function Home() {
 function HomeInner() {
   const [state, dispatch] = useReducer(pageReducer, initialPageState);
   const {
-    activeTab, selectedAgent, inCall, callId,
-    searchQuery, selectedCategory,
+    activeTab, selectedAgent, previewAgent, inCall, callId,
+    searchQuery, selectedCategory, pendingLaunch,
   } = state;
   const searchParams = useSearchParams();
   const router = useRouter();
-  const launchParamsRef = useRef<{ agentId: string; autoStart: boolean } | null>(null);
-  const launchAttemptedRef = useRef(false);
+  const [isStartingCall, setIsStartingCall] = useState(false);
 
-  // Debounce search query for API calls (300ms)
+  // #18 & #21: Debounce BOTH search and category together; reset page on change
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+  const [debouncedCategory, setDebouncedCategory] = useState(selectedCategory);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setDebouncedQuery(searchQuery);
+      setDebouncedCategory(selectedCategory);
+      setPage(1); // #18: Reset pagination on filter change
     }, 300);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategory]);
 
   const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
   const { balance: userBalance, isLoading: isLoadingBalance } = useUserBalance(address);
-
-  // Pagination state
-  const [page, setPage] = useState(1);
+  const onboarding = useOnboarding(connected, userBalance || 0);
 
   const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
     search: debouncedQuery,
-    category: selectedCategory,
+    category: debouncedCategory,
     page,
   });
 
@@ -123,39 +141,41 @@ function HomeInner() {
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
 
   const clearLaunchState = useCallback(() => {
-    launchParamsRef.current = null;
-    launchAttemptedRef.current = false;
+    dispatch({ type: 'CONSUME_LAUNCH' });
   }, []);
 
-  // Tap agent → start call immediately (no modal, no wallet gate)
-  const startCallWithAgent = useCallback(async (agent: Agent) => {
-    if (!isWebRTCSupported) { showError('Your browser does not support voice calls'); return; }
-    if (micPermissions.microphone === 'denied') { showError('Microphone access is blocked. Please allow it in browser settings.'); return; }
-    if (micPermissions.microphone === 'prompt') {
-      const granted = await requestMicrophonePermission();
-      if (!granted) { showError('Microphone permission is required for voice calls'); return; }
-    }
-
-    // Set agent and start call in one go
-    dispatch({ type: 'SELECT_AGENT', agent });
-
-    // Pre-flight: verify the agent is configured
-    try {
-      const preflightRes = await fetch(`/api/webrtc/signal?agentId=${encodeURIComponent(agent.id)}`);
-      if (!preflightRes.ok) {
-        showError('This agent is unavailable right now');
-        dispatch({ type: 'SELECT_AGENT', agent: null });
-        return;
-      }
-    } catch {
-      showError('Cannot reach voice service. Please try again.');
-      dispatch({ type: 'SELECT_AGENT', agent: null });
+  // #19: Removed preflight — useElevenLabsConversation already calls /api/webrtc/signal
+  // to get the token. A separate availability check is a wasted round-trip.
+  // The hook will surface an error if the agent is unavailable.
+  const startCallWithAgentRef = useRef<(agent: Agent) => Promise<void>>();
+  startCallWithAgentRef.current = async (agent: Agent) => {
+    if (!connected || !address) {
+      dispatch({ type: 'PREVIEW_AGENT', agent });
+      showError('Connect your wallet before starting a paid call');
       return;
     }
 
-    const newCallId = generateCallId();
-    dispatch({ type: 'START_CALL', callId: newCallId });
-  }, [isWebRTCSupported, micPermissions, requestMicrophonePermission]);
+    setIsStartingCall(true);
+    try {
+      if (!isWebRTCSupported) { showError('Your browser does not support voice calls'); return; }
+      if (micPermissions.microphone === 'denied') { showError('Microphone access is blocked. Please allow it in browser settings.'); return; }
+      if (micPermissions.microphone === 'prompt') {
+        const granted = await requestMicrophonePermission();
+        if (!granted) { showError('Microphone permission is required for voice calls'); return; }
+      }
+
+      dispatch({ type: 'SELECT_AGENT', agent });
+      const newCallId = generateCallId();
+      dispatch({ type: 'START_CALL', callId: newCallId });
+    } finally {
+      setIsStartingCall(false);
+    }
+  };
+
+  // Stable reference that never changes — avoids effect re-triggers
+  const startCallWithAgent = useCallback((agent: Agent) => {
+    return startCallWithAgentRef.current!(agent);
+  }, []);
 
   const endCall = useCallback(() => {
     clearLaunchState();
@@ -164,9 +184,9 @@ function HomeInner() {
 
   const handleSelectAgent = useCallback((agent: Agent | null) => {
     if (agent) {
-      startCallWithAgent(agent);
+      dispatch({ type: 'PREVIEW_AGENT', agent });
     }
-  }, [startCallWithAgent]);
+  }, []);
 
   const handleSelectRelatedAgent = useCallback((agentId: string) => {
     const agent = agents.find((a) => a.id === agentId);
@@ -175,9 +195,9 @@ function HomeInner() {
     dispatch({ type: 'SET_TAB', tab: 'discover' });
 
     if (agent) {
-      startCallWithAgent(agent);
+      dispatch({ type: 'PREVIEW_AGENT', agent });
     }
-  }, [agents, clearLaunchState, startCallWithAgent]);
+  }, [agents, clearLaunchState]);
 
   const handleSearchChange = useCallback((query: string) => {
     dispatch({ type: 'SET_SEARCH', query });
@@ -188,8 +208,8 @@ function HomeInner() {
   }, []);
 
   const handleSelectRelatedAgentDispatch = useCallback((agent: Agent | null) => {
-    if (agent) startCallWithAgent(agent);
-  }, [startCallWithAgent]);
+    if (agent) dispatch({ type: 'PREVIEW_AGENT', agent });
+  }, []);
 
   const handleSwitchTab = useCallback((tab: string) => {
     dispatch({ type: 'SET_TAB', tab: tab as PageState['activeTab'] });
@@ -206,32 +226,28 @@ function HomeInner() {
 
   useEffect(() => {
     const launchParams = readCallLaunchParams(searchParams);
-    if (!launchParams || launchParamsRef.current) {
+    if (!launchParams || pendingLaunch) {
       return;
     }
 
-    launchParamsRef.current = launchParams;
+    dispatch({ type: 'SET_LAUNCH', launch: launchParams });
     dispatch({ type: 'SET_TAB', tab: 'discover' });
     router.replace('/', { scroll: false });
-  }, [router, searchParams]);
+  }, [pendingLaunch, router, searchParams]);
 
   useEffect(() => {
-    const launchParams = launchParamsRef.current;
-    if (!launchParams || selectedAgent || agents.length === 0) {
+    if (!pendingLaunch || selectedAgent || previewAgent || agents.length === 0) {
       return;
     }
 
-    const agent = agents.find((candidate) => candidate.id === launchParams.agentId);
+    const agent = agents.find((candidate) => candidate.id === pendingLaunch.agentId);
+    dispatch({ type: 'CONSUME_LAUNCH' });
     if (!agent) {
-      launchParamsRef.current = null;
       return;
     }
 
-    if (launchParams.autoStart) {
-      startCallWithAgent(agent);
-      launchAttemptedRef.current = true;
-    }
-  }, [agents, selectedAgent, startCallWithAgent]);
+    dispatch({ type: 'PREVIEW_AGENT', agent });
+  }, [agents, pendingLaunch, previewAgent, selectedAgent]);
 
   return (
     <ErrorBoundary>
@@ -271,23 +287,21 @@ function HomeInner() {
           ) : (
             <>
               {activeTab === 'discover' && (
-                <Suspense fallback={<TabLoading />}>
-                  <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
-                    <DiscoverTab
-                      agents={displayedAgents}
-                      isLoading={isLoadingAgents && displayedAgents.length === 0}
-                      error={agentsError}
-                      onSelect={handleSelectAgent}
-                      searchQuery={searchQuery}
-                      onSearchChange={handleSearchChange}
-                      selectedCategory={selectedCategory}
-                      onCategoryChange={handleCategoryChange}
-                      onRefresh={mutateAgents}
-                      hasMore={hasMore}
-                      onLoadMore={handleLoadMore}
-                    />
-                  </ErrorBoundary>
-                </Suspense>
+                <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
+                  <DiscoverTab
+                    agents={displayedAgents}
+                    isLoading={isLoadingAgents && displayedAgents.length === 0}
+                    error={agentsError}
+                    onSelect={handleSelectAgent}
+                    searchQuery={searchQuery}
+                    onSearchChange={handleSearchChange}
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={handleCategoryChange}
+                    onRefresh={mutateAgents}
+                    hasMore={hasMore}
+                    onLoadMore={handleLoadMore}
+                  />
+                </ErrorBoundary>
               )}
               {activeTab === 'calls' && (
                 <Suspense fallback={<TabLoading />}>
