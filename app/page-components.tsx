@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Star, Phone } from 'lucide-react';
+import React from 'react';
+import { Star, Phone, ShieldCheck } from 'lucide-react';
 import { Card, Badge, Avatar } from '@/components/ui';
 import type { Agent } from '@/lib/types';
 
@@ -42,7 +42,7 @@ export const AgentCard = React.memo(function AgentCard({
     <Card
       interactive
       variant="default"
-      className="group relative overflow-hidden p-4 hover:border-cyan-500/30 transition-all duration-200"
+      className="group relative h-full overflow-hidden p-4 transition-all duration-200 hover:border-cyan-500/30 hover:bg-gray-900/80"
       onClick={onClick}
     >
       <div className="flex items-start gap-4 relative">
@@ -51,12 +51,16 @@ export const AgentCard = React.memo(function AgentCard({
           {agent.online && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full" />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="font-bold text-white truncate max-w-[180px]">{agent.name}</span>
-            {agent.verified && <Badge variant="info" size="sm" className="flex-shrink-0">✓</Badge>}
+          <div className="mb-1 flex items-center gap-2">
+            <span className="min-w-0 truncate font-bold text-white">{agent.name}</span>
+            {agent.verified && (
+              <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-300" title="Verified agent">
+                <ShieldCheck className="h-3.5 w-3.5" />
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed mb-2">{agent.bio || agent.specialty}</p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1">
               <Stars rating={rating} />
               <span className="text-xs text-gray-400">{rating.toFixed(1)}</span>
@@ -65,9 +69,9 @@ export const AgentCard = React.memo(function AgentCard({
           </div>
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <div className="text-right">
-            <div className="text-lg font-bold text-cyan-400">${agent.rate}</div>
-            <div className="text-[10px] text-gray-500">/min</div>
+          <div className="text-right tabular-nums">
+            <div className="text-lg font-bold text-cyan-400">${Number(agent.rate).toFixed(2)}</div>
+            <div className="text-[10px] uppercase tracking-wide text-gray-500">/min</div>
           </div>
           {/* Tap to call indicator */}
           <div className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 group-hover:bg-cyan-500/20 transition-colors">

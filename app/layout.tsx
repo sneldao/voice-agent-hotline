@@ -106,9 +106,9 @@ export default function RootLayout({
         
         <WalletProvider>
           <ThemeProvider>
-            <main id="main-content">
+            <div>
               {children}
-            </main>
+            </div>
           </ThemeProvider>
         </WalletProvider>
       </body>

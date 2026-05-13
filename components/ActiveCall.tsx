@@ -76,11 +76,13 @@ export function ActiveCall({
   const [speakerVolume, setSpeakerVolume] = useState(2); // 0=mute, 1=low, 2=full
   const [savedCallId, setSavedCallId] = useState<string | null>(null);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   // #20: Keep a ref to transcripts so handleEnd always reads the latest
   const transcriptsRef = useRef(transcripts);
   transcriptsRef.current = transcripts;
   const streamingStartedRef = useRef(false);
+  const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentPayoutAddress = agent.wallet_address || agent.wallet || '';
   const platformAddress = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
   // Fall back to platform address if agent has no wallet (no split in that case)
@@ -138,11 +140,27 @@ export function ActiveCall({
   startCallRef.current = startCall;
 
   useEffect(() => {
-    if (!hasStarted && isSupported) {
-      resetPayment();
-      startCallRef.current();
-      setHasStarted(true);
+    if (hasStarted || !isSupported || startTimerRef.current) {
+      return;
     }
+
+    let cancelled = false;
+    startTimerRef.current = setTimeout(() => {
+      startTimerRef.current = null;
+      if (cancelled) return;
+
+      resetPayment();
+      void startCallRef.current();
+      setHasStarted(true);
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      if (startTimerRef.current) {
+        clearTimeout(startTimerRef.current);
+        startTimerRef.current = null;
+      }
+    };
   }, [hasStarted, isSupported, resetPayment]);
 
   useEffect(() => {
@@ -273,6 +291,17 @@ export function ActiveCall({
     onEnd();
   }, [onEnd]);
 
+  const handleRetry = useCallback(async () => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    resetPayment();
+    try {
+      await startCallRef.current();
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [isRetrying, resetPayment]);
+
   const handleRate = useCallback((rating: number, feedback?: string) => {
     if (savedCallId) {
       rateCall(savedCallId, rating, feedback);
@@ -359,7 +388,7 @@ export function ActiveCall({
 
   if (!isSupported) {
     return (
-      <div className="fixed inset-0 z-50 bg-gray-900 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex h-dvh items-center justify-center bg-gray-900 p-4">
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-white mb-2">WebRTC Not Supported</h3>
@@ -372,8 +401,8 @@ export function ActiveCall({
 
   if (call.isConnecting) {
     return (
-      <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col items-center justify-center">
-        <div className="text-center">
+      <div className="fixed inset-0 z-50 flex h-dvh flex-col items-center justify-center bg-gray-900 p-4">
+        <div className="mx-auto max-w-md text-center">
           <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center mb-6 animate-pulse">
             <span className="text-4xl">{agent.avatar || agent.name.charAt(0)}</span>
           </div>
@@ -385,6 +414,9 @@ export function ActiveCall({
             <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             <span className="text-gray-400 ml-2">Connecting...</span>
           </div>
+          <p className="mt-4 text-xs leading-5 text-gray-500">
+            Keep this tab focused while we prepare the voice session and microphone stream.
+          </p>
         </div>
       </div>
     );
@@ -392,22 +424,28 @@ export function ActiveCall({
 
   if (call.error) {
     return (
-      <div className="fixed inset-0 z-50 bg-gray-900 flex items-center justify-center p-4">
-        <div className="text-center">
+      <div className="fixed inset-0 z-50 flex h-dvh items-center justify-center bg-gray-900 p-4">
+        <div className="mx-auto max-w-md text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-white mb-2">Call Failed</h3>
-          <p className="text-gray-400 mb-4">{call.error}</p>
-          <Button onClick={handleEnd} variant="destructive">End Call</Button>
+          <p className="text-gray-400 mb-5">{call.error}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Button onClick={handleEnd} variant="outline">Close</Button>
+            <Button onClick={handleRetry} isLoading={isRetrying}>
+              Retry Call
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+    <div className="fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-gray-900">
       {/* Header — #8: Simplified to avatar+name, status dot, cost ticker */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <div className="flex items-center gap-3">
+      <div className="w-full border-b border-gray-800">
+        <div className="mx-auto flex w-full max-w-2xl items-center justify-between p-4">
+          <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} flex items-center justify-center`}>
             <span className="text-lg">{agent.avatar || agent.name.charAt(0)}</span>
           </div>
@@ -418,11 +456,12 @@ export function ActiveCall({
               <span className="text-xs text-gray-400">{call.isConnected ? 'Connected' : 'Connecting'}</span>
             </div>
           </div>
-        </div>
+          </div>
         
-        <div className="flex items-center gap-2">
-          <div className="px-3 py-1.5 bg-gray-800 rounded-full text-right">
-            <span className="text-sm font-bold text-cyan-400 tabular-nums">${(call.cost || 0).toFixed(4)}</span>
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1.5 bg-gray-800 rounded-full text-right">
+              <span className="text-sm font-bold text-cyan-400 tabular-nums">${(call.cost || 0).toFixed(4)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -448,8 +487,14 @@ export function ActiveCall({
         </div>
       )}
 
+      {call.isReconnecting && (
+        <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-200">
+          Reconnecting voice session. Duration and billing are paused.
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-center overflow-y-auto p-4">
         {isFinalizing && (
           <div className="w-full max-w-md mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center">
             <p className="text-sm font-medium text-amber-200">Finalizing payment on Celo</p>
@@ -524,7 +569,8 @@ export function ActiveCall({
       </div>
 
       {/* Controls */}
-      <div className="p-6 border-t border-gray-800">
+      <div className="w-full border-t border-gray-800">
+        <div className="mx-auto w-full max-w-2xl p-6">
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={() => { vibrate(40); toggleMute(); }}
@@ -595,6 +641,7 @@ export function ActiveCall({
               />
             </div>
           </div>
+        </div>
       </div>
 
       {/* Call Summary Modal */}

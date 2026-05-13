@@ -48,8 +48,8 @@ export function Onboarding({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex h-dvh items-center justify-center overflow-y-auto bg-gray-950/95 p-4 backdrop-blur-sm">
+      <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-gray-800 bg-gray-900">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div className="flex items-center gap-2">

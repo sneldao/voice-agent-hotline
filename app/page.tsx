@@ -272,7 +272,7 @@ function HomeInner() {
           onSkip={onboarding.skipOnboarding}
           onConnect={connect}
         />
-        <main id="main-content" className="max-w-2xl mx-auto pb-28 px-4 sm:px-6" role="main">
+        <main id="main-content" className="mx-auto max-w-6xl px-4 pb-28 sm:px-6 lg:px-8" role="main">
           {inCall && selectedAgent && callId ? (
             <ActiveCall
               agent={{
@@ -354,7 +354,7 @@ function HomeInner() {
           onCallNow={startCallWithAgent}
         />
         <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50" role="navigation" aria-label="Main navigation">
-          <div className="max-w-2xl mx-auto px-4 py-2 flex justify-around">
+          <div className="mx-auto flex max-w-2xl justify-around px-4 py-2">
             {[
               { id: 'discover', label: 'Discover', Icon: Search },
               { id: 'calls', label: 'Calls', Icon: Phone },

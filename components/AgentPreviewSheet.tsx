@@ -49,8 +49,8 @@ export function AgentPreviewSheet({
   const examples = getExamples(agent);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 shadow-2xl shadow-black/60">
+    <div className="fixed inset-0 z-[60] flex h-dvh items-end justify-center overflow-y-auto bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 shadow-2xl shadow-black/60">
         <div className="flex items-start gap-4 border-b border-gray-800 p-4">
           <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} text-2xl`}>
             {agent.avatar || agent.name.charAt(0)}
@@ -116,7 +116,7 @@ export function AgentPreviewSheet({
           ) : (
             <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
               <Shield className="h-4 w-4" />
-              Wallet ready. You only pay for time used.
+              Ready to call. Microphone permission will be checked next.
             </div>
           )}
         </div>
@@ -133,7 +133,7 @@ export function AgentPreviewSheet({
               disabled={isStartingCall}
             >
               <Phone className="h-4 w-4" />
-              Call now
+              Start voice call
             </Button>
           ) : (
             <Button type="button" onClick={onConnect} isLoading={isConnectingWallet}>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Mic, Search } from 'lucide-react';
+import { Mic, Search, Sparkles, ShieldCheck, WalletCards } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { PullToRefresh, RefreshButton, showError, showSuccess } from '@/components/ui';
@@ -153,69 +153,89 @@ export function DiscoverTab({
     );
   }
 
+  const selectedLabel = selectedCategory === 'all'
+    ? 'All Agents'
+    : CATEGORIES.find(c => c.id === selectedCategory)?.name || 'Agents';
+
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="p-4 space-y-5">
-        {/* Hero Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
-              <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse" />
+      <div className="py-5 lg:grid lg:grid-cols-[320px_1fr] lg:gap-8 lg:py-8">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-2xl border border-gray-800 bg-gray-900/70 p-5">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
+              <Sparkles className="h-3.5 w-3.5" />
+              Voice-first marketplace
             </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Tap any agent to start talking</p>
-              <p className="text-xs text-gray-400 mt-0.5">No signup needed. Just tap and speak.</p>
+            <h2 className="text-2xl font-bold leading-tight text-white">Pick an expert and start a live voice call.</h2>
+            <p className="mt-3 text-sm leading-6 text-gray-400">
+              Browse specialized agents, confirm the rate, then connect your wallet only when you are ready to call.
+            </p>
+            <div className="mt-5 grid gap-2 text-sm text-gray-300">
+              <div className="flex items-center gap-2">
+                <Mic className="h-4 w-4 text-cyan-300" />
+                Real-time voice conversation
+              </div>
+              <div className="flex items-center gap-2">
+                <WalletCards className="h-4 w-4 text-emerald-300" />
+                Pay only for call duration
+              </div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-indigo-300" />
+                Verified agent profiles
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Search */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search agents..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-12 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50 text-sm focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
-            />
-            <button
-              type="button"
-              onClick={handleVoiceSearch}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 transition-colors ${
-                isListening ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-              }`}
-              aria-label="Search by voice"
-              title="Search by voice"
-            >
-              <Mic className="w-4 h-4" />
-            </button>
+          <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Categories</p>
+            <div className="flex flex-wrap gap-2 lg:flex-col">
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => onCategoryChange(cat.id)}
+                  className={`
+                    flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200
+                    ${selectedCategory === cat.id
+                      ? 'border-cyan-500/50 bg-cyan-500/15 text-white'
+                      : 'border-gray-800 bg-gray-950/40 text-gray-400 hover:border-gray-700 hover:text-gray-200'
+                    }
+                  `}
+                >
+                  <span><span className="mr-2">{cat.icon}</span>{cat.name}</span>
+                  {selectedCategory === cat.id && <span className="h-2 w-2 rounded-full bg-cyan-300" />}
+                </button>
+              ))}
+            </div>
           </div>
-          <RefreshButton onRefresh={handleRefresh} />
-        </div>
+        </aside>
 
-        {/* Categories */}
-        <div className="w-full">
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => (
+        <div className="mt-5 min-w-0 space-y-5 lg:mt-0">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search agents by specialty, task, or category..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full rounded-xl border border-gray-700/50 bg-gray-800/50 py-3 pl-10 pr-12 text-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+              />
               <button
-                key={cat.id}
-                onClick={() => onCategoryChange(cat.id)}
-                className={`
-                  flex-shrink-0 px-3 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 border whitespace-nowrap
-                  ${selectedCategory === cat.id
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-transparent shadow-lg shadow-cyan-500/25'
-                    : 'bg-gray-800/50 text-gray-400 border-gray-700/50 hover:border-gray-600'
-                  }
-                `}
+                type="button"
+                onClick={handleVoiceSearch}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 transition-colors ${
+                  isListening ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                }`}
+                aria-label="Search by voice"
+                title="Search by voice"
               >
-                <span className="mr-1">{cat.icon}</span>
-                <span>{cat.name}</span>
+                <Mic className="h-4 w-4" />
               </button>
-            ))}
+            </div>
+            <RefreshButton onRefresh={handleRefresh} />
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+
+          <div className="flex flex-wrap gap-2">
             {CATEGORIES.filter(cat => cat.id !== 'all').slice(0, 4).map(cat => (
               <button
                 key={`voice-${cat.id}`}
@@ -231,32 +251,33 @@ export function DiscoverTab({
               </button>
             ))}
           </div>
-        </div>
 
-        {/* All Agents */}
-        <section aria-label="Agent list">
-          <h2 className="text-sm font-semibold text-gray-400 mb-3">
-            {selectedCategory === 'all' ? 'All Agents' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
-            <span className="ml-2 text-xs text-gray-500">({agents.length})</span>
-          </h2>
-          <div className="space-y-3 min-h-[400px]">
-            {agents.map(agent => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                onClick={() => onSelect(agent)}
-              />
-            ))}
-          </div>
-          {hasMore && (
-            <button
-              onClick={onLoadMore}
-              className="w-full mt-4 py-3 text-sm font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl transition-colors"
-            >
-              Load More
-            </button>
-          )}
-        </section>
+          <section aria-label="Agent list">
+            <div className="mb-3 flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">{selectedLabel}</h2>
+                <p className="text-sm text-gray-500">{agents.length} available now</p>
+              </div>
+            </div>
+            <div className="grid min-h-[400px] gap-3 lg:grid-cols-2">
+              {agents.map(agent => (
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  onClick={() => onSelect(agent)}
+                />
+              ))}
+            </div>
+            {hasMore && (
+              <button
+                onClick={onLoadMore}
+                className="mt-4 w-full rounded-xl bg-cyan-500/10 py-3 text-sm font-medium text-cyan-400 transition-colors hover:bg-cyan-500/20 hover:text-cyan-300"
+              >
+                Load More
+              </button>
+            )}
+          </section>
+        </div>
       </div>
     </PullToRefresh>
   );
