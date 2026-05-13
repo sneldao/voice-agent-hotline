@@ -1,13 +1,22 @@
 'use client';
 
-import { useCallback } from 'react';
-import { Mic, Search, Sparkles, ShieldCheck, WalletCards } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { PullToRefresh, RefreshButton, showSuccess } from '@/components/ui';
 import { AgentCard } from '@/app/page-components';
-import { VoiceRouter } from './VoiceRouter';
 import type { Agent } from '@/lib/types';
+
+// ─── Compact line data for the switchboard ─────────────────────────────────
+const LINES: { id: string; emoji: string; label: string; desk: string }[] = [
+  { id: 'general_helper', emoji: '🤖', label: 'General Helper', desk: 'Anything' },
+  { id: 'medical_advisor', emoji: '⚕️', label: 'Dr. Maya', desk: 'Health' },
+  { id: 'web_researcher', emoji: '🔍', label: 'Web Researcher', desk: 'Research' },
+  { id: 'code_reviewer', emoji: '👨‍💻', label: 'Code Reviewer', desk: 'Tech' },
+  { id: 'solana_sage', emoji: '🔮', label: 'Solana Sage', desk: 'Crypto' },
+  { id: 'tour_master', emoji: '🌍', label: 'Tour Master', desk: 'Travel' },
+];
 
 const CATEGORIES = [
   { id: 'all', name: 'All', icon: '🌐' },
@@ -16,13 +25,6 @@ const CATEGORIES = [
   { id: 'tech', name: 'Tech', icon: '💻' },
   { id: 'blockchain', name: 'Crypto', icon: '🪙' },
   { id: 'general', name: 'General', icon: '🤖' },
-];
-
-const SPOKEN_DEMOS = [
-  { text: 'Find someone to debug this payment issue', category: 'all', filter: 'Code Reviewer' },
-  { text: 'Help me prep for a doctor visit', category: 'healthcare', filter: '' },
-  { text: 'Plan a fast weekend trip', category: 'all', filter: 'Tour' },
-  { text: 'Explain this wallet transaction', category: 'blockchain', filter: '' },
 ];
 
 interface DiscoverTabProps {
@@ -54,14 +56,29 @@ export function DiscoverTab({
   hasMore,
   onLoadMore,
 }: DiscoverTabProps) {
+  const [showBoard, setShowBoard] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
   const handleRefresh = useCallback(async () => {
     try {
       await onRefresh();
       showSuccess('Agents refreshed');
-    } catch {
-      // PullToRefresh handles its own loading state via finally
-    }
+    } catch { /* handled */ }
   }, [onRefresh]);
+
+  const concierge = agents.find(a => a.id === 'general_helper') || agents[0];
+
+  const handleDialClick = useCallback(() => {
+    if (!concierge || isConnecting) return;
+    setIsConnecting(true);
+    onVoiceCall(concierge);
+    setTimeout(() => setIsConnecting(false), 2000);
+  }, [concierge, isConnecting, onVoiceCall]);
+
+  const handleLineClick = useCallback((lineId: string) => {
+    const agent = agents.find(a => a.id === lineId);
+    if (agent) onSelect(agent);
+  }, [agents, onSelect]);
 
   const hasSearchQuery = searchQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
@@ -70,9 +87,7 @@ export function DiscoverTab({
   if (isLoading) {
     return (
       <div className="p-4 space-y-4">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <AgentCardSkeleton key={i} />
-        ))}
+        {[1, 2, 3, 4, 5].map((i) => <AgentCardSkeleton key={i} />)}
       </div>
     );
   }
@@ -99,165 +114,214 @@ export function DiscoverTab({
     );
   }
 
-  const selectedLabel = selectedCategory === 'all'
-    ? 'All Agents'
-    : CATEGORIES.find(c => c.id === selectedCategory)?.name || 'Agents';
-
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="py-5 lg:grid lg:grid-cols-[350px_1fr] lg:gap-8 lg:py-8">
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <VoiceRouter agents={agents} onCallAgent={onVoiceCall} />
-
-          <div className="operator-panel rounded-[1.5rem] p-5">
-            <div className="operator-label mb-4 inline-flex items-center gap-2 rounded-md px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
-              <Sparkles className="h-3.5 w-3.5" />
-              Live AI switchboard
-            </div>
-            <h2 className="text-2xl font-bold leading-tight text-amber-50">Say what you need. The operator patches the right line.</h2>
-            <p className="mt-3 text-sm leading-6 text-amber-100/65">
-              A voice-first switchboard for specialist AI agents. Tap a line, hear the connection, and talk through the task.
-            </p>
-            <div className="mt-5 grid gap-2 text-sm text-amber-50/85">
-              <div className="flex items-center gap-2 rounded-lg border border-amber-100/10 bg-black/20 px-3 py-2">
-                <Mic className="h-4 w-4 text-red-300" />
-                Hands-free intake and live calls
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border border-amber-100/10 bg-black/20 px-3 py-2">
-                <WalletCards className="h-4 w-4 text-amber-200" />
-                Pay only while the line is active
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border border-amber-100/10 bg-black/20 px-3 py-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-300" />
-                Specialized voices for real tasks
-              </div>
-            </div>
+      <div className="py-6">
+        {/* ═══════════════════════════════════════════════════════════════════
+            LAYER 1 — THE HOOK
+            Full-viewport hero. One action: pick up the line.
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section className="relative mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 text-center lg:min-h-[50vh]">
+          {/* Ring animation circles */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="absolute h-56 w-56 animate-ping rounded-full border border-red-500/10 [animation-duration:3s]" />
+            <div className="absolute h-72 w-72 animate-ping rounded-full border border-amber-200/8 [animation-duration:4s] [animation-delay:0.5s]" />
+            <div className="absolute h-96 w-96 animate-ping rounded-full border border-amber-100/5 [animation-duration:5s] [animation-delay:1s]" />
           </div>
 
-          <div className="rounded-[1.25rem] border border-amber-100/15 bg-[#17100d]/85 p-4 shadow-xl shadow-black/20">
-            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-amber-100/45">Operator cards</p>
-            <div className="space-y-2">
-              {SPOKEN_DEMOS.map((demo) => (
+          {/* The Dial */}
+          <button
+            onClick={handleDialClick}
+            disabled={!concierge || isConnecting}
+            className="rotary-dial relative z-10 flex h-40 w-40 items-center justify-center rounded-full transition-all duration-300 hover:scale-[1.04] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:h-48 sm:w-48"
+            aria-label="Pick up the line — start a voice call"
+          >
+            <span className="absolute inset-5 rounded-full border border-amber-100/20" />
+            <span className="absolute inset-10 rounded-full border border-black/40 bg-black/20" />
+            {isConnecting ? (
+              <Loader2 className="relative z-10 h-12 w-12 animate-spin text-amber-50" />
+            ) : (
+              <PhoneCall className="relative z-10 h-12 w-12 text-amber-50 drop-shadow-lg" />
+            )}
+          </button>
+
+          {/* Copy */}
+          <h1 className="relative z-10 mt-8 text-3xl font-bold text-amber-50 sm:text-4xl">
+            {isConnecting ? 'Connecting...' : 'Pick up the line.'}
+          </h1>
+          <p className="relative z-10 mt-3 max-w-xs text-base text-amber-100/60">
+            {isConnecting
+              ? 'Patching you through to the AI concierge'
+              : 'Tap the dial to talk. No typing, no forms — just speak.'}
+          </p>
+          <p className="relative z-10 mt-2 text-sm text-amber-100/40">
+            {agents.length} specialist{agents.length !== 1 ? 's' : ''} standing by
+          </p>
+
+          {/* Scroll hint */}
+          <button
+            onClick={() => setShowBoard(true)}
+            className="relative z-10 mt-10 flex flex-col items-center gap-1 text-amber-100/40 transition-colors hover:text-amber-100/70"
+            aria-label="Show the switchboard"
+          >
+            <span className="text-xs font-medium uppercase tracking-widest">Browse the board</span>
+            <ChevronDown className="h-5 w-5 animate-bounce" />
+          </button>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            LAYER 2 — THE BOARD
+            Compact switchboard lines. One tap per agent.
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section
+          className={`mx-auto mt-12 max-w-2xl transition-all duration-500 ${
+            showBoard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'
+          }`}
+          aria-hidden={!showBoard}
+        >
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold text-amber-50">The Switchboard</h2>
+            <p className="mt-1 text-sm text-amber-100/50">Tap a line to connect</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {LINES.map((line) => {
+              const agent = agents.find(a => a.id === line.id);
+              const isOnline = agent?.online !== false;
+              return (
                 <button
-                  key={demo.text}
+                  key={line.id}
                   type="button"
-                  onClick={() => {
-                    onCategoryChange(demo.category);
-                    onSearchChange(demo.filter);
-                  }}
-                  className="w-full rounded-lg border border-amber-100/15 bg-[#f1dca7] px-3 py-2 text-left text-sm font-medium text-[#2a1510] shadow-inner transition-all hover:-translate-y-0.5 hover:border-red-900/40 hover:bg-[#ffe9b5]"
+                  onClick={() => handleLineClick(line.id)}
+                  disabled={!agent}
+                  className="group operator-panel relative flex flex-col items-center gap-2 rounded-2xl p-4 text-center transition-all duration-200 hover:-translate-y-1 hover:border-red-300/40 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  "{demo.text}"
+                  {/* Line lamp */}
+                  <div className={`line-lamp absolute right-3 top-3 h-2.5 w-2.5 rounded-full ${
+                    isOnline ? 'bg-emerald-300 text-emerald-300' : 'bg-red-400/60 text-red-400/60'
+                  }`} />
+
+                  <span className="text-3xl">{line.emoji}</span>
+                  <span className="text-sm font-bold text-amber-50">{line.label}</span>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-100/15 bg-black/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-100/60">
+                    <Radio className="h-2.5 w-2.5" />
+                    {line.desk}
+                  </span>
+
+                  {/* Hover call indicator */}
+                  <div className="absolute inset-x-4 bottom-3 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="rounded-full bg-red-500/20 px-3 py-1 text-[10px] font-bold text-red-100">
+                      <PhoneCall className="mr-1 inline h-3 w-3" />
+                      Connect
+                    </span>
+                  </div>
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
-          <div className="rounded-[1.25rem] border border-amber-100/15 bg-[#17100d]/85 p-4 shadow-xl shadow-black/20">
-            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-amber-100/45">Line banks</p>
-            <div className="flex flex-wrap gap-2 lg:flex-col">
+          {/* Transition to full browse */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => {
+                setShowBoard(true);
+                // Scroll to layer 3
+                document.getElementById('full-directory')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-amber-100/15 bg-black/20 px-5 py-2.5 text-sm font-semibold text-amber-100/60 transition-colors hover:border-amber-100/30 hover:text-amber-50"
+            >
+              <Search className="h-4 w-4" />
+              Browse full directory
+            </button>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            LAYER 3 — THE DIRECTORY
+            Full search, categories, detailed agent cards.
+            Always rendered but visually below the fold.
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section id="full-directory" className="mx-auto mt-16 max-w-5xl">
+          {/* Search + filters */}
+          <div className="mb-6 space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#5b2b1d]" />
+                <input
+                  type="text"
+                  placeholder="Search agents..."
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  onFocus={() => setShowBoard(true)}
+                  className="paper-input w-full rounded-xl border py-3 pl-10 pr-12 text-sm font-medium transition-all focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-bold text-[#5b2b1d] transition-colors hover:bg-red-900/10"
+                    aria-label="Clear search"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <RefreshButton onRefresh={handleRefresh} />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
               {CATEGORIES.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => onCategoryChange(cat.id)}
                   className={`
-                    flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold transition-all duration-200
+                    rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
                     ${selectedCategory === cat.id
-                      ? 'border-red-400/50 bg-red-500/20 text-amber-50 shadow-lg shadow-red-950/30'
-                      : 'border-amber-100/10 bg-black/25 text-amber-100/60 hover:border-amber-100/25 hover:text-amber-50'
+                      ? 'border-red-400/50 bg-red-500/20 text-amber-50'
+                      : 'border-amber-100/10 bg-black/25 text-amber-100/50 hover:border-amber-100/25 hover:text-amber-50'
                     }
                   `}
                 >
-                  <span><span className="mr-2">{cat.icon}</span>{cat.name}</span>
-                  {selectedCategory === cat.id && <span className="line-lamp h-2.5 w-2.5 rounded-full bg-red-300 text-red-300" />}
+                  <span className="mr-1.5">{cat.icon}</span>{cat.name}
                 </button>
               ))}
             </div>
           </div>
-        </aside>
 
-        <div className="mt-5 min-w-0 space-y-5 lg:mt-0">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#5b2b1d]" />
-              <input
-                type="text"
-                placeholder="Search the switchboard..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="paper-input w-full rounded-xl border py-3 pl-10 pr-12 text-sm font-medium transition-all focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-bold text-[#5b2b1d] transition-colors hover:bg-red-900/10"
-                  aria-label="Clear search"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <RefreshButton onRefresh={handleRefresh} />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.filter(cat => cat.id !== 'all').slice(0, 4).map(cat => (
+          {/* Agent grid */}
+          {hasNoSearchResults ? (
+            <div className="min-h-[200px] rounded-[1.5rem] border border-amber-100/15 bg-[#17100d]/85 p-8 text-center">
+              <p className="text-base font-semibold text-amber-50">No agents match that filter.</p>
+              <p className="mt-2 text-sm text-amber-100/55">Try a different search or clear the filter.</p>
               <button
-                key={`voice-${cat.id}`}
                 type="button"
-                onClick={() => {
-                  onCategoryChange(cat.id);
-                  onSearchChange(`Show me ${cat.name.toLowerCase()}`);
-                }}
-                className="inline-flex items-center gap-1 rounded-full border border-amber-100/15 bg-[#17100d]/85 px-3 py-1.5 text-xs font-semibold text-amber-100/60 transition-colors hover:border-red-300/40 hover:text-amber-50"
+                onClick={() => onSearchChange('')}
+                className="mt-5 rounded-xl border border-amber-100/20 bg-amber-100/10 px-4 py-2 text-sm font-bold text-amber-100 transition-colors hover:bg-amber-100/15"
               >
-                <Mic className="h-3 w-3" />
-                Route me to {cat.name.toLowerCase()}
+                Clear filter
               </button>
-            ))}
-          </div>
-
-          <section aria-label="Agent list">
-            <div className="mb-3 flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-amber-50">{selectedLabel}</h2>
-                <p className="text-sm text-amber-100/45">{agents.length} live lines on the board</p>
-              </div>
             </div>
-            {hasNoSearchResults ? (
-              <div className="min-h-[300px] rounded-[1.5rem] border border-amber-100/15 bg-[#17100d]/85 p-8 text-center">
-                <p className="text-base font-semibold text-amber-50">No lines matched that filter.</p>
-                <p className="mt-2 text-sm text-amber-100/55">Clear the filter or use the operator to connect by intent.</p>
-                <button
-                  type="button"
-                  onClick={() => onSearchChange('')}
-                  className="mt-5 rounded-xl border border-amber-100/20 bg-amber-100/10 px-4 py-2 text-sm font-bold text-amber-100 transition-colors hover:bg-amber-100/15"
-                >
-                  Clear filter
-                </button>
-              </div>
-            ) : (
-              <div className="grid min-h-[400px] gap-3 lg:grid-cols-2">
-                {agents.map(agent => (
-                  <AgentCard
-                    key={agent.id}
-                    agent={agent}
-                    onClick={() => onSelect(agent)}
-                  />
-                ))}
-              </div>
-            )}
-            {hasMore && (
-              <button
-                onClick={onLoadMore}
-                className="mt-4 w-full rounded-xl border border-amber-100/15 bg-[#17100d]/85 py-3 text-sm font-bold text-amber-100 transition-colors hover:bg-red-500/10"
-              >
-                Load More
-              </button>
-            )}
-          </section>
-        </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {agents.map(agent => (
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  onClick={() => onSelect(agent)}
+                />
+              ))}
+            </div>
+          )}
+
+          {hasMore && (
+            <button
+              onClick={onLoadMore}
+              className="mt-4 w-full rounded-xl border border-amber-100/15 bg-[#17100d]/85 py-3 text-sm font-bold text-amber-100 transition-colors hover:bg-red-500/10"
+            >
+              Load More
+            </button>
+          )}
+        </section>
       </div>
     </PullToRefresh>
   );
