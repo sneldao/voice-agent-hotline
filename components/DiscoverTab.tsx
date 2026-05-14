@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio } from 'lucide-react';
+import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio, Flame } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { PullToRefresh, RefreshButton, showSuccess } from '@/components/ui';
 import { AgentCard } from '@/app/page-components';
+import { playDialTone } from '@/lib/sounds';
+import { useStreak } from '@/lib/useStreak';
 import type { Agent } from '@/lib/types';
 
 // ─── Compact line data for the switchboard ─────────────────────────────────
@@ -40,6 +42,8 @@ interface DiscoverTabProps {
   onRefresh: () => Promise<void>;
   hasMore: boolean;
   onLoadMore: () => void;
+  /** Agent ID to use for the main dial button. Defaults to 'general_helper'. */
+  preferredConciergeId?: string;
 }
 
 export function DiscoverTab({
@@ -55,9 +59,11 @@ export function DiscoverTab({
   onRefresh,
   hasMore,
   onLoadMore,
+  preferredConciergeId = 'general_helper',
 }: DiscoverTabProps) {
   const [showBoard, setShowBoard] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const streak = useStreak();
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -66,11 +72,12 @@ export function DiscoverTab({
     } catch { /* handled */ }
   }, [onRefresh]);
 
-  const concierge = agents.find(a => a.id === 'general_helper') || agents[0];
+  const concierge = agents.find(a => a.id === preferredConciergeId) || agents.find(a => a.id === 'general_helper') || agents[0];
 
   const handleDialClick = useCallback(() => {
     if (!concierge || isConnecting) return;
-    // Haptic feedback on mobile
+    // Sound + haptic feedback
+    playDialTone();
     try { navigator.vibrate?.(50); } catch { /* unsupported */ }
     setIsConnecting(true);
     onVoiceCall(concierge);
@@ -159,6 +166,23 @@ export function DiscoverTab({
           <p className="relative z-10 mt-2 animate-fadeIn text-sm text-amber-100/40 [animation-delay:600ms]">
             {agents.length} specialist{agents.length !== 1 ? 's' : ''} standing by
           </p>
+
+          {/* First call free badge */}
+          <div className="relative z-10 mt-4 animate-fadeIn [animation-delay:800ms] inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
+            <span className="text-xs font-semibold text-emerald-300">⚡ First call free — no wallet needed</span>
+          </div>
+
+          {/* Streak indicator */}
+          {streak.currentStreak > 0 && (
+            <div className="relative z-10 mt-2 animate-fadeIn [animation-delay:900ms] inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1.5">
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-xs font-semibold text-orange-300">
+                {streak.streakAtRisk
+                  ? `${streak.currentStreak}-day streak at risk — call today!`
+                  : `${streak.currentStreak}-day streak 🔥`}
+              </span>
+            </div>
+          )}
 
           {/* Scroll hint */}
           <button

@@ -96,6 +96,8 @@ export const AgentCard = React.memo(function AgentCard({
               <Stars rating={rating} />
               <span className="text-xs text-amber-100/55">{rating.toFixed(1)}</span>
             </div>
+            <span className="text-xs text-amber-100/40">·</span>
+            <span className="text-xs text-amber-100/45">{agent.calls || 0} calls</span>
             {agent.category && <Badge variant="default" size="sm">{agent.category}</Badge>}
           </div>
         </div>

@@ -1,8 +1,10 @@
 'use client';
 
-import { CheckCircle, Phone, Radio, Shield, Sparkles, Wallet, X } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle, Phone, Radio, Shield, Sparkles, Wallet, X, Volume2 } from 'lucide-react';
 import type { Agent } from '@/lib/types';
 import { Button } from './ui/Button';
+import { useAudioPreview } from '@/lib/useAudioPreview';
 
 interface AgentPreviewSheetProps {
   agent: Agent | null;
@@ -10,6 +12,7 @@ interface AgentPreviewSheetProps {
   userBalance: number;
   isConnectingWallet: boolean;
   isStartingCall: boolean;
+  hasFreeCall?: boolean;
   onClose: () => void;
   onConnect: () => void;
   onCallNow: (agent: Agent) => void;
@@ -55,10 +58,13 @@ export function AgentPreviewSheet({
   userBalance,
   isConnectingWallet,
   isStartingCall,
+  hasFreeCall = false,
   onClose,
   onConnect,
   onCallNow,
 }: AgentPreviewSheetProps) {
+  const audioPreview = useAudioPreview();
+
   if (!agent) return null;
 
   const rate = Number(agent.rate) || 0;
@@ -80,14 +86,30 @@ export function AgentPreviewSheet({
                 <h2 className="truncate text-lg font-bold text-white">{agent.name}</h2>
                 <p className="text-sm text-gray-400">{agent.specialty}</p>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-800 hover:text-white"
-                aria-label="Close agent preview"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {audioPreview.hasPreview(agent.id) && (
+                  <button
+                    type="button"
+                    onClick={() => audioPreview.toggle(agent.id)}
+                    className={`rounded-full p-2 transition-colors ${
+                      audioPreview.isPlaying && audioPreview.playingAgentId === agent.id
+                        ? 'bg-red-500/20 text-red-300'
+                        : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
+                    }`}
+                    aria-label={audioPreview.isPlaying && audioPreview.playingAgentId === agent.id ? 'Stop preview' : 'Play voice preview'}
+                  >
+                    <Volume2 className={`h-4 w-4 ${audioPreview.isPlaying && audioPreview.playingAgentId === agent.id ? 'animate-pulse' : ''}`} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-800 hover:text-white"
+                  aria-label="Close agent preview"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -118,6 +140,22 @@ export function AgentPreviewSheet({
             </div>
           </div>
 
+          {/* Social proof stats */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-2.5 text-center">
+              <p className="text-sm font-bold text-white">{agent.calls || 0}</p>
+              <p className="text-[10px] text-gray-500">calls</p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-2.5 text-center">
+              <p className="text-sm font-bold text-amber-300">⭐ {(agent.rating || 4.5).toFixed(1)}</p>
+              <p className="text-[10px] text-gray-500">rating</p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-2.5 text-center">
+              <p className="text-sm font-bold text-white">~3 min</p>
+              <p className="text-[10px] text-gray-500">avg call</p>
+            </div>
+          </div>
+
           <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-3">
             <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
               <CheckCircle className="h-4 w-4 text-cyan-400" />
@@ -134,10 +172,12 @@ export function AgentPreviewSheet({
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                 <Wallet className="h-4 w-4" />
-                Caller ID required for paid calls
+                {hasFreeCall ? 'First call is on us' : 'Caller ID required for paid calls'}
               </p>
               <p className="mt-1 text-xs leading-5 text-amber-100/80">
-                Connect before starting so the hotline can settle against a real address.
+                {hasFreeCall
+                  ? 'No wallet needed — try a free call and see how it feels.'
+                  : 'Connect before starting so the hotline can settle against a real address.'}
               </p>
             </div>
           ) : !hasEnoughBalance ? (
@@ -165,6 +205,17 @@ export function AgentPreviewSheet({
             >
               <Phone className="h-4 w-4" />
               Start voice call
+            </Button>
+          ) : hasFreeCall ? (
+            <Button
+              type="button"
+              onClick={() => onCallNow(agent)}
+              isLoading={isStartingCall}
+              disabled={isStartingCall}
+              className="bg-gradient-to-r from-emerald-500 to-cyan-500"
+            >
+              <Phone className="h-4 w-4" />
+              Try free call
             </Button>
           ) : (
             <Button type="button" onClick={onConnect} isLoading={isConnectingWallet}>

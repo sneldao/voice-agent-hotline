@@ -1,10 +1,11 @@
 'use client';
 
-import { User, Wallet, LogOut, ExternalLink } from 'lucide-react';
+import { User, Wallet, LogOut, ExternalLink, Flame, Trophy, Phone } from 'lucide-react';
 import { ProfileSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { Button, Card, Avatar } from '@/components/ui';
 import { DelegationPanel } from '@/components/DelegationPanel';
+import { useStreak } from '@/lib/useStreak';
 
 interface ProfileTabProps {
   balance: number;
@@ -17,6 +18,7 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect }: Profil
   const displayAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : 'Not connected';
+  const streak = useStreak();
 
   if (isLoading) return <ProfileSkeleton />;
 
@@ -47,6 +49,39 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect }: Profil
           </button>
         </div>
       </div>
+
+      {/* Streak & Stats Card */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border border-amber-100/15 bg-amber-100/5 p-4 text-center">
+          <Flame className={`w-6 h-6 mx-auto mb-1 ${streak.currentStreak > 0 ? 'text-orange-400' : 'text-gray-600'}`} />
+          <p className="text-2xl font-bold text-amber-50">{streak.currentStreak}</p>
+          <p className="text-[10px] text-amber-100/45 uppercase tracking-wide">day streak</p>
+        </div>
+        <div className="rounded-xl border border-amber-100/15 bg-amber-100/5 p-4 text-center">
+          <Phone className="w-6 h-6 mx-auto mb-1 text-cyan-400" />
+          <p className="text-2xl font-bold text-amber-50">{streak.totalCalls}</p>
+          <p className="text-[10px] text-amber-100/45 uppercase tracking-wide">total calls</p>
+        </div>
+        <div className="rounded-xl border border-amber-100/15 bg-amber-100/5 p-4 text-center">
+          <Trophy className="w-6 h-6 mx-auto mb-1 text-amber-400" />
+          <p className="text-2xl font-bold text-amber-50">{streak.longestStreak}</p>
+          <p className="text-[10px] text-amber-100/45 uppercase tracking-wide">best streak</p>
+        </div>
+      </div>
+
+      {/* Streak status message */}
+      {streak.streakAtRisk && (
+        <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-3 flex items-center gap-3">
+          <Flame className="w-5 h-5 text-orange-400 flex-shrink-0" />
+          <p className="text-sm text-orange-200">Your streak is at risk! Make a call today to keep it alive.</p>
+        </div>
+      )}
+      {streak.calledToday && streak.currentStreak > 1 && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 flex items-center gap-3">
+          <Flame className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          <p className="text-sm text-emerald-200">🔥 {streak.currentStreak}-day streak! Come back tomorrow to keep it going.</p>
+        </div>
+      )}
 
       {/* Balance Card */}
       <Card variant="gradient" className="overflow-hidden">

@@ -23,6 +23,9 @@ import { Onboarding } from '@/components/Onboarding';
 import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
 import { readCallLaunchParams } from '@/lib/product-launch';
 import { useOnboarding } from '@/lib/useOnboarding';
+import { usePersonalizedAgents, getPreferredConcierge } from '@/lib/usePersonalization';
+import { useFreeCall } from '@/lib/useFreeCall';
+import { useStreak } from '@/lib/useStreak';
 
 // #17: Lazy-load all heavy components — only DiscoverTab is needed on first paint
 const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
@@ -129,6 +132,8 @@ function HomeInner() {
   const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
   const { balance: userBalance, isLoading: isLoadingBalance } = useUserBalance(address);
   const onboarding = useOnboarding(connected, userBalance || 0);
+  const freeCall = useFreeCall();
+  const streak = useStreak();
 
   const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
     search: debouncedQuery,
@@ -136,7 +141,9 @@ function HomeInner() {
     page,
   });
 
-  const displayedAgents = agents;
+  // Personalize agent order based on onboarding use-case selection
+  const personalizedAgents = usePersonalizedAgents(agents, onboarding.selectedUseCase);
+  const displayedAgents = personalizedAgents;
   const localCallHistory = useLocalCallHistory();
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
 
@@ -151,11 +158,16 @@ function HomeInner() {
   startCallWithAgentRef.current = async (agent: Agent) => {
     const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-    // In demo mode, skip wallet requirement entirely
-    if (!isDemoMode && (!connected || !address)) {
+    // Allow call if: demo mode, wallet connected, OR user has a free call available
+    if (!isDemoMode && !freeCall.hasFreeCall && (!connected || !address)) {
       dispatch({ type: 'PREVIEW_AGENT', agent });
       showInfo('Caller ID needed first. Connect your wallet, then the call can start.');
       return;
+    }
+
+    // If using free call (no wallet), activate it
+    if (!isDemoMode && !connected && freeCall.hasFreeCall) {
+      freeCall.startFreeCall();
     }
 
     setIsStartingCall(true);
@@ -195,8 +207,16 @@ function HomeInner() {
 
   const endCall = useCallback(() => {
     clearLaunchState();
+    // If this was a free call, mark it as used
+    if (freeCall.isFreeCallActive) {
+      freeCall.completeFreeCall();
+    }
+    // Record the call for streak tracking
+    if (selectedAgent) {
+      streak.recordCall(selectedAgent.id);
+    }
     dispatch({ type: 'END_CALL' });
-  }, [clearLaunchState]);
+  }, [clearLaunchState, freeCall, selectedAgent, streak]);
 
   const handleSelectAgent = useCallback((agent: Agent | null) => {
     if (agent) {
@@ -289,9 +309,14 @@ function HomeInner() {
           currentStep={onboarding.currentStep}
           walletConnected={connected}
           walletBalance={userBalance || 0}
+          selectedUseCase={onboarding.selectedUseCase}
+          currentStepIndex={onboarding.currentStepIndex}
+          totalSteps={onboarding.totalSteps}
           onClose={onboarding.closeOnboarding}
           onNext={onboarding.nextStep}
+          onPrev={onboarding.prevStep}
           onSkip={onboarding.skipOnboarding}
+          onSetUseCase={onboarding.setUseCase}
           onConnect={connect}
         />
         <main id="main-content" className="mx-auto max-w-6xl px-4 pb-28 sm:px-6 lg:px-8" role="main">
@@ -315,6 +340,10 @@ function HomeInner() {
               relatedAgents={relatedAgents}
               onEnd={endCall}
               onSelectRelatedAgent={handleSelectRelatedAgent}
+              walletConnected={connected}
+              streakCount={streak.currentStreak}
+              isFirstCall={streak.totalCalls <= 1}
+              onConnectWallet={connect}
             />
           ) : (
             <>
@@ -333,6 +362,7 @@ function HomeInner() {
                     onRefresh={mutateAgents}
                     hasMore={hasMore}
                     onLoadMore={handleLoadMore}
+                    preferredConciergeId={getPreferredConcierge(onboarding.selectedUseCase)}
                   />
                 </ErrorBoundary>
               )}
@@ -372,6 +402,7 @@ function HomeInner() {
           userBalance={userBalance || 0}
           isConnectingWallet={isConnecting}
           isStartingCall={isStartingCall}
+          hasFreeCall={freeCall.hasFreeCall}
           onClose={() => dispatch({ type: 'PREVIEW_AGENT', agent: null })}
           onConnect={connect}
           onCallNow={startCallWithAgent}

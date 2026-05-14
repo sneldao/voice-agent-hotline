@@ -31,6 +31,14 @@ interface ActiveCallProps {
   relatedAgents?: AgentRecommendation[];
   onEnd: () => void;
   onSelectRelatedAgent?: (agentId: string) => void;
+  /** Whether the user's wallet is connected (for post-call prompt) */
+  walletConnected?: boolean;
+  /** Current streak count (for post-call prompt) */
+  streakCount?: number;
+  /** Whether this is the user's first call (for post-call prompt) */
+  isFirstCall?: boolean;
+  /** Callback to connect wallet (for post-call prompt) */
+  onConnectWallet?: () => void;
 }
 
 export function ActiveCall({
@@ -42,6 +50,10 @@ export function ActiveCall({
   relatedAgents = [],
   onEnd,
   onSelectRelatedAgent,
+  walletConnected = true,
+  streakCount = 0,
+  isFirstCall = false,
+  onConnectWallet,
 }: ActiveCallProps) {
   const { 
     state: call, 
@@ -698,6 +710,10 @@ export function ActiveCall({
           setShowSummary(false);
           onSelectRelatedAgent?.(id);
         }}
+        walletConnected={walletConnected}
+        streakCount={streakCount}
+        isFirstCall={isFirstCall}
+        onConnectWallet={onConnectWallet}
       />
     </div>
   );
