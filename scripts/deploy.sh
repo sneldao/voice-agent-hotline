@@ -1,47 +1,55 @@
 #!/bin/bash
 set -e
 
-# Voice Hotline Celo Deployment Script (Space Optimized)
-# This script ensures minimal disk usage on the server
+# ================================================
+# Voice Hotline Celo — Server Deploy (Space Optimized)
+# ================================================
+# Run on the Hetzner server, from /opt/voice-hotline-celo.
+#
+# Cleanup of intermediate .next/* artifacts is handled
+# automatically by the `postbuild` hook in package.json
+# (scripts/cleanup-standalone.sh) — this script only
+# handles things that hook can't, like node_modules and
+# the deprecated `out/` directory.
+# ================================================
 
 PROJECT_DIR="/opt/voice-hotline-celo"
 cd "$PROJECT_DIR"
 
-echo "=== Step 1: Pre-deploy cleanup ==="
-# Remove old build artifacts and cache BEFORE pulling (faster)
-rm -rf .next/cache .next/server .next/static .next/types .next/trace .next/standalone/.next/cache
+echo "=== Step 1: Pre-deploy cache wipe ==="
+# Wipe webpack cache so the next build starts cold-but-clean
+rm -rf .next/cache .next/standalone/.next/cache
 
 echo "=== Step 2: Pull latest changes ==="
-git pull
+# Re-init .git silently if it's missing (e.g. first deploy after
+# old script nuked it). Otherwise just pull.
+if [ ! -d .git ]; then
+  echo "    .git missing — re-initialising from origin…"
+  git init -q
+  git remote add origin https://github.com/sneldao/voice-agent-hotline.git 2>/dev/null || true
+  git fetch -q origin main
+  git reset -q --hard origin/main
+else
+  git pull
+fi
 
 echo "=== Step 3: Install dependencies ==="
 pnpm install --prod --no-frozen-lockfile
 
-echo "=== Step 4: Build standalone ==="
-pnpm build
+echo "=== Step 4: Build standalone (postbuild auto-cleans) ==="
+# NODE_ENV=production triggers scripts/cleanup-standalone.sh
+# to remove .next/{cache,server,static,types,trace}, copy assets
+# into .next/standalone/, and preserve .git + source.
+NODE_ENV=production pnpm build
 
-echo "=== Step 5: Copy static assets into standalone ==="
-# Next.js standalone does not include these automatically
-cp -r .next/static .next/standalone/.next/
-cp -r public .next/standalone/
-
-echo "=== Step 5b: Post-build cleanup ==="
-# Remove everything EXCEPT the standalone runtime
-# This is what PM2 actually needs
-rm -rf .next/cache
-rm -rf .next/server
-rm -rf .next/static
-rm -rf .next/types
-rm -rf .next/trace
-rm -rf .next/standalone/.next/cache
-rm -rf node_modules  # Not needed - standalone has its own
-
-# Also clean up other non-essentials
-rm -rf .git  # Not needed at runtime
-rm -rf out   # Frontend goes to Vercel, not here
+echo "=== Step 5: Drop build-only deps & legacy dirs ==="
+# Standalone has its own bundled node_modules — top-level is
+# only needed during build.
+rm -rf node_modules
+# `out/` was for static export; frontend now lives on Vercel.
+rm -rf out
 
 echo "=== Step 6: Write persistent launcher ==="
-# Write start.sh to /opt (not /tmp) so it survives OS cleanup
 cat > /opt/voice-hotline-celo/start.sh << 'LAUNCHER'
 #!/bin/bash
 export NODE_ENV=production
@@ -66,13 +74,13 @@ pm2 restart voice-hotline-celo
 
 # Wait for startup and verify
 sleep 3
-if curl -sf http://localhost:3042/api/agents > /dev/null 2>&1; then
-    echo "✅ Deployment successful! API is healthy."
+if curl -sf -o /dev/null -w '%{http_code}' http://localhost:3042/api/agents | grep -qE '^(2|4)0[0-9]$'; then
+    echo "✅ Deployment successful! API is responding."
 else
-    echo "⚠️  Deployment complete but API health check failed. Check logs: pm2 logs voice-hotline-celo"
+    echo "⚠️  Deployment complete but API health check failed. Check: pm2 logs voice-hotline-celo"
 fi
 
-# Show final disk usage
 echo ""
 echo "=== Disk Usage ==="
-du -sh .[!.]* * 2>/dev/null | sort -h | tail -10
+du -sh "$PROJECT_DIR"
+du -sh "$PROJECT_DIR"/.[!.]* "$PROJECT_DIR"/* 2>/dev/null | sort -h | tail -10
