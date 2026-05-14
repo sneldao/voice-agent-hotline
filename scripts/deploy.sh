@@ -30,7 +30,8 @@ if [ ! -d .git ]; then
   git fetch -q origin main
   git reset -q --hard origin/main
 else
-  git pull
+  git fetch -q origin main
+  git reset -q --hard origin/main
 fi
 
 echo "=== Step 3: Install dependencies ==="
