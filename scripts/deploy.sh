@@ -58,8 +58,12 @@ UPSTASH_REDIS_URL=${UPSTASH_URL}
 UPSTASH_REDIS_TOKEN=${UPSTASH_TOKEN}
 ENVFILE
 
-echo "=== Step 6: Restart PM2 ==="
-pm2 restart voice-hotline-celo
+echo "=== Step 6: Reload PM2 with new ecosystem config ==="
+# Delete stale PM2 process (uses old script path / env vars),
+# then re-add using the current ecosystem.config.js.
+pm2 delete voice-hotline-celo 2>/dev/null || true
+pm2 start ecosystem.config.js
+pm2 save
 
 echo "=== Step 7: Health check ==="
 sleep 3
