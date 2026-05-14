@@ -1,0 +1,79 @@
+# Deployment Guide
+
+## Overview
+
+| Target | URL | Notes |
+|---|---|---|
+| Vercel | `voisss-agent-hotline.vercel.app` | Auto-deploys from `main`; serverless API routes |
+| VPS (Hetzner) | `voisss.celo.famile.xyz` | PM2 standalone server on port 3042; ~52 MB |
+
+Both targets share the same **Upstash Redis** instance (`game-corgi-122374.upstash.io`).
+
+---
+
+## Vercel Deployment
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsneldao%2Fvoice-agent-hotline)
+
+### Environment Variables (Vercel Dashboard)
+
+```
+ELEVENLABS_API_KEY=
+ELEVENLABS_CONVERSATIONAL_ENABLED=true
+
+UPSTASH_REDIS_REST_URL=https://game-corgi-122374.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_token
+
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
+NEXT_PUBLIC_API_URL=https://voisss.celo.famile.xyz
+
+NEXT_PUBLIC_ERC8004_ENABLED=true
+NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x8004A818BFB912233c491871b3d84c89A494BD9e
+NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS=0x8004B663056A597Dffe9eCcC1965A193B7388713
+NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00
+NEXT_PUBLIC_PLATFORM_ADDRESS=0x54351049081A5A64Ea93c56b666830ED5076b960
+```
+
+After updating env vars, trigger a manual redeploy — Vercel only picks up new values on the next build.
+
+### Seed agents
+
+```bash
+curl -X POST https://voisss-agent-hotline.vercel.app/api/agents/seed
+```
+
+---
+
+## Hetzner VPS Deployment
+
+See [`docs/HETZNER_DEPLOYMENT.md`](HETZNER_DEPLOYMENT.md).
+
+```bash
+export UPSTASH_REDIS_REST_TOKEN=your_token
+make deploy   # full: git pull → build → clean → restart
+make logs     # PM2 logs
+make status   # PM2 status
+make restart  # restart without rebuilding
+```
+
+---
+
+## Dual-Deployment Architecture
+
+```
+Browser
+  └─► Vercel (HTML/JS/CSS)
+        └─► NEXT_PUBLIC_API_URL = https://voisss.celo.famile.xyz
+              └─► Hetzner Next.js standalone (port 3042)
+                    └─► Upstash Redis (shared)
+```
+
+When `NEXT_PUBLIC_API_URL` is set, browser API calls route to the VPS. If unset, Vercel's serverless functions handle them directly (same Redis).
+
+---
+
+## After Any Deployment
+
+1. Verify agents: `GET /api/agents`
+2. If empty, seed: `POST /api/agents/seed`
+3. Check stats: `GET /api/agents/stats`
