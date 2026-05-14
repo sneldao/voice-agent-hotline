@@ -35,7 +35,7 @@ else
 fi
 
 echo "=== Step 3: Install dependencies ==="
-pnpm install --prod --no-frozen-lockfile
+pnpm install --no-frozen-lockfile
 
 echo "=== Step 4: Build standalone (postbuild auto-cleans) ==="
 # NODE_ENV=production triggers scripts/cleanup-standalone.sh
