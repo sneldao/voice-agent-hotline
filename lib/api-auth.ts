@@ -63,11 +63,21 @@ export async function verifyWalletAuth(req: NextRequest): Promise<{
 /**
  * Verify the request is from ElevenLabs (webhook secret).
  * Expects header: X-ElevenLabs-Secret
+ *
+ * In production, rejects all requests when no secret is configured.
+ * In development, allows requests when no secret is configured (with warning).
  */
 export function verifyElevenLabsWebhook(req: NextRequest): boolean {
   const secret = req.headers.get('x-elevenlabs-secret');
   const expected = process.env.ELEVENLABS_WEBHOOK_SECRET;
-  if (!expected) return true; // No secret configured = skip check (dev mode)
+  if (!expected) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Auth] ELEVENLABS_WEBHOOK_SECRET is not set — rejecting webhook in production');
+      return false;
+    }
+    console.warn('[Auth] ELEVENLABS_WEBHOOK_SECRET is not set — allowing webhook in dev mode');
+    return true;
+  }
   return secret === expected;
 }
 

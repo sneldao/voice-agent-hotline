@@ -2,10 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export type OnboardingStep = 
-  | 'welcome'
+export type OnboardingStep =
+  | 'splash'
+  | 'use-case'
+  | 'voice-demo'
+  | 'meet-agents'
+  | 'how-it-works'
+  | 'social-proof'
   | 'wallet-connect'
   | 'complete';
+
+export type UseCase = 'coding' | 'health' | 'research' | 'crypto' | 'travel' | 'general';
 
 interface OnboardingState {
   isFirstTime: boolean;
@@ -15,41 +22,63 @@ interface OnboardingState {
   hasFundedWallet: boolean;
   hasMadeFirstCall: boolean;
   isOpen: boolean;
+  selectedUseCase: UseCase | null;
 }
 
 interface UseOnboardingReturn extends OnboardingState {
   startOnboarding: () => void;
   closeOnboarding: () => void;
   nextStep: () => void;
+  prevStep: () => void;
   skipOnboarding: () => void;
-  markStepComplete: (step: Exclude<OnboardingStep, 'welcome' | 'complete'>) => void;
+  setUseCase: (useCase: UseCase) => void;
+  markStepComplete: (step: string) => void;
   resetOnboarding: () => void;
+  totalSteps: number;
+  currentStepIndex: number;
 }
 
 const STORAGE_KEY = 'voisss-onboarding';
+const PREFERENCES_KEY = 'voisss-preferences';
+
+const STEPS: OnboardingStep[] = [
+  'splash',
+  'use-case',
+  'voice-demo',
+  'meet-agents',
+  'how-it-works',
+  'social-proof',
+  'wallet-connect',
+  'complete',
+];
 
 export function useOnboarding(walletConnected: boolean, walletBalance: number): UseOnboardingReturn {
   const [state, setState] = useState<OnboardingState>({
     isFirstTime: false,
-    currentStep: 'welcome',
+    currentStep: 'splash',
     hasSeenWelcome: false,
     hasConnectedWallet: false,
     hasFundedWallet: false,
     hasMadeFirstCall: false,
     isOpen: false,
+    selectedUseCase: null,
   });
 
   // Load onboarding state from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const stored = localStorage.getItem(STORAGE_KEY);
+    const prefs = localStorage.getItem(PREFERENCES_KEY);
+    const parsedPrefs = prefs ? JSON.parse(prefs) : {};
+
     if (stored) {
       const parsed = JSON.parse(stored);
       setState(prev => ({
         ...prev,
         ...parsed,
-        isFirstTime: false, // Don't show automatically if stored
+        selectedUseCase: parsedPrefs.useCase || null,
+        isFirstTime: false,
         isOpen: false,
       }));
     } else {
@@ -58,6 +87,7 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
         ...prev,
         isFirstTime: true,
         isOpen: true,
+        selectedUseCase: parsedPrefs.useCase || null,
       }));
     }
   }, []);
@@ -86,7 +116,7 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
     setState(prev => ({
       ...prev,
       isOpen: true,
-      currentStep: 'welcome',
+      currentStep: 'splash',
     }));
   }, []);
 
@@ -94,19 +124,29 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
     setState(prev => ({
       ...prev,
       isOpen: false,
+      hasSeenWelcome: true,
     }));
   }, []);
 
   const nextStep = useCallback(() => {
     setState(prev => {
-      const steps: OnboardingStep[] = ['welcome', 'wallet-connect', 'complete'];
-      const currentIndex = steps.indexOf(prev.currentStep);
-      const nextStep = steps[currentIndex + 1] || 'complete';
-      
+      const currentIndex = STEPS.indexOf(prev.currentStep);
+      const next = STEPS[currentIndex + 1] || 'complete';
       return {
         ...prev,
-        currentStep: nextStep,
+        currentStep: next,
         hasSeenWelcome: true,
+      };
+    });
+  }, []);
+
+  const prevStep = useCallback(() => {
+    setState(prev => {
+      const currentIndex = STEPS.indexOf(prev.currentStep);
+      if (currentIndex <= 0) return prev;
+      return {
+        ...prev,
+        currentStep: STEPS[currentIndex - 1],
       };
     });
   }, []);
@@ -119,7 +159,15 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
     }));
   }, []);
 
-  const markStepComplete = useCallback((step: Exclude<OnboardingStep, 'welcome' | 'complete'>) => {
+  const setUseCase = useCallback((useCase: UseCase) => {
+    setState(prev => ({ ...prev, selectedUseCase: useCase }));
+    if (typeof window !== 'undefined') {
+      const prefs = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}');
+      localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...prefs, useCase }));
+    }
+  }, []);
+
+  const markStepComplete = useCallback((step: string) => {
     setState(prev => ({
       ...prev,
       [`has${step.charAt(0).toUpperCase() + step.slice(1).replace(/-/g, '')}`]: true,
@@ -129,15 +177,17 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
   const resetOnboarding = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PREFERENCES_KEY);
     }
     setState({
       isFirstTime: true,
-      currentStep: 'welcome',
+      currentStep: 'splash',
       hasSeenWelcome: false,
       hasConnectedWallet: false,
       hasFundedWallet: false,
       hasMadeFirstCall: false,
       isOpen: true,
+      selectedUseCase: null,
     });
   }, []);
 
@@ -146,8 +196,12 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
     startOnboarding,
     closeOnboarding,
     nextStep,
+    prevStep,
     skipOnboarding,
+    setUseCase,
     markStepComplete,
     resetOnboarding,
+    totalSteps: STEPS.length,
+    currentStepIndex: STEPS.indexOf(state.currentStep),
   };
 }

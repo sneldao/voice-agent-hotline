@@ -33,12 +33,18 @@ export function getRelatedAgentRecommendations(
   const selectedTags = normalizeList(selectedAgent.tags);
   const selectedTerms = tokenize(selectedAgent.specialty);
 
-  return agents
+  // Pre-tokenize and normalize agents once
+  const preparedAgents = agents
     .filter((agent) => agent.id !== selectedAgent.id)
-    .map((agent) => {
-      const category = normalize(agent.category);
-      const tags = normalizeList(agent.tags);
-      const specialtyTerms = tokenize(agent.specialty);
+    .map(agent => ({
+      agent,
+      category: normalize(agent.category),
+      tags: normalizeList(agent.tags),
+      specialtyTerms: tokenize(agent.specialty)
+    }));
+
+  return preparedAgents
+    .map(({ agent, category, tags, specialtyTerms }) => {
       const sharedTags = intersection(selectedTags, tags);
       const sharedTerms = intersection(selectedTerms, specialtyTerms);
       const priceGap = Math.abs(Number(agent.rate) - Number(selectedAgent.rate));

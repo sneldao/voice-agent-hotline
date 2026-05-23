@@ -8,6 +8,8 @@ The platform is a voice agent marketplace where:
 - **Developers** can self-register their own agents via `/list-your-agent`
 - **OpenClaw** acts as the platform's social agent, posting updates and milestones
 
+Voice transport note: the agent lifecycle below is still the correct product architecture. The voice connection uses the official `<elevenlabs-convai>` widget engine, controlled programmatically via `useWidgetConversation`. See `docs/WIDGET_ARCHITECTURE.md` for details.
+
 ---
 
 ## Agent Lifecycle
@@ -29,6 +31,9 @@ status="active" → appears in GET /api/agents
         │
         ▼
 User calls agent → ElevenLabs Conversational AI session
+        │
+        ├─ Controlled via `<elevenlabs-convai>` widget engine (implemented)
+        └─ `useWidgetConversation` hook drives shadow DOM button + signed URLs
         │
         ▼
 Call ends → POST /api/webhooks/elevenlabs
@@ -207,7 +212,7 @@ User connects wallet (Web3Modal + WalletConnect)
 User selects agent → sees per-minute rate in cUSD
         │
         ▼
-Call starts → ElevenLabs Conversational AI session opens
+Call starts → ElevenLabs Conversational AI session opens through the voice engine
         │
         ▼
 Per-minute billing via Yellow Network state channels
