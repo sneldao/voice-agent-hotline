@@ -53,45 +53,56 @@ const ethersConfig = defaultConfig({
 // Module-scope creation can block the main thread and create MutationObserver conflicts.
 let web3Modal: ReturnType<typeof createWeb3Modal> | null = null;
 let web3ModalInitAttempted = false;
+let web3ModalInitPromise: Promise<ReturnType<typeof createWeb3Modal> | null> | null = null;
 
 let web3ModalEventCallback: ((event: any) => void) | null = null;
 
+function createWeb3ModalSafely() {
+  try {
+    web3Modal = createWeb3Modal({
+      ethersConfig,
+      chains,
+      projectId,
+      enableAnalytics: false,
+      themeMode: 'dark',
+      themeVariables: {
+        '--w3m-accent': '#06b6d4',
+        '--w3m-border-radius-master': '12px',
+      },
+    });
+
+    if (web3Modal && web3ModalEventCallback) {
+      web3Modal.subscribeEvents(web3ModalEventCallback);
+    }
+
+    return web3Modal;
+  } catch (error: any) {
+    if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
+      console.warn('Web3Modal: window.ethereum conflict handled gracefully');
+    } else {
+      console.error('Web3Modal initialization error:', error);
+    }
+    return null;
+  }
+}
+
 function ensureWeb3Modal() {
-  if (web3ModalInitAttempted) return web3Modal;
+  if (web3Modal) return Promise.resolve(web3Modal);
+  if (web3ModalInitPromise) return web3ModalInitPromise;
+  if (!projectId || typeof window === 'undefined') return Promise.resolve(null);
+
   web3ModalInitAttempted = true;
 
-  if (!projectId || typeof window === 'undefined') return null;
+  // Keep init off the first render tick, but make callers await the result.
+  web3ModalInitPromise = new Promise<ReturnType<typeof createWeb3Modal> | null>((resolve) => {
+    setTimeout(() => {
+      resolve(createWeb3ModalSafely());
+    }, 0);
+  }).finally(() => {
+    web3ModalInitPromise = null;
+  });
 
-  // Defer initialization off the critical render path to avoid
-  // MutationObserver conflicts with React hydration and portal rendering.
-  setTimeout(() => {
-    try {
-      web3Modal = createWeb3Modal({
-        ethersConfig,
-        chains,
-        projectId,
-        enableAnalytics: false,
-        themeMode: 'dark',
-        themeVariables: {
-          '--w3m-accent': '#06b6d4',
-          '--w3m-border-radius-master': '12px',
-        },
-      });
-
-      // Subscribe events now that modal is ready
-      if (web3Modal && web3ModalEventCallback) {
-        web3Modal.subscribeEvents(web3ModalEventCallback);
-      }
-    } catch (error: any) {
-      if (error?.message?.includes('ethereum') || error?.message?.includes('getter')) {
-        console.warn('Web3Modal: window.ethereum conflict handled gracefully');
-      } else {
-        console.error('Web3Modal initialization error:', error);
-      }
-    }
-  }, 0);
-
-  return null;
+  return web3ModalInitPromise;
 }
 
 interface WalletState {
@@ -131,12 +142,42 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined' && !initialized.current) {
       initialized.current = true;
 
-      // Lazy-init Web3Modal on first mount instead of module scope
-      const modal = ensureWeb3Modal();
+      // Defer Web3Modal init to avoid blocking first paint
+      // Use requestIdleCallback (or setTimeout fallback) to keep main thread free
+      const deferInit = (window as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 100));
       
-      const checkConnection = async () => {
+      deferInit(async () => {
         try {
-          // Check if Web3Modal is initialized and has an existing connection
+          // Check injected wallet FIRST (fast, no network calls)
+          if (window.ethereum) {
+            const eth = window.ethereum as unknown as EthereumProvider;
+            const accounts = await eth.request({ method: 'eth_accounts' });
+            
+            if (accounts.length > 0) {
+              const chainId = await eth.request({ method: 'eth_chainId' });
+              setWallet({
+                connected: true,
+                address: accounts[0],
+                chainId: parseInt(chainId, 16),
+                balance: null,
+                isConnecting: false,
+                walletType: 'metamask',
+              });
+              providerRef.current = new BrowserProvider(window.ethereum as any);
+              
+              // Fetch balance in background (don't block)
+              providerRef.current.getBalance(accounts[0]).then(balance => {
+                setWallet(prev => ({ ...prev, balance: formatEther(balance) }));
+              }).catch(() => {});
+              
+              // Still init Web3Modal in background for WalletConnect support
+              void ensureWeb3Modal();
+              return;
+            }
+          }
+
+          // No injected wallet connected — try Web3Modal
+          const modal = await ensureWeb3Modal();
           if (modal && modal.getIsConnected()) {
             const address = modal.getAddress();
             const chainId = modal.getChainId();
@@ -151,41 +192,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 walletType: 'walletconnect',
               });
               
-              // Set up provider
               providerRef.current = modal.getWalletProvider()
                 ? new BrowserProvider(modal.getWalletProvider() as any)
                 : null;
-            }
-          } else if (window.ethereum) {
-            // Check for MetaMask/injected wallet
-            const eth = window.ethereum as unknown as EthereumProvider;
-            const accounts = await eth.request({ method: 'eth_accounts' });
-            const chainId = await eth.request({ method: 'eth_chainId' });
-            
-            if (accounts.length > 0) {
-              setWallet({
-                connected: true,
-                address: accounts[0],
-                chainId: parseInt(chainId, 16),
-                balance: null, // Will be fetched separately
-                isConnecting: false,
-                walletType: 'metamask',
-              });
-              
-              // Set up provider
-              providerRef.current = new BrowserProvider(window.ethereum as any);
-              
-              // Fetch balance
-              const balance = await providerRef.current!.getBalance(accounts[0]);
-              setWallet(prev => ({ ...prev, balance: formatEther(balance) }));
             }
           }
         } catch (error) {
           console.error('Failed to check connection:', error);
         }
-      };
-      
-      checkConnection();
+      });
 
       // Listen for account changes (injected wallets)
       if (window.ethereum) {
@@ -294,7 +309,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       // If no injected wallet or connection failed, use WalletConnect
-      const modal = ensureWeb3Modal();
+      const modal = await ensureWeb3Modal();
       if (modal) {
         await modal.open();
         // Connection will be handled by the event listener
@@ -328,7 +343,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const switchChain = useCallback(async (chainId: number) => {
     if (wallet.walletType === 'walletconnect') {
-      const modal = ensureWeb3Modal();
+      const modal = await ensureWeb3Modal();
       if (modal) {
         await modal.switchNetwork(chainId);
       }

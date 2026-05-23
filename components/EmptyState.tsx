@@ -11,6 +11,18 @@ interface EmptyStateProps {
   onAction?: () => void;
 }
 
+export function EmptyHistoryState({ onBrowseAgents }: { onBrowseAgents?: () => void }) {
+  return (
+    <EmptyState
+      type="calls"
+      title="No calls yet"
+      description="Your call history will appear here after you make your first call."
+      actionLabel={onBrowseAgents ? 'Browse Agents' : undefined}
+      onAction={onBrowseAgents}
+    />
+  );
+}
+
 export function EmptyState({ 
   type = 'calls', 
   title, 

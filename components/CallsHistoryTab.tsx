@@ -5,7 +5,8 @@ import { Phone, Clock, Wallet, Bookmark, Star } from 'lucide-react';
 import { CallHistorySkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { useLocalCallHistory, CallRecord } from '@/lib/useCallHistory';
-import { RefreshButton, Card, Avatar, TranscriptModal, ShareModal, ExportModal, EmptyHistoryState, showError } from '@/components/ui';
+import { RefreshButton, Card, Avatar, TranscriptModal, ShareModal, ExportModal, showError } from '@/components/ui';
+import { EmptyHistoryState } from './EmptyState';
 import type { Agent } from '@/lib/types';
 
 interface CallsHistoryTabProps {

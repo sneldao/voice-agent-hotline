@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleOptions, withCors } from '@/lib/cors';
 import { getUserByAddress, updateUserBalance, createUser } from '@/lib/db';
 
 export async function GET(
@@ -15,18 +16,21 @@ export async function GET(
     
     if (!user) {
       // Return 404 instead of auto-creating to prevent phantom users from bots/prefetchers
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }), request);
     }
     
-    return NextResponse.json({
-      id: user.id,
-      address: user.address,
-      balance: user.balance,
-      createdAt: user.createdAt,
-    });
+    return withCors(
+      NextResponse.json({
+        id: user.id,
+        address: user.address,
+        balance: user.balance,
+        createdAt: user.createdAt,
+      }),
+      request
+    );
   } catch (error) {
     console.error('Error fetching user:', error);
-    return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 });
+    return withCors(NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 }), request);
   }
 }
 
@@ -44,13 +48,17 @@ export async function POST(
     switch (action) {
       case 'add_balance':
         await updateUserBalance(`user_${normalizedAddress}`, amount);
-        return NextResponse.json({ success: true, balance: amount });
+        return withCors(NextResponse.json({ success: true, balance: amount }), request);
         
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return withCors(NextResponse.json({ error: 'Invalid action' }, { status: 400 }), request);
     }
   } catch (error) {
     console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    return withCors(NextResponse.json({ error: 'Failed to update user' }, { status: 500 }), request);
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return handleOptions(request);
 }
