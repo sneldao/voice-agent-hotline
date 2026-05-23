@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic';
 // GET /api/agents/[id]
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const agent = await redis.hgetall(`agent:${params.id}`);
+    const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
@@ -25,10 +26,11 @@ export async function GET(
 // Update:   { field: value, ... }
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const agent = await redis.hgetall(`agent:${params.id}`);
+    const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
@@ -39,39 +41,39 @@ export async function PATCH(
     if (action === 'approve') {
       // Approval only sets the listing status — ERC-8004 identity mint is
       // performed client-side by the agent developer from their dashboard.
-      await redis.hset(`agent:${params.id}`, {
+      await redis.hset(`agent:${id}`, {
         status: 'active',
         active: 'true',
         approved_at: new Date().toISOString(),
       });
-      console.log('[Agents API] Approved agent:', params.id);
+      console.log('[Agents API] Approved agent:', id);
 
       // Notify via webhook if configured
-      await sendNotification('approved', agent, params.id);
+      await sendNotification('approved', agent, id);
 
-      return NextResponse.json({ message: 'Agent approved', id: params.id });
+      return NextResponse.json({ message: 'Agent approved', id });
     }
 
     if (action === 'reject') {
-      await redis.hset(`agent:${params.id}`, {
+      await redis.hset(`agent:${id}`, {
         status: 'rejected',
         active: 'false',
         rejection_reason: reason || '',
         rejected_at: new Date().toISOString(),
       });
-      console.log('[Agents API] Rejected agent:', params.id);
+      console.log('[Agents API] Rejected agent:', id);
 
       // Notify via webhook if configured
-      await sendNotification('rejected', agent, params.id, reason);
+      await sendNotification('rejected', agent, id, reason);
 
-      return NextResponse.json({ message: 'Agent rejected', id: params.id });
+      return NextResponse.json({ message: 'Agent rejected', id });
     }
 
     if (Object.keys(fields).length > 0) {
-      await redis.hset(`agent:${params.id}`, fields);
+      await redis.hset(`agent:${id}`, fields);
     }
 
-    const updated = await redis.hgetall(`agent:${params.id}`);
+    const updated = await redis.hgetall(`agent:${id}`);
     return NextResponse.json({ agent: updated });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -110,14 +112,15 @@ async function sendNotification(
 // DELETE /api/agents/[id]
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    const deleted = await redis.del(`agent:${params.id}`);
+    const deleted = await redis.del(`agent:${id}`);
     if (!deleted) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
-    return NextResponse.json({ message: 'Agent deleted', id: params.id });
+    return NextResponse.json({ message: 'Agent deleted', id });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

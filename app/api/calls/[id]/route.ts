@@ -71,9 +71,10 @@ export async function POST(request: NextRequest) {
 // GET /api/calls/[id] - Get call status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const call = activeCalls.get(params.id)
+  const { id } = await params;
+  const call = activeCalls.get(id)
 
   if (!call) {
     return NextResponse.json({ error: 'Call not found' }, { status: 404 })
@@ -85,9 +86,10 @@ export async function GET(
 // DELETE /api/calls/[id] - End a call
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const call = activeCalls.get(params.id)
+  const { id } = await params;
+  const call = activeCalls.get(id)
 
   if (!call) {
     return NextResponse.json({ error: 'Call not found' }, { status: 404 })
@@ -95,7 +97,7 @@ export async function DELETE(
 
   // Stop billing and settle
   const paymentService = getVoicePaymentService()
-  const session = await paymentService.endCall(params.id)
+  const session = await paymentService.endCall(id)
 
   call.status = 'ended'
   call.endTime = new Date().toISOString()
@@ -105,13 +107,13 @@ export async function DELETE(
   // Register completed call for ratings (verified if user has wallet)
   const ratingsService = getRatingsService()
   ratingsService.registerCompletedCall(
-    params.id,
+    id,
     call.agentId,
     call.userAddress,
     !!call.userAddress // Verified if we have a wallet address
   )
 
-  console.log(`[Call] Ended: ${params.id}, cost: $${(session.totalCost || 0).toFixed(4)}`)
+  console.log(`[Call] Ended: ${id}, cost: $${(session.totalCost || 0).toFixed(4)}`)
 
   return NextResponse.json({ call })
 }
