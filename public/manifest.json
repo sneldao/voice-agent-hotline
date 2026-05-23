@@ -1,7 +1,7 @@
 {
-  "name": "VOISSS - Voice Agent Hotline",
+  "name": "VOISSS — A phonebook for AI you can talk to",
   "short_name": "VOISSS",
-  "description": "Talk to verified AI agents. Pay per second via x402 micropayments on Celo.",
+  "description": "Say what you need. VOISSS connects the right voice. No keyboard required.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -14,6 +14,6 @@
       "type": "image/png"
     }
   ],
-  "categories": ["productivity", "utilities"],
+  "categories": ["productivity", "utilities", "lifestyle"],
   "lang": "en-US"
 }

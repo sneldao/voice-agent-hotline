@@ -38,40 +38,11 @@ export function Modal({
       if (e.key === 'Escape') onCloseRef.current();
     };
 
-    // Focus trap
-    const handleTabKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab' || !modalRef.current) return;
-
-      const focusableElements = modalRef.current.querySelectorAll(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-      
-      if (focusableElements.length === 0) return;
-      
-      const firstElement = focusableElements[0] as HTMLElement;
-      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-      // Shift + Tab
-      if (e.shiftKey) {
-        if (document.activeElement === firstElement || document.activeElement === modalRef.current) {
-          lastElement.focus();
-          e.preventDefault();
-        }
-      } else {
-        // Tab
-        if (document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
-      }
-    };
-
     document.addEventListener('keydown', handleEscape);
-    document.addEventListener('keydown', handleTabKey);
     document.body.style.overflow = 'hidden';
 
-    // Focus the first focusable element in the modal
-    const focusTimer = requestAnimationFrame(() => {
+    // Defer focus management to avoid blocking the modal paint
+    const focusTimer = setTimeout(() => {
       if (modalRef.current) {
         const focusableElement = modalRef.current.querySelector(
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -82,12 +53,11 @@ export function Modal({
           modalRef.current.focus({ preventScroll: true });
         }
       }
-    });
+    }, 50);
 
     return () => {
-      cancelAnimationFrame(focusTimer);
+      clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('keydown', handleTabKey);
       document.body.style.overflow = '';
 
       // Restore focus to the previously focused element
@@ -143,7 +113,6 @@ export function Modal({
             flex
             flex-col
             max-h-[85vh]
-            will-change-transform
           `}
         >
           {/* Header */}

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { Star, ChevronRight, Phone } from 'lucide-react';
-import { Card, Badge, Avatar, Modal, Button } from '@/components/ui';
+import React from 'react';
+import { Radio, ShieldCheck, Star, PhoneForwarded } from 'lucide-react';
+import { Badge, Avatar } from '@/components/ui';
 import type { Agent } from '@/lib/types';
 
 const STAR_COLORS = [
@@ -29,6 +29,23 @@ const Stars = React.memo(function Stars({ rating }: { rating: number }) {
   );
 });
 
+const AGENT_PERSONAS: Record<string, { desk: string; tone: string; line: string }> = {
+  solana_sage: { desk: 'Chain Desk', tone: 'precise', line: 'Wallets, transactions, DeFi signals' },
+  code_reviewer: { desk: 'Debug Desk', tone: 'direct', line: 'Architecture, bugs, repo reviews' },
+  general_helper: { desk: 'Life Admin', tone: 'warm', line: 'Booking, reminders, everyday tasks' },
+  tour_master: { desk: 'Travel Desk', tone: 'upbeat', line: 'Trips, routes, local plans' },
+  web_researcher: { desk: 'Research Desk', tone: 'thorough', line: 'Sources, summaries, current info' },
+  medical_advisor: { desk: 'Health Prep', tone: 'calm', line: 'Questions, symptoms, visit prep' },
+};
+
+function getPersona(agent: Agent) {
+  return AGENT_PERSONAS[agent.id] || {
+    desk: agent.category ? `${agent.category} Desk` : 'Hotline Desk',
+    tone: 'helpful',
+    line: agent.specialty,
+  };
+}
+
 export const AgentCard = React.memo(function AgentCard({
   agent,
   onClick,
@@ -37,51 +54,64 @@ export const AgentCard = React.memo(function AgentCard({
   onClick: () => void;
 }) {
   const rating = Number(agent.rating) || 0;
+  const persona = getPersona(agent);
 
   return (
-    <Card
-      interactive
-      variant="default"
-      className="group relative overflow-hidden p-4 hover:border-gray-700/50 transition-all duration-200"
+    <button
+      type="button"
       onClick={onClick}
+      className="group operator-panel relative h-full w-full overflow-hidden rounded-[1.25rem] p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-red-300/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0806] active:scale-[0.99]"
+      aria-label={`Open ${agent.name}`}
     >
-      <div className="flex items-start gap-4 relative">
+      <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-amber-200/60 via-red-500/80 to-black/20" />
+      <div className="absolute bottom-4 left-4 right-16 patch-cord opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="relative flex items-start gap-4">
         <div className="relative flex-shrink-0">
-          <Avatar size="lg" online={agent.online}>{agent.avatar}</Avatar>
-          {agent.online && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full animate-pulse" />}
+          <div className="rounded-full border border-amber-100/25 bg-black/30 p-1 shadow-inner">
+            <Avatar size="lg" online={agent.online}>{agent.avatar}</Avatar>
+          </div>
+          {agent.online && <div className="line-lamp absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-300 text-emerald-300" />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="font-bold text-white truncate max-w-[180px]">{agent.name}</span>
-            {agent.verified && <Badge variant="info" size="sm" className="flex-shrink-0">✓ Verified</Badge>}
-          </div>
-          <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed mb-2.5">{agent.bio || agent.specialty}</p>
-          <div className="flex items-center gap-2 mb-2">
-            <Stars rating={rating} />
-            <span className="text-sm font-medium text-gray-300">{rating.toFixed(1)}</span>
-            <span className="text-xs text-gray-500">({agent.totalRatings || 0})</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {agent.totalCalls && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-800/50 text-xs text-gray-400">
-                <Phone className="w-3 h-3" />{agent.totalCalls} calls
+          <div className="mb-1 flex items-center gap-2">
+            <span className="min-w-0 truncate font-bold text-amber-50">{agent.name}</span>
+            {agent.verified && (
+              <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-300" title="Verified agent">
+                <ShieldCheck className="h-3.5 w-3.5" />
               </span>
             )}
+          </div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-md border border-amber-100/20 bg-black/25 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-100/80">
+              <Radio className="h-3 w-3" />
+              {persona.desk}
+            </span>
+            <span className="rounded-md border border-red-300/20 bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-100/80">
+              {persona.tone} voice
+            </span>
+          </div>
+          <p className="mb-2 line-clamp-2 text-sm leading-relaxed text-amber-100/70">{persona.line}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Stars rating={rating} />
+              <span className="text-xs text-amber-100/55">{rating.toFixed(1)}</span>
+            </div>
+            <span className="text-xs text-amber-100/40">·</span>
+            <span className="text-xs text-amber-100/45">{agent.calls || 0} calls</span>
             {agent.category && <Badge variant="default" size="sm">{agent.category}</Badge>}
           </div>
         </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-xl font-bold text-cyan-400">${agent.rate}</div>
-          <div className="text-xs text-gray-500 mb-2">/min</div>
-          <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${agent.online ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-gray-800 text-gray-500 border border-gray-700'}`}>
-            {agent.online ? '● Available' : '○ Offline'}
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="text-right tabular-nums">
+            <div className="text-lg font-bold text-amber-200">${Number(agent.rate).toFixed(2)}</div>
+            <div className="text-[10px] uppercase tracking-wide text-amber-100/40">/min</div>
+          </div>
+          <div className="rounded-full border border-red-300/30 bg-red-500/15 px-3 py-1.5 transition-colors group-hover:bg-red-500/25">
+            <PhoneForwarded className="h-3.5 w-3.5 text-red-100" />
           </div>
         </div>
       </div>
-      <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight className="w-5 h-5 text-cyan-400" />
-      </div>
-    </Card>
+    </button>
   );
 });
 
@@ -95,7 +125,7 @@ export const FeaturedCard = React.memo(function FeaturedCard({
   return (
     <button
       onClick={onClick}
-      className="w-full sm:flex-shrink-0 sm:w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 border-gray-800 bg-gray-900/50 hover:border-gray-700 active:scale-[0.98] will-change-transform"
+      className="w-full sm:flex-shrink-0 sm:w-36 rounded-2xl p-4 text-left transition-all duration-300 border-2 border-gray-800 bg-gray-900/50 hover:border-gray-700 active:scale-[0.98]"
     >
       <Avatar size="md" online={agent.online}>{agent.avatar}</Avatar>
       <div className="mt-3">
@@ -109,106 +139,3 @@ export const FeaturedCard = React.memo(function FeaturedCard({
     </button>
   );
 });
-
-export function AgentDetailModal({
-  agent,
-  onClose,
-  onCall,
-}: {
-  agent: Agent | null;
-  onClose: () => void;
-  onCall: () => void;
-}) {
-  const [calling, setCalling] = useState(false);
-  const [estimatedMins, setEstimatedMins] = useState(5);
-
-  const estimatedCost = useMemo(() => {
-    if (!agent) return "0.00";
-    return (agent.rate * estimatedMins).toFixed(2);
-  }, [agent?.rate, estimatedMins]);
-
-  const handleCall = useCallback(() => {
-    setCalling(true);
-    onCall();
-  }, [onCall]);
-
-  if (!agent) return null;
-
-  return (
-    <Modal isOpen={!!agent} onClose={onClose} size="md">
-      <div className={`-mx-6 -mt-6 mb-6 p-6 rounded-t-2xl bg-gradient-to-br ${agent.color} text-center`}>
-        <div className="relative inline-block">
-          <Avatar size="xl" className="bg-white/20 text-4xl">{agent.avatar}</Avatar>
-          {agent.online && <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />}
-        </div>
-        <h2 className="text-2xl font-bold text-white mt-3">{agent.name}</h2>
-        <p className="text-white/80 text-sm mt-1">{agent.specialty}</p>
-        <div className="flex items-center justify-center gap-6 mt-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 font-bold text-white">
-              <span>⭐</span> {(Number(agent.rating) || 0).toFixed(1)}
-            </div>
-            <div className="text-xs text-white/60">{agent.totalRatings ?? 0} reviews</div>
-          </div>
-          <div className="text-center">
-            <div className="font-bold text-white">${agent.rate}</div>
-            <div className="text-xs text-white/60">/minute</div>
-          </div>
-          {agent.totalCalls && (
-            <div className="text-center">
-              <div className="font-bold text-white">{agent.totalCalls}</div>
-              <div className="text-xs text-white/60">calls</div>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-gray-300 mb-2 block">
-            Call Duration
-          </label>
-          <div className="flex gap-2">
-            {[1, 5, 10, 15].map(mins => (
-              <button
-                key={mins}
-                onClick={() => setEstimatedMins(mins)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  estimatedMins === mins ? 'bg-cyan-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
-              >
-                {mins}m
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="bg-gray-800/50 rounded-xl p-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">Rate</span>
-            <span className="text-white font-medium">${agent.rate}/min</span>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">Duration</span>
-            <span className="text-white">{estimatedMins} minutes</span>
-          </div>
-          <div className="flex justify-between items-center pt-2 border-t border-gray-700">
-            <span className="text-gray-400">Estimated Cost</span>
-            <span className="text-cyan-400 font-bold text-lg">${estimatedCost}</span>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500">
-          Payment is settled on-chain before the call connects. You only pay for the time you use.
-        </p>
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button
-            onClick={handleCall}
-            className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400"
-          >
-            <Phone className="w-4 h-4 mr-2" />
-            {calling ? 'Connecting...' : 'Start Call'}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}

@@ -1,71 +1,75 @@
 /**
  * PM2 Ecosystem Configuration
- * 
- * Production-grade process management for Voice Agent Hotline
- * 
+ * Voice Agent Hotline — Hetzner Production
+ *
  * Usage:
  *   pm2 start ecosystem.config.js
  *   pm2 save
  *   pm2 startup
- * 
- * Monitoring:
- *   pm2 monit
- *   pm2 logs voice-hotline-celo
- *   pm2 status
  */
 
-require('dotenv').config({ path: '.env.local' });
+/**
+ * PM2 Ecosystem Configuration
+ * Voice Agent Hotline — Hetzner Production
+ *
+ * Usage:
+ *   pm2 start ecosystem.config.js
+ *   pm2 save
+ *   pm2 startup
+ *
+ * Env vars are written by deploy.sh into .env.hetzner.
+ * After deploy.sh runs, reload with: pm2 reload voice-hotline-celo
+ */
+
+const path = require('path');
+
+// Load .env.hetzner if dotenv is available (fallback for local dev).
+// On the server, node_modules is deleted after build so we read
+// the file manually to avoid a hard dep on dotenv at runtime.
+function loadEnv(envPath) {
+  const fs = require('fs');
+  if (!fs.existsSync(envPath)) return {};
+  const vars = {};
+  fs.readFileSync(envPath, 'utf8')
+    .split('\n')
+    .forEach(line => {
+      const m = line.match(/^([A-Z_]+)=(.*)$/);
+      if (m && !m[1].startsWith('#')) vars[m[1]] = m[2];
+    });
+  return vars;
+}
+
+const env = loadEnv('/opt/voice-hotline-celo/.env.hetzner');
 
 module.exports = {
   apps: [
     {
-      // Application name
       name: 'voice-hotline-celo',
-      
-      // Start with standalone server (required for output: 'standalone')
-      // 'next start' does not work with standalone output - must use server.js directly
-      script: '.next/standalone/server.js',
-      
-      // Use fork mode (Next.js handles its own clustering internally)
+      script: '/opt/voice-hotline-celo/.next/standalone/server.js',
+      cwd: '/opt/voice-hotline-celo',
       instances: 1,
       exec_mode: 'fork',
-      
-      // Environment variables
       env: {
-        ...process.env,
-        NODE_ENV: 'production',
-        PORT: 3042,
-        HOSTNAME: '0.0.0.0',
+        NODE_ENV: env.NODE_ENV || 'production',
+        PORT: env.PORT || '3042',
+        HOSTNAME: env.HOSTNAME || '0.0.0.0',
+        UPSTASH_REDIS_REST_URL: env.UPSTASH_REDIS_REST_URL || '',
+        UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN || '',
+        UPSTASH_REDIS_URL: env.UPSTASH_REDIS_URL || '',
+        UPSTASH_REDIS_TOKEN: env.UPSTASH_REDIS_TOKEN || '',
+        CELO_RPC_URL: env.CELO_RPC_URL || 'https://forno.celo.org',
       },
-      
-      // Logging configuration (ORGANIZED)
       error_file: './logs/pm2-err.log',
       out_file: './logs/pm2-out.log',
       log_file: './logs/pm2-combined.log',
       time: true,
-      
-      // Auto-restart on crash (RELIABLE)
       autorestart: true,
-      
-      // Memory limit - restart if exceeded (PERFORMANT)
       max_memory_restart: '1G',
-      
-      // Don't watch files in production
       watch: false,
-      
-      // Graceful shutdown timeout
       kill_timeout: 3000,
-      
-      // Wait before restarting (prevents rapid restart loops)
       restart_delay: 4000,
-      
-      // Min cluster instances (for cluster mode)
       min_instances: 1,
-      
-      // Max memory for cluster scaling
       max_restarts: 10,
-      
-      // Source map support for debugging
       source_map_support: true,
     },
   ],

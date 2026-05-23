@@ -46,8 +46,11 @@ export async function GET(req: NextRequest) {
       .map((a: any) => ({
         ...a,
         // Ensure UI-friendly booleans/numbers for frontend
-        online: a.active === 'true' || a.status === 'active' || true, // Default to online if active
+        online: a.online === 'true' || a.active === 'true' || a.status === 'active' || (!a.online && !a.active && !a.status),
         verified: a.status === 'active',
+        specialty: a.specialty || a.category || 'AI Assistant',
+        category: a.category === 'code' ? 'tech' : a.category,
+        bio: a.bio || a.description || a.specialty || '',
         rate: parseFloat(a.price_per_minute || a.rate || '0.1'),
         rating: parseFloat(a.rating || '0'),
         totalRatings: parseInt(a.total_ratings || '0', 10),
@@ -61,7 +64,10 @@ export async function GET(req: NextRequest) {
       agents = agents.filter((a: any) => {
         const name = (a.name || '').toLowerCase();
         const specialty = (a.specialty || '').toLowerCase();
-        return name.includes(search) || specialty.includes(search);
+        const bio = (a.bio || a.description || '').toLowerCase();
+        const category = (a.category || '').toLowerCase();
+        const tags = Array.isArray(a.tags) ? a.tags.join(' ').toLowerCase() : String(a.tags || '').toLowerCase();
+        return name.includes(search) || specialty.includes(search) || bio.includes(search) || category.includes(search) || tags.includes(search);
       });
     }
 

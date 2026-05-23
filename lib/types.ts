@@ -1,13 +1,24 @@
 export type AgentStatus = 'active' | 'pending' | 'rejected';
 
+/**
+ * Canonical Agent type used throughout the frontend.
+ *
+ * Backend (lib/db.ts) stores a superset of these fields using snake_case
+ * Redis keys. API routes normalise between the two representations.
+ * `rate` and `ratePerMinute` are aliases — `rate` is the display value.
+ */
 export interface Agent {
   id: string;
   name: string;
+  description?: string;
   specialty: string;
   bio: string;
   rating: number;
   calls: number;
+  /** Per-minute rate in USD — preferred display field */
   rate: number;
+  /** Alias for `rate`, used by backend / db layer */
+  ratePerMinute?: number;
   avatar: string;
   color: string;
   online: boolean;

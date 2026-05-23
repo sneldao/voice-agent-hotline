@@ -164,6 +164,23 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
       ? BigInt(process.env.ERC8004_TOKEN_MEDICAL_ADVISOR)
       : null,
   },
+
+  // ── Voice Router (not a user-facing agent — used for intent routing) ──────
+  voice_router: {
+    key: 'voice_router',
+    name: 'VOISSS Router',
+    emoji: '📡',
+    tagline: 'Voice intake and routing',
+    color: 'from-cyan-500 to-blue-600',
+    elevenLabsAgentId: process.env.ELEVENLABS_AGENT_VOICE_ROUTER ?? null,
+    voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam
+    systemPrompt: 'Internal router agent — not user-facing.',
+    elevenLabsTools: ['route_to_agent'],
+    specialties: ['routing'],
+    allowedSkills: ['research'],
+    composioTools: [],
+    tokenId: null,
+  },
 };
 
 // ============================================

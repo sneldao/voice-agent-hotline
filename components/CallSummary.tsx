@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { ShareModal } from './ShareModal';
+import { PostCallPrompt } from './PostCallPrompt';
 import type { PaymentState } from '@/lib/useRealPayment';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
 import { SUPERFLUID_TOKEN_SYMBOL, getExplorerTxUrl } from '@/lib/superfluid-streaming';
@@ -48,6 +49,14 @@ interface CallSummaryProps {
   onDownload: () => void;
   relatedAgents: AgentRecommendation[];
   onSelectRelatedAgent: (agentId: string) => void;
+  /** Whether the user's wallet is connected */
+  walletConnected?: boolean;
+  /** Current streak count */
+  streakCount?: number;
+  /** Whether this was the user's first call ever */
+  isFirstCall?: boolean;
+  /** Callback to connect wallet (for post-call prompt) */
+  onConnectWallet?: () => void;
 }
 
 export function CallSummary({
@@ -66,6 +75,10 @@ export function CallSummary({
   onDownload,
   relatedAgents,
   onSelectRelatedAgent,
+  walletConnected = true,
+  streakCount = 0,
+  isFirstCall = false,
+  onConnectWallet,
 }: CallSummaryProps) {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
@@ -179,6 +192,15 @@ export function CallSummary({
               )}
             </div>
           </div>
+
+          {/* Post-call Vox prompt — wallet connect + streak celebration */}
+          <PostCallPrompt
+            showWalletPrompt={!walletConnected}
+            streakCount={streakCount}
+            isFirstCall={isFirstCall}
+            onConnect={onConnectWallet || (() => {})}
+            onDismiss={() => {}}
+          />
 
           {/* Tabs */}
           <div className="flex gap-2 mb-6">

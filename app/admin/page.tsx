@@ -118,14 +118,14 @@ export default function AdminPage() {
 
   if (!connected) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <div className="min-h-screen bg-[#0b0806] flex items-center justify-center">
+        <div className="operator-panel rounded-[1.5rem] p-8 text-center space-y-4">
           <div className="text-4xl">🔐</div>
-          <h1 className="text-xl font-semibold text-white">Admin Access</h1>
-          <p className="text-slate-400 text-sm">Connect your wallet to access the admin panel</p>
+          <h1 className="text-xl font-semibold text-amber-50">Admin Access</h1>
+          <p className="text-amber-100/60 text-sm">Connect your wallet to access the admin panel</p>
           <button
             onClick={connect}
-            className="px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
+            className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors"
           >
             Connect Wallet
           </button>
@@ -136,19 +136,19 @@ export default function AdminPage() {
 
   if (connected && !isAdmin(address)) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center space-y-3">
+      <div className="min-h-screen bg-[#0b0806] flex items-center justify-center">
+        <div className="operator-panel rounded-[1.5rem] p-8 text-center space-y-3">
           <div className="text-4xl">🚫</div>
-          <h1 className="text-xl font-semibold text-white">Access Denied</h1>
-          <p className="text-slate-400 text-sm">This wallet is not authorised to access the admin panel.</p>
-          <p className="text-slate-600 text-xs font-mono">{address}</p>
+          <h1 className="text-xl font-semibold text-amber-50">Access Denied</h1>
+          <p className="text-amber-100/60 text-sm">This wallet is not authorised to access the admin panel.</p>
+          <p className="text-amber-100/30 text-xs font-mono">{address}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-[#0b0806] text-amber-50">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg transition-all ${
           toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
@@ -161,11 +161,11 @@ export default function AdminPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold">Agent Admin</h1>
-            <p className="text-slate-400 text-sm mt-1">Review and manage agent registrations</p>
+            <p className="text-amber-100/60 text-sm mt-1">Review and manage agent registrations</p>
           </div>
           <button
             onClick={fetchAgents}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors"
+            className="px-3 py-1.5 bg-amber-100/10 hover:bg-amber-100/15 border border-amber-100/15 rounded-lg text-sm text-amber-100/60 transition-colors"
           >
             ↻ Refresh
           </button>
@@ -179,8 +179,8 @@ export default function AdminPage() {
               onClick={() => setFilter(f)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 filter === f
-                  ? 'bg-violet-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
+                  ? 'bg-red-500/20 text-amber-50 border-red-400/50'
+                  : 'bg-black/25 text-amber-100/50 border-amber-100/10 hover:text-amber-50'
               }`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -190,13 +190,13 @@ export default function AdminPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-16 text-slate-500">Loading agents…</div>
+          <div className="text-center py-16 text-amber-100/40">Loading agents…</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">No {filter} agents</div>
+          <div className="text-center py-16 text-amber-100/40">No {filter} agents</div>
         ) : (
           <div className="space-y-4">
             {filtered.map(agent => (
-              <div key={agent.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+              <div key={agent.id} className="operator-panel border border-amber-100/15 rounded-xl p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -217,21 +217,21 @@ export default function AdminPage() {
                       )}
                     </div>
                     {agent.description && (
-                      <p className="text-slate-400 text-sm mt-1 line-clamp-2">{agent.description}</p>
+                      <p className="text-amber-100/50 text-sm mt-1 line-clamp-2">{agent.description}</p>
                     )}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
-                      {agent.category && <span>Category: <span className="text-slate-300">{agent.category}</span></span>}
-                      {agent.rate && <span>Rate: <span className="text-slate-300">${agent.rate}/min</span></span>}
-                      {agent.totalCalls && <span>Calls: <span className="text-slate-300">{agent.totalCalls}</span></span>}
-                      {agent.totalRevenue && <span>Revenue: <span className="text-slate-300">{parseFloat(agent.totalRevenue).toFixed(4)} cUSD</span></span>}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-amber-100/40">
+                      {agent.category && <span>Category: <span className="text-amber-100/70">{agent.category}</span></span>}
+                      {agent.rate && <span>Rate: <span className="text-amber-100/70">${agent.rate}/min</span></span>}
+                      {agent.totalCalls && <span>Calls: <span className="text-amber-100/70">{agent.totalCalls}</span></span>}
+                      {agent.totalRevenue && <span>Revenue: <span className="text-amber-100/70">{parseFloat(agent.totalRevenue).toFixed(4)} cUSD</span></span>}
                       {agent.wallet_address && (
-                        <span>Wallet: <span className="text-slate-300 font-mono">{agent.wallet_address.slice(0, 8)}…{agent.wallet_address.slice(-4)}</span></span>
+                        <span>Wallet: <span className="text-amber-100/70 font-mono">{agent.wallet_address.slice(0, 8)}…{agent.wallet_address.slice(-4)}</span></span>
                       )}
                       {agent.elevenlabs_agent_id && (
-                        <span>EL ID: <span className="text-slate-300 font-mono">{agent.elevenlabs_agent_id}</span></span>
+                        <span>EL ID: <span className="text-amber-100/70 font-mono">{agent.elevenlabs_agent_id}</span></span>
                       )}
                       {agent.submitted_at && (
-                        <span>Submitted: <span className="text-slate-300">{new Date(agent.submitted_at).toLocaleDateString()}</span></span>
+                        <span>Submitted: <span className="text-amber-100/70">{new Date(agent.submitted_at).toLocaleDateString()}</span></span>
                       )}
                     </div>
                     {agent.rejection_reason && (
@@ -269,7 +269,7 @@ export default function AdminPage() {
                     <button
                       onClick={() => handleDelete(agent.id)}
                       disabled={actionLoading === agent.id + 'delete'}
-                      className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-400 rounded-lg text-sm transition-colors"
+                      className="px-4 py-1.5 bg-amber-100/10 hover:bg-amber-100/15 disabled:opacity-50 text-amber-100/50 rounded-lg text-sm transition-colors border border-amber-100/15"
                     >
                       {actionLoading === agent.id + 'delete' ? '…' : 'Delete'}
                     </button>
