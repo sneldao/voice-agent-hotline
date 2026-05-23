@@ -1,8 +1,5 @@
 'use client';
 
-// Force dynamic rendering to avoid SSR issues with client-only SDKs
-export const revalidate = 0;
-
 import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';

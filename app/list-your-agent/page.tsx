@@ -1,8 +1,5 @@
 'use client';
 
-// Force dynamic rendering to avoid SSR issues with client-only SDKs
-export const revalidate = 0;
-
 import { AgentRegistrationForm } from '@/components/ui/AgentCreation';
 
 export default function ListYourAgentPage() {
