@@ -99,6 +99,11 @@ function formatExpiry(expiresAt: number): string {
 
 export function DelegationPanel() {
   const { connected, address, connect } = useWallet();
+  const delegationAddress = process.env.NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS;
+  const delegationConfigured = Boolean(
+    delegationAddress &&
+    delegationAddress !== '0x0000000000000000000000000000000000000000'
+  );
 
   const [scope, setScope] = useState<DelegationScope>(DEFAULT_SCOPE);
   const [activeDelegation, setActiveDelegation] = useState<ActiveDelegation | null>(null);
@@ -115,15 +120,7 @@ export function DelegationPanel() {
     if (!connected || !address) return;
 
     setIsLoading(true);
-
-    // Check if contracts are configured
-    fetch(apiUrl('/api/sdk/health'))
-      .then(r => r.json())
-      .then(d => {
-        const configured = d.erc8004?.configured ?? false;
-        setErc8004Configured(configured);
-      })
-      .catch(() => setErc8004Configured(false));
+    setErc8004Configured(delegationConfigured);
 
     // Load existing delegations
     fetch(apiUrl(`/api/delegations?userAddress=${address}`))
@@ -135,7 +132,7 @@ export function DelegationPanel() {
       })
       .catch(() => {/* no existing delegation */})
       .finally(() => setIsLoading(false));
-  }, [connected, address]);
+  }, [connected, address, delegationConfigured]);
 
   const handleGrant = async () => {
     if (!connected) { connect(); return; }

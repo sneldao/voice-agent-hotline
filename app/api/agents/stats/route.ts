@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { redis } from '@/lib/redis';
+import { withCors, handleOptions } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,14 +10,18 @@ export const dynamic = 'force-dynamic';
  *
  * GET /api/agents/stats
  */
-export async function GET() {
+export async function OPTIONS(req: NextRequest) {
+  return handleOptions(req);
+}
+
+export async function GET(req: NextRequest) {
   try {
     const agentIds = await redis.smembers('agent_index');
     if (agentIds.length === 0) {
-      return NextResponse.json({
+      return withCors(NextResponse.json({
         summary: { totalAgents: 0, totalCalls: 0, avgRating: 0, topAgent: null, generatedAt: new Date().toISOString() },
         agents: [],
-      });
+      }), req);
     }
 
     const pipeline = redis.pipeline();
@@ -58,7 +63,7 @@ export async function GET() {
       online: a?.online === 'true',
     }));
 
-    return NextResponse.json({
+    return withCors(NextResponse.json({
       summary: {
         totalAgents,
         totalCalls,
@@ -67,9 +72,9 @@ export async function GET() {
         generatedAt: new Date().toISOString(),
       },
       agents: perAgent,
-    });
+    }), req);
   } catch (error: any) {
     console.error('[Stats API] error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return withCors(NextResponse.json({ error: error.message }, { status: 500 }), req);
   }
 }

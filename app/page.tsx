@@ -7,80 +7,65 @@ import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef, useState
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ToastProvider, showError } from '@/components/ui';
+import { ToastProvider, showError, showInfo } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
-import { signMessage } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
-import { useWebRTCSupport } from '@/lib/useElevenLabsConversation';
-import { useOnboarding } from '@/lib/useOnboarding';
+import { useWebRTCSupport } from '@/lib/useWebRTCSupport';
 import { useUserBalance, useAgents } from '@/lib/useSWR';
 import { Search, Phone, User } from 'lucide-react';
 import { generateCallId } from '@/lib/ids';
 import type { Agent } from '@/lib/types';
-// Dynamic import for ActiveCall with SSR disabled to avoid ElevenLabs SDK issues
-const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
-import { Onboarding } from '@/components/Onboarding';
-import { WalletConnectGate } from '@/components/WalletConnectGate';
-import { LowBalanceWarning } from '@/components/LowBalanceWarning';
 import { Header } from '@/components/Header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { AgentPreviewSheet } from '@/components/AgentPreviewSheet';
+import { Onboarding } from '@/components/Onboarding';
 import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
-import { AgentDetailModal } from '@/app/page-components';
 import { readCallLaunchParams } from '@/lib/product-launch';
+import { useOnboarding } from '@/lib/useOnboarding';
+import { usePersonalizedAgents, getPreferredConcierge } from '@/lib/usePersonalization';
+import { useFreeCall } from '@/lib/useFreeCall';
+import { useStreak } from '@/lib/useStreak';
 
-// Lazy load tabs for code splitting
-const DiscoverTab = React.lazy(() => import('@/components/DiscoverTab').then(m => ({ default: m.DiscoverTab })));
-const CallsHistoryTab = React.lazy(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
-const ProfileTab = React.lazy(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
+// #17: Lazy-load all heavy components — only DiscoverTab is needed on first paint
+const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
+const CallsHistoryTab = dynamic(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
+const ProfileTab = dynamic(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
+
+// DiscoverTab is the landing view — keep it eager
+import { DiscoverTab } from '@/components/DiscoverTab';
 
 interface PageState {
   activeTab: 'discover' | 'calls' | 'profile';
   selectedAgent: Agent | null;
+  previewAgent: Agent | null;
   inCall: boolean;
   callId: string | null;
   searchQuery: string;
   selectedCategory: string;
-  showWalletGate: boolean;
-  showLowBalance: boolean;
-  requiredBalance: number;
-  lowBalanceContent: {
-    title: string;
-    description: string;
-    balanceLabel: string;
-    requiredLabel: string;
-    currentBalance: number;
-  };
+  pendingLaunch: { agentId: string; autoStart: boolean } | null;
 }
 
 type PageAction =
   | { type: 'SET_TAB'; tab: PageState['activeTab'] }
   | { type: 'SELECT_AGENT'; agent: Agent | null }
+  | { type: 'PREVIEW_AGENT'; agent: Agent | null }
   | { type: 'START_CALL'; callId: string }
   | { type: 'END_CALL' }
   | { type: 'SET_SEARCH'; query: string }
   | { type: 'SET_CATEGORY'; category: string }
-  | { type: 'SHOW_WALLET_GATE'; show: boolean }
-  | { type: 'SHOW_LOW_BALANCE'; show: boolean; required?: number; balance?: number }
-  | { type: 'DISMISS_LOW_BALANCE' };
+  | { type: 'SET_LAUNCH'; launch: { agentId: string; autoStart: boolean } | null }
+  | { type: 'CONSUME_LAUNCH' };
 
 const initialPageState: PageState = {
   activeTab: 'discover',
   selectedAgent: null,
+  previewAgent: null,
   inCall: false,
   callId: null,
   searchQuery: '',
   selectedCategory: 'all',
-  showWalletGate: false,
-  showLowBalance: false,
-  requiredBalance: 0,
-  lowBalanceContent: {
-    title: 'Insufficient Balance',
-    description: 'Add funds to your wallet to continue with this call. Your balance is too low to cover the estimated cost.',
-    balanceLabel: 'Current Balance',
-    requiredLabel: 'Required',
-    currentBalance: 0,
-  },
+  pendingLaunch: null,
 };
 
 function pageReducer(state: PageState, action: PageAction): PageState {
@@ -89,27 +74,20 @@ function pageReducer(state: PageState, action: PageAction): PageState {
       return { ...state, activeTab: action.tab };
     case 'SELECT_AGENT':
       return { ...state, selectedAgent: action.agent };
+    case 'PREVIEW_AGENT':
+      return { ...state, previewAgent: action.agent };
     case 'START_CALL':
-      return { ...state, inCall: true, callId: action.callId };
+      return { ...state, inCall: true, previewAgent: null, callId: action.callId };
     case 'END_CALL':
-      return { ...state, inCall: false, selectedAgent: null, callId: null };
+      return { ...state, inCall: false, selectedAgent: null, previewAgent: null, callId: null };
     case 'SET_SEARCH':
       return { ...state, searchQuery: action.query };
     case 'SET_CATEGORY':
       return { ...state, selectedCategory: action.category };
-    case 'SHOW_WALLET_GATE':
-      return { ...state, showWalletGate: action.show };
-    case 'SHOW_LOW_BALANCE':
-      return {
-        ...state,
-        showLowBalance: action.show,
-        ...(action.required !== undefined ? { requiredBalance: action.required } : {}),
-        ...(action.balance !== undefined
-          ? { lowBalanceContent: { ...state.lowBalanceContent, currentBalance: action.balance } }
-          : {}),
-      };
-    case 'DISMISS_LOW_BALANCE':
-      return { ...state, showLowBalance: false };
+    case 'SET_LAUNCH':
+      return { ...state, pendingLaunch: action.launch };
+    case 'CONSUME_LAUNCH':
+      return { ...state, pendingLaunch: null };
     default:
       return state;
   }
@@ -126,101 +104,131 @@ export default function Home() {
 function HomeInner() {
   const [state, dispatch] = useReducer(pageReducer, initialPageState);
   const {
-    activeTab, selectedAgent, inCall, callId,
-    searchQuery, selectedCategory,
-    showWalletGate, showLowBalance, requiredBalance, lowBalanceContent,
+    activeTab, selectedAgent, previewAgent, inCall, callId,
+    searchQuery, selectedCategory, pendingLaunch,
   } = state;
   const searchParams = useSearchParams();
   const router = useRouter();
-  const launchParamsRef = useRef<{ agentId: string; autoStart: boolean } | null>(null);
-  const launchAttemptedRef = useRef(false);
+  const [isStartingCall, setIsStartingCall] = useState(false);
 
-  // Debounce search query for API calls (300ms)
+  // #18 & #21: Debounce BOTH search and category together; reset page on change
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+  const [debouncedCategory, setDebouncedCategory] = useState(selectedCategory);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setDebouncedQuery(searchQuery);
+      setDebouncedCategory(selectedCategory);
+      setPage(1); // #18: Reset pagination on filter change
     }, 300);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategory]);
 
   const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
-  const { balance: userBalance, isLoading: isLoadingBalance, mutate: mutateBalance } = useUserBalance(address);
-  // Load more: fetch next page
-  const [page, setPage] = useState(1);
-  const [allAgents, setAllAgents] = useState<Agent[]>([]);
+  const { balance: userBalance, isLoading: isLoadingBalance } = useUserBalance(address);
+  const onboarding = useOnboarding(connected, userBalance || 0);
+  const freeCall = useFreeCall();
+  const streak = useStreak();
 
   const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
     search: debouncedQuery,
-    category: selectedCategory,
+    category: debouncedCategory,
     page,
   });
+
+  // Personalize agent order based on onboarding use-case selection
+  const personalizedAgents = usePersonalizedAgents(agents, onboarding.selectedUseCase);
+  const displayedAgents = personalizedAgents;
   const localCallHistory = useLocalCallHistory();
   const { isSupported: isWebRTCSupported, permissions: micPermissions, requestMicrophonePermission } = useWebRTCSupport();
-  const onboarding = useOnboarding(connected, userBalance);
+
   const clearLaunchState = useCallback(() => {
-    launchParamsRef.current = null;
-    launchAttemptedRef.current = false;
+    dispatch({ type: 'CONSUME_LAUNCH' });
   }, []);
 
-  const startCall = useCallback(async () => {
-    if (!selectedAgent) return;
-    if (!isWebRTCSupported) { showError('WebRTC not supported'); return; }
-    if (micPermissions.microphone === 'denied') { showError('Microphone access required'); return; }
-    if (micPermissions.microphone === 'prompt') {
-      const granted = await requestMicrophonePermission();
-      if (!granted) { showError('Microphone permission required'); return; }
-    }
-    if (!connected) { dispatch({ type: 'SHOW_WALLET_GATE', show: true }); return; }
+  // #19: Removed preflight — useWidgetConversation fetches a signed URL via
+  // /api/webrtc/signal when starting. A separate availability check is a wasted round-trip.
+  // The hook will surface an error if the agent is unavailable.
+  const startCallWithAgentRef = useRef<(agent: Agent) => Promise<void>>();
+  startCallWithAgentRef.current = async (agent: Agent) => {
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-    // Pre-flight: verify the agent is configured (lightweight, no token minting)
+    // Allow call if: demo mode, wallet connected, OR user has a free call available
+    if (!isDemoMode && !freeCall.hasFreeCall && (!connected || !address)) {
+      dispatch({ type: 'PREVIEW_AGENT', agent });
+      showInfo('Wallet needed first. Connect your wallet, then the call can start.');
+      return;
+    }
+
+    // If using free call (no wallet), activate it
+    if (!isDemoMode && !connected && freeCall.hasFreeCall) {
+      freeCall.startFreeCall();
+    }
+
+    setIsStartingCall(true);
     try {
-      const preflightRes = await fetch(`/api/webrtc/signal?agentId=${encodeURIComponent(selectedAgent.id)}`);
-      if (!preflightRes.ok) {
-        showError('Agent is unavailable right now');
+      if (!isWebRTCSupported) {
+        dispatch({ type: 'PREVIEW_AGENT', agent });
+        showError('Your browser does not support voice calls. Try Chrome desktop for the demo.');
         return;
       }
-    } catch {
-      showError('Cannot reach voice service. Please try again.');
-      return;
+      if (micPermissions.microphone === 'denied') {
+        dispatch({ type: 'PREVIEW_AGENT', agent });
+        showError('Microphone access is blocked. Please allow it in browser settings.');
+        return;
+      }
+      if (micPermissions.microphone === 'prompt') {
+        showInfo('Allow microphone access to open the voice line.');
+        const granted = await requestMicrophonePermission();
+        if (!granted) {
+          dispatch({ type: 'PREVIEW_AGENT', agent });
+          showError('Microphone permission is required for voice calls');
+          return;
+        }
+      }
+
+      dispatch({ type: 'SELECT_AGENT', agent });
+      const newCallId = generateCallId();
+      dispatch({ type: 'START_CALL', callId: newCallId });
+    } finally {
+      setIsStartingCall(false);
     }
+  };
 
-    const estimatedCost = Number(selectedAgent.rate) * 5;
-
-    if (userBalance < estimatedCost) {
-      dispatch({
-        type: 'SHOW_LOW_BALANCE',
-        show: true,
-        required: estimatedCost,
-        balance: userBalance,
-      });
-      return;
-    }
-
-    const newCallId = generateCallId();
-    dispatch({ type: 'START_CALL', callId: newCallId });
-  }, [
-    connected,
-    isWebRTCSupported,
-    micPermissions,
-    requestMicrophonePermission,
-    selectedAgent,
-    userBalance,
-  ]);
+  // Stable reference that never changes — avoids effect re-triggers
+  const startCallWithAgent = useCallback((agent: Agent) => {
+    return startCallWithAgentRef.current!(agent);
+  }, []);
 
   const endCall = useCallback(() => {
     clearLaunchState();
+    // If this was a free call, mark it as used
+    if (freeCall.isFreeCallActive) {
+      freeCall.completeFreeCall();
+    }
+    // Record the call for streak tracking
+    if (selectedAgent) {
+      streak.recordCall(selectedAgent.id);
+    }
     dispatch({ type: 'END_CALL' });
-  }, [clearLaunchState]);
+  }, [clearLaunchState, freeCall, selectedAgent, streak]);
 
-  const closeModal = useCallback(() => {
-    dispatch({ type: 'SELECT_AGENT', agent: null });
-  }, []);
+  const handleSelectAgent = useCallback((agent: Agent | null) => {
+    if (agent) {
+      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+      if (isDemoMode) {
+        // In demo mode, skip the preview sheet and start the call directly
+        startCallWithAgent(agent);
+      } else {
+        dispatch({ type: 'PREVIEW_AGENT', agent });
+      }
+    }
+  }, [startCallWithAgent]);
 
   const handleSelectRelatedAgent = useCallback((agentId: string) => {
     const agent = agents.find((a) => a.id === agentId);
@@ -229,13 +237,9 @@ function HomeInner() {
     dispatch({ type: 'SET_TAB', tab: 'discover' });
 
     if (agent) {
-      dispatch({ type: 'SELECT_AGENT', agent });
+      dispatch({ type: 'PREVIEW_AGENT', agent });
     }
   }, [agents, clearLaunchState]);
-
-  const handleSelectAgent = useCallback((agent: Agent | null) => {
-    dispatch({ type: 'SELECT_AGENT', agent });
-  }, []);
 
   const handleSearchChange = useCallback((query: string) => {
     dispatch({ type: 'SET_SEARCH', query });
@@ -246,7 +250,7 @@ function HomeInner() {
   }, []);
 
   const handleSelectRelatedAgentDispatch = useCallback((agent: Agent | null) => {
-    dispatch({ type: 'SELECT_AGENT', agent });
+    if (agent) dispatch({ type: 'PREVIEW_AGENT', agent });
   }, []);
 
   const handleSwitchTab = useCallback((tab: string) => {
@@ -258,110 +262,40 @@ function HomeInner() {
     [agents, selectedAgent]
   );
 
-  // Accumulate agents across pages for "Load More"
-  // Reset when search/category changes
-  const prevFiltersRef = useRef(`${debouncedQuery}|${selectedCategory}`);
-  useEffect(() => {
-    const currentFilters = `${debouncedQuery}|${selectedCategory}`;
-    if (prevFiltersRef.current !== currentFilters) {
-      prevFiltersRef.current = currentFilters;
-      setPage(1);
-      setAllAgents(agents);
-    } else if (page === 1) {
-      setAllAgents(agents);
-    } else {
-      // Append new page, dedup by id
-      setAllAgents(prev => {
-        const existingIds = new Set(prev.map(a => a.id));
-        const newAgents = agents.filter(a => !existingIds.has(a.id));
-        return newAgents.length > 0 ? [...prev, ...newAgents] : prev;
-      });
-    }
-  }, [agents, page, debouncedQuery, selectedCategory]);
-
   const handleLoadMore = useCallback(() => {
     setPage(prev => prev + 1);
   }, []);
 
   useEffect(() => {
     const launchParams = readCallLaunchParams(searchParams);
-    if (!launchParams || launchParamsRef.current) {
+    if (!launchParams || pendingLaunch) {
       return;
     }
 
-    launchParamsRef.current = launchParams;
-
+    dispatch({ type: 'SET_LAUNCH', launch: launchParams });
     dispatch({ type: 'SET_TAB', tab: 'discover' });
     router.replace('/', { scroll: false });
-  }, [router, searchParams]);
+  }, [pendingLaunch, router, searchParams]);
 
   useEffect(() => {
-    const launchParams = launchParamsRef.current;
-    if (!launchParams || selectedAgent || agents.length === 0) {
+    if (!pendingLaunch || selectedAgent || previewAgent || agents.length === 0) {
       return;
     }
 
-    const agent = agents.find((candidate) => candidate.id === launchParams.agentId);
+    const agent = agents.find((candidate) => candidate.id === pendingLaunch.agentId);
+    dispatch({ type: 'CONSUME_LAUNCH' });
     if (!agent) {
-      showError('Selected agent is no longer available.');
-      launchParamsRef.current = null;
       return;
     }
 
-    dispatch({ type: 'SELECT_AGENT', agent });
-  }, [agents, selectedAgent]);
-
-  useEffect(() => {
-    const launchParams = launchParamsRef.current;
-    if (!launchParams?.autoStart || !selectedAgent || launchAttemptedRef.current) {
-      return;
-    }
-
-    void startCall().finally(() => {
-      if (connected) {
-        launchAttemptedRef.current = true;
-      }
-    });
-  }, [connected, selectedAgent, startCall]);
+    dispatch({ type: 'PREVIEW_AGENT', agent });
+  }, [agents, pendingLaunch, previewAgent, selectedAgent]);
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-950 text-white font-sans">
+      <div className="switchboard-shell min-h-screen text-white font-sans">
         <OfflineBanner />
         <ToastProvider />
-        <Onboarding
-          isOpen={onboarding.isOpen}
-          currentStep={onboarding.currentStep}
-          walletConnected={connected}
-          walletBalance={userBalance}
-          onClose={onboarding.closeOnboarding}
-          onNext={onboarding.nextStep}
-          onSkip={onboarding.skipOnboarding}
-          onConnect={connect}
-        />
-        <WalletConnectGate
-          isOpen={showWalletGate}
-          onConnect={() => { connect(); dispatch({ type: 'SHOW_WALLET_GATE', show: false }); }}
-          onClose={() => dispatch({ type: 'SHOW_WALLET_GATE', show: false })}
-          isConnecting={isConnecting}
-        />
-        <LowBalanceWarning
-          isOpen={showLowBalance}
-          balance={lowBalanceContent.currentBalance}
-          requiredAmount={requiredBalance}
-          title={lowBalanceContent.title}
-          description={lowBalanceContent.description}
-          balanceLabel={lowBalanceContent.balanceLabel}
-          requiredLabel={lowBalanceContent.requiredLabel}
-          onAddFunds={() => { dispatch({ type: 'DISMISS_LOW_BALANCE' }); dispatch({ type: 'SET_TAB', tab: 'profile' }); }}
-          onClose={() => dispatch({ type: 'DISMISS_LOW_BALANCE' })}
-          onGoHome={() => { dispatch({ type: 'DISMISS_LOW_BALANCE' }); dispatch({ type: 'SELECT_AGENT', agent: null }); }}
-        />
-        <AgentDetailModal
-          agent={selectedAgent}
-          onClose={closeModal}
-          onCall={startCall}
-        />
         <Header
           connected={connected}
           userBalance={userBalance}
@@ -370,7 +304,22 @@ function HomeInner() {
           onConnect={connect}
           onDisconnect={disconnect}
         />
-        <main id="main-content" className="max-w-2xl mx-auto pb-28 px-4 sm:px-6" role="main">
+        <Onboarding
+          isOpen={onboarding.isOpen}
+          currentStep={onboarding.currentStep}
+          walletConnected={connected}
+          walletBalance={userBalance || 0}
+          selectedUseCase={onboarding.selectedUseCase}
+          currentStepIndex={onboarding.currentStepIndex}
+          totalSteps={onboarding.totalSteps}
+          onClose={onboarding.closeOnboarding}
+          onNext={onboarding.nextStep}
+          onPrev={onboarding.prevStep}
+          onSkip={onboarding.skipOnboarding}
+          onSetUseCase={onboarding.setUseCase}
+          onConnect={connect}
+        />
+        <main id="main-content" className="mx-auto max-w-6xl px-4 pb-28 sm:px-6 lg:px-8" role="main">
           {inCall && selectedAgent && callId ? (
             <ActiveCall
               agent={{
@@ -391,27 +340,31 @@ function HomeInner() {
               relatedAgents={relatedAgents}
               onEnd={endCall}
               onSelectRelatedAgent={handleSelectRelatedAgent}
+              walletConnected={connected}
+              streakCount={streak.currentStreak}
+              isFirstCall={streak.totalCalls <= 1}
+              onConnectWallet={connect}
             />
           ) : (
             <>
               {activeTab === 'discover' && (
-                <Suspense fallback={<TabLoading />}>
-                  <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
-                    <DiscoverTab
-                      agents={allAgents}
-                      isLoading={isLoadingAgents && allAgents.length === 0}
-                      error={agentsError}
-                      onSelect={handleSelectAgent}
-                      searchQuery={searchQuery}
-                      onSearchChange={handleSearchChange}
-                      selectedCategory={selectedCategory}
-                      onCategoryChange={handleCategoryChange}
-                      onRefresh={async () => { await mutateAgents(); }}
-                      hasMore={hasMore}
-                      onLoadMore={handleLoadMore}
-                    />
-                  </ErrorBoundary>
-                </Suspense>
+                <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
+                  <DiscoverTab
+                    agents={displayedAgents}
+                    isLoading={isLoadingAgents && displayedAgents.length === 0}
+                    error={agentsError}
+                    onSelect={handleSelectAgent}
+                    onVoiceCall={startCallWithAgent}
+                    searchQuery={searchQuery}
+                    onSearchChange={handleSearchChange}
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={handleCategoryChange}
+                    onRefresh={mutateAgents}
+                    hasMore={hasMore}
+                    onLoadMore={handleLoadMore}
+                    preferredConciergeId={getPreferredConcierge(onboarding.selectedUseCase)}
+                  />
+                </ErrorBoundary>
               )}
               {activeTab === 'calls' && (
                 <Suspense fallback={<TabLoading />}>
@@ -443,8 +396,19 @@ function HomeInner() {
             </>
           )}
         </main>
-        <nav className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800/50" role="navigation" aria-label="Main navigation">
-          <div className="max-w-2xl mx-auto px-4 py-2 flex justify-around">
+        <AgentPreviewSheet
+          agent={previewAgent}
+          connected={connected}
+          userBalance={userBalance || 0}
+          isConnectingWallet={isConnecting}
+          isStartingCall={isStartingCall}
+          hasFreeCall={freeCall.hasFreeCall}
+          onClose={() => dispatch({ type: 'PREVIEW_AGENT', agent: null })}
+          onConnect={connect}
+          onCallNow={startCallWithAgent}
+        />
+        <nav className="fixed bottom-0 left-0 right-0 border-t border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl" role="navigation" aria-label="Main navigation">
+          <div className="mx-auto flex max-w-2xl justify-around px-4 py-2">
             {[
               { id: 'discover', label: 'Discover', Icon: Search },
               { id: 'calls', label: 'Calls', Icon: Phone },
@@ -453,8 +417,9 @@ function HomeInner() {
               <button
                 key={tab.id}
                 onClick={() => dispatch({ type: 'SET_TAB', tab: tab.id as PageState['activeTab'] })}
-                className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
-                  activeTab === tab.id ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-500 hover:text-gray-300'
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+                className={`flex flex-col items-center gap-1 rounded-xl px-6 py-2 transition-all ${
+                  activeTab === tab.id ? 'bg-red-500/15 text-amber-100' : 'text-amber-100/40 hover:text-amber-100/75'
                 }`}
               >
                 <tab.Icon className="w-5 h-5" />
@@ -471,8 +436,8 @@ function HomeInner() {
 function TabLoading() {
   return (
     <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
-      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-      <p className="text-gray-400 text-sm mt-4">Loading...</p>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
+      <p className="mt-4 text-sm text-amber-100/55">Loading switchboard...</p>
     </div>
   );
 }
@@ -480,10 +445,10 @@ function TabLoading() {
 function TabError({ label, onRetry }: { label: string; onRetry: () => void }) {
   return (
     <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
-      <p className="text-red-400 text-sm mb-4">Something went wrong loading {label}.</p>
+      <p className="mb-4 text-sm text-red-300">Something went wrong loading {label}.</p>
       <button
         onClick={onRetry}
-        className="px-4 py-2 text-sm font-medium text-cyan-400 bg-cyan-500/10 rounded-lg hover:bg-cyan-500/20 transition-colors"
+        className="rounded-lg border border-amber-100/20 bg-amber-100/10 px-4 py-2 text-sm font-bold text-amber-100 transition-colors hover:bg-amber-100/15"
       >
         Try Again
       </button>

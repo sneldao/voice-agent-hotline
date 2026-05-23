@@ -9,6 +9,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { handleOptions, withCors } from '@/lib/cors';
 import {
   getActiveDelegations,
   getDelegationById,
@@ -53,28 +54,28 @@ export async function GET(req: NextRequest) {
       // Fetch a specific delegation
       const delegation = await getDelegationById(delegationId);
       if (!delegation) {
-        return NextResponse.json({ error: 'Delegation not found' }, { status: 404 });
+        return withCors(NextResponse.json({ error: 'Delegation not found' }, { status: 404 }), req);
       }
-      return NextResponse.json({ delegation });
+      return withCors(NextResponse.json({ delegation }), req);
     }
 
     if (!userAddress) {
-      return NextResponse.json({ error: 'userAddress is required' }, { status: 400 });
+      return withCors(NextResponse.json({ error: 'userAddress is required' }, { status: 400 }), req);
     }
 
     const delegations = await getActiveDelegations(userAddress);
 
     if (delegations.length === 0) {
-      return NextResponse.json({ delegation: null, delegations: [] });
+      return withCors(NextResponse.json({ delegation: null, delegations: [] }), req);
     }
 
     // Return the most recent active delegation
     const latest = delegations.sort((a, b) => b.createdAt - a.createdAt)[0];
-    return NextResponse.json({ delegation: latest, delegations });
+    return withCors(NextResponse.json({ delegation: latest, delegations }), req);
 
   } catch (error: any) {
     console.error('[API:Delegations:GET]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return withCors(NextResponse.json({ error: error.message }, { status: 500 }), req);
   }
 }
 
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!userAddress) {
-      return NextResponse.json({ error: 'userAddress is required' }, { status: 400 });
+      return withCors(NextResponse.json({ error: 'userAddress is required' }, { status: 400 }), req);
     }
 
     const delegationRegistryAddress = process.env.NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS;
@@ -162,17 +163,20 @@ export async function POST(req: NextRequest) {
       createdAt: Date.now(),
     });
 
-    return NextResponse.json({
-      delegationId,
-      delegation,
-      onChain: isConfigured,
-      txData, // Unsigned transaction for user to sign
-      platformAddress: PLATFORM_ADDRESS,
-    });
+    return withCors(
+      NextResponse.json({
+        delegationId,
+        delegation,
+        onChain: isConfigured,
+        txData, // Unsigned transaction for user to sign
+        platformAddress: PLATFORM_ADDRESS,
+      }),
+      req
+    );
 
   } catch (error: any) {
     console.error('[API:Delegations:POST]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return withCors(NextResponse.json({ error: error.message }, { status: 500 }), req);
   }
 }
 
@@ -186,14 +190,14 @@ export async function DELETE(req: NextRequest) {
     const userAddress = searchParams.get('userAddress');
 
     if (!delegationId) {
-      return NextResponse.json({ error: 'delegationId is required' }, { status: 400 });
+      return withCors(NextResponse.json({ error: 'delegationId is required' }, { status: 400 }), req);
     }
 
     // Verify ownership
     if (userAddress) {
       const delegation = await getDelegationById(delegationId);
       if (delegation && delegation.userId !== userAddress) {
-        return NextResponse.json({ error: 'Not authorized to revoke this delegation' }, { status: 403 });
+        return withCors(NextResponse.json({ error: 'Not authorized to revoke this delegation' }, { status: 403 }), req);
       }
     }
 
@@ -227,15 +231,22 @@ export async function DELETE(req: NextRequest) {
     // Revoke in Redis
     await revokeDelegation(delegationId);
 
-    return NextResponse.json({ 
-      success: true, 
-      delegationId,
-      onChain: isConfigured,
-      txData, // Unsigned transaction for user to sign (if needed)
-    });
+    return withCors(
+      NextResponse.json({ 
+        success: true, 
+        delegationId,
+        onChain: isConfigured,
+        txData, // Unsigned transaction for user to sign (if needed)
+      }),
+      req
+    );
 
   } catch (error: any) {
     console.error('[API:Delegations:DELETE]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return withCors(NextResponse.json({ error: error.message }, { status: 500 }), req);
   }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return handleOptions(req);
 }
