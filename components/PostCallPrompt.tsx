@@ -51,7 +51,7 @@ export function PostCallPrompt({
                 {isFirstCall ? 'Nice first call!' : 'That was great!'}
               </h3>
               <p className="mt-1 text-sm text-amber-100/60 leading-relaxed">
-                Connect your Caller ID to keep your call history, unlock all agents, and build your streak.
+                Connect your wallet to keep your call history, unlock all agents, and build your streak.
               </p>
               <div className="mt-3 flex gap-2">
                 <Button
@@ -60,7 +60,7 @@ export function PostCallPrompt({
                   className="bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400"
                 >
                   <Wallet className="w-3.5 h-3.5" />
-                  Get Caller ID
+                  Connect Wallet
                 </Button>
                 <Button onClick={onDismiss} variant="ghost" size="sm">
                   Later

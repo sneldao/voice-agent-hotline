@@ -13,7 +13,13 @@ interface User {
   updatedAt: number;
 }
 
-interface Agent {
+/**
+ * Backend Agent record stored in Redis.
+ *
+ * See also `Agent` in lib/types.ts for the frontend-facing type.
+ * API routes map between the two representations.
+ */
+interface DbAgent {
   id: string;
   owner: string;
   name: string;
@@ -29,6 +35,9 @@ interface Agent {
   createdAt: number;
   updatedAt: number;
 }
+
+// Re-export for callers that still reference the old name
+type Agent = DbAgent;
 
 interface CallSession {
   id: string;

@@ -35,16 +35,6 @@ export interface TranscriptMessage {
   isFinal: boolean;
 }
 
-// Agent ID mapping — same as in useElevenLabsConversation
-const AGENT_ID_MAP: Record<string, string> = {
-  general_helper: 'agent_2101khgsyd02fnvshvr7rzb50qj6',
-  solana_sage: 'agent_9001khs0795af6ntqsskx7zk4yqp',
-  code_reviewer: 'agent_9301khs07adxf6qrsyfst7xjv5aa',
-  tour_master: 'agent_7701khqafe2fet2vq9m3m88896xv',
-  web_researcher: 'agent_5301kmcn9c3sf2cswtga84kpcfk8',
-  medical_advisor: 'agent_0601krex7tg2f43rjz96gvtxwwpk',
-  voice_router: 'agent_1301krgw7ctveryscr9z894hmz6r',
-};
 
 interface WidgetConversationOptions {
   agentId: string;
@@ -92,8 +82,9 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
   const eventCleanupRef = useRef<Array<() => void>>([]);
   const connectedRef = useRef(false);
 
-  // Resolve the ElevenLabs agent ID from our internal key
-  const resolvedAgentId = AGENT_ID_MAP[agentId] || agentId;
+  // agentId is our internal key (e.g. 'general_helper').
+  // Resolution to an ElevenLabs agent ID happens server-side in /api/webrtc/signal
+  // via the canonical AGENT_REGISTRY, keeping IDs in a single source of truth.
 
   // Centralized connection state handlers
   const handleConnected = useCallback(() => {
@@ -300,12 +291,13 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
         const data = await response.json();
         if (data.signedUrl) {
           engine.setSignedUrl(data.signedUrl);
+        } else if (data.elevenLabsAgentId) {
+          engine.setAgentId(data.elevenLabsAgentId);
         } else {
-          // Fall back to resolved agent ID
-          engine.setAgentId(data.elevenLabsAgentId || resolvedAgentId);
+          throw new Error('Server returned neither signedUrl nor elevenLabsAgentId');
         }
       } else {
-        engine.setAgentId(resolvedAgentId);
+        throw new Error('Signed URL mode is required — agent IDs are resolved server-side via the registry');
       }
 
       // Attach event listeners before starting
@@ -350,7 +342,6 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     useSignedUrl,
     agentId,
     userId,
-    resolvedAgentId,
     engine,
     attachEventListeners,
     handleConnected,

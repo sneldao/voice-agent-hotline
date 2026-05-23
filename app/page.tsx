@@ -161,7 +161,7 @@ function HomeInner() {
     // Allow call if: demo mode, wallet connected, OR user has a free call available
     if (!isDemoMode && !freeCall.hasFreeCall && (!connected || !address)) {
       dispatch({ type: 'PREVIEW_AGENT', agent });
-      showInfo('Caller ID needed first. Connect your wallet, then the call can start.');
+      showInfo('Wallet needed first. Connect your wallet, then the call can start.');
       return;
     }
 
