@@ -12,24 +12,16 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
+  // The app uses a hardcoded dark switchboard aesthetic throughout.
+  // Light mode is not supported — always force dark.
+  const [theme] = useState<Theme>('dark');
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setTheme(initialTheme);
-    document.documentElement.classList.add(initialTheme + '-mode');
+    document.documentElement.classList.add('dark-mode');
   }, []);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.remove(theme + '-mode');
-    document.documentElement.classList.add(newTheme + '-mode');
+    // no-op: light mode is not supported with the switchboard theme
   };
 
   return (

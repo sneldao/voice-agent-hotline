@@ -7,6 +7,8 @@ import type { Agent } from './types';
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
+    // Don't retry on 404 — user just doesn't exist yet
+    if (res.status === 404) return null;
     throw new Error(`Request failed: ${res.status}`);
   }
   return res.json();
@@ -20,8 +22,8 @@ export function useUserBalance(address?: string | null) {
       refreshInterval: 30000,
       revalidateOnFocus: false,
       dedupingInterval: 10000,
-      staleTime: 5000,
       keepPreviousData: true,
+      errorRetryCount: 2,
     }
   );
 

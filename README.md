@@ -1,174 +1,269 @@
 # 🎙️ VOISSS — Voice Agent Hotline
 
-VOISSS is a decentralised marketplace for calling AI voice agents on-demand, powered by ElevenLabs Conversational AI. Users connect a Celo wallet, browse agents, and pay-per-second via stablecoins for live voice conversations. The platform includes purpose-built agents like **Dr. Maya** (medical/healthcare advisor), **Web Researcher** (real-time web search via Firecrawl), and **Solana Sage** (blockchain analytics). Agent reputation, identity, and delegation are tracked on-chain using ERC-8004 registries on Celo.
+**A hands-free AI agent marketplace you can use without ever touching a keyboard.**
 
-**Live:** [voisss.celo.famile.xyz](https://voisss.celo.famile.xyz) · [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)
+VOISSS lets you browse, discover, and have live voice conversations with specialized AI agents — entirely by speaking. Built with [ElevenLabs Conversational AI](https://elevenlabs.io/conversational-ai) for natural voice interaction and [Cursor](https://cursor.sh) as the AI-first development environment.
 
----
+Current build status: the product UI has been redesigned as an immersive classic phone-operator switchboard. The next engineering phase is replacing the temporary SDK call path with a controlled ElevenLabs widget engine.
 
-## What It Does
-
-- Browse a marketplace of voice AI agents (Dr. Maya, Web Researcher, Solana Sage, Code Reviewer, Diversifi, Clawdy, and more)
-- **Healthcare agent:** Dr. Maya provides evidence-based health information with proper safety disclaimers
-- Connect your wallet and call any agent — billed per minute with Celo-native stablecoin settlement
-- Agents earn per call; reputation and identity are tracked on-chain via ERC-8004
-- **Real-time research:** Web Researcher uses Firecrawl to search and scrape during calls
-- Payment infrastructure is modular: the app supports Celo-first flows today and includes optional WDK/x402 plumbing for additional wallet and payment experiences
-- Developers can list their own ElevenLabs agent via the self-registration flow at `/list-your-agent`
+**Live Demo:** [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)  
+**Repo:** [github.com/sneldao/voice-agent-hotline](https://github.com/sneldao/voice-agent-hotline)
 
 ---
 
-## Stack
+## The Idea
+
+What if you could call an AI expert the same way you'd call a friend — just tap and talk? No typing, no prompts, no keyboard required.
+
+VOISSS is a voice-first marketplace where each agent is a specialist: a doctor, a web researcher, a code reviewer, a travel planner. You speak naturally, they respond in real-time with ElevenLabs' ultra-low-latency voice AI. During the conversation, agents can take actions on your behalf — search the web, look up blockchain data, book appointments — all triggered by your voice.
+
+---
+
+## Hands-Free Experience
+
+Every interaction in VOISSS is designed for zero keyboard input:
+
+- **Browse agents** → tap to select (mobile-first UI, large touch targets)
+- **Start a call** → one tap, then pure voice conversation
+- **Agent actions** → speak your request, the agent executes tools mid-conversation
+- **End call** → tap the hang-up button, get a spoken summary
+- **Rate & review** → tap stars, no text required
+
+The entire flow from discovery to conversation to payment works without typing a single character.
+
+---
+
+## ElevenLabs Integration
+
+VOISSS uses ElevenLabs across the full stack:
+
+| Feature | ElevenLabs API |
+|---------|---------------|
+| Real-time voice conversations | [Conversational AI](https://elevenlabs.io/docs/conversational-ai) |
+| Agent voices | Pre-made + custom voice IDs per agent |
+| Speech-to-Text (input) | Built into ConvAI — user speaks, agent understands |
+| Text-to-Speech (output) | Built into ConvAI — agent responds with natural voice |
+| Tool execution during calls | Webhook-based tool calls (search, book, research) |
+| Conversation transcripts | Widget events or webhook reconciliation, pending widget-control spike |
+
+### Current State
+
+- The visible product now uses a switchboard-style UI: operator console, rotary call control, line lamps, patch-cord accents, agent line cards, and an analog in-call console.
+- `VoiceRouter` no longer uses browser `SpeechRecognition`; tapping it starts the General Helper concierge line.
+- `ActiveCall` uses the `useWidgetConversation` hook which controls the global `<elevenlabs-convai>` widget engine.
+- The widget is mounted offscreen by `WidgetEngineProvider` in the layout and controlled programmatically via shadow DOM button clicks and signed URLs.
+
+### How It Works
+
+Target widget-first flow:
+
+```
+User speaks → ElevenLabs STT → LLM processes → Tool call (if needed) → ElevenLabs TTS → User hears response
+```
+
+1. User taps "Call" on an agent (or taps the Voice Router mic)
+2. App sets the `agent-id` or `signed-url` on the ElevenLabs widget and starts the conversation
+3. Widget handles WebRTC connection, negotiation, and agent dispatch internally
+4. User speaks naturally — ElevenLabs handles ASR, turn-taking, and TTS
+5. When the agent needs to take action (web search, booking, etc.), it triggers a webhook
+6. Our server executes the tool and returns a narration string
+7. ElevenLabs speaks the result back to the user
+8. Full transcript is captured and saved
+
+### Key Files
+
+- `components/VoiceRouter.tsx` — One-tap AI concierge launcher
+- `components/ActiveCall.tsx` — Custom operator-style call UI backed by the widget hook
+- `components/WidgetEngine.tsx` — Global `<elevenlabs-convai>` widget provider (offscreen, controlled)
+- `lib/useWidgetConversation.ts` — Conversation hook controlling the widget engine
+- `lib/useWebRTCSupport.ts` — Browser capability check (WebRTC + microphone)
+- `app/widget-probe/page.tsx` — Internal widget-control spike page
+- `components/WidgetProbe.tsx` — Runtime introspection UI for the `<elevenlabs-convai>` element
+- `lib/agent-registry.ts` — Canonical registry mapping agents to ElevenLabs IDs + voice configs
+- `app/api/webhooks/elevenlabs/route.ts` — Webhook handler for mid-conversation tool execution
+- `app/api/webrtc/signal/route.ts` — Signed URL + token endpoint for authenticated sessions
+- `docs/WIDGET_ARCHITECTURE.md` — Full architecture documentation
+
+### Why the Widget?
+
+We use the official `<elevenlabs-convai>` widget rather than the raw `@elevenlabs/client` SDK because:
+- The widget reliably handles WebRTC negotiation and AI agent dispatch
+- It's the same connection path used by the ElevenLabs dashboard (proven to work)
+- It manages audio devices, reconnection, and error recovery internally
+- Our app can control it programmatically while showing its own custom switchboard UI
+
+### Next Voice Plumbing Steps
+
+1. ~~Prove widget imperative control on the real custom element.~~ ✅ Done
+2. ~~Record `/widget-probe` results.~~ ✅ Shadow button is the control path; no imperative methods; signed URLs work.
+3. ~~Replace the hardcoded visible widget with one controlled widget engine.~~ ✅ Done
+4. ~~Build `useWidgetConversation`.~~ ✅ Done
+5. ~~Swap `ActiveCall` from `useElevenLabsConversation` to `useWidgetConversation`.~~ ✅ Done
+6. Transcript source of truth: widget emits no transcript events; use ElevenLabs webhook reconciliation for final records.
+7. Signed URLs enabled by default; `/api/webrtc/signal` provides them.
+
+---
+
+## Built with Cursor
+
+This entire project was developed using Cursor's AI-powered coding features:
+
+- **AI-assisted architecture** — Cursor helped design the 4-layer agent architecture (Voice → Orchestration → Execution → Settlement)
+- **Code generation** — Components, API routes, and integrations written with Cursor's AI assistance
+- **Debugging** — Real-time error resolution during ElevenLabs SDK integration
+- **Refactoring** — Large-scale refactors (WebRTC migration, payment system) guided by Cursor
+
+---
+
+## Available Voice Agents
+
+| Agent | Voice | Specialty |
+|-------|-------|-----------|
+| **Dr. Maya** ⚕️ | Sarah | Evidence-based health information with safety protocols |
+| **Web Researcher** 🔍 | Steve | Real-time web search & content extraction via Firecrawl |
+| **Solana Sage** 🔮 | Josh | Blockchain analytics, wallet balances, transaction lookups |
+| **Code Reviewer** 👨‍💻 | Antoni | GitHub operations, code reviews, architecture advice |
+| **General Helper** 🤖 | Adam | Booking, ordering, scheduling — your AI concierge |
+| **Tour Master** 🌍 | Rachel | Travel planning, destination research, price comparison |
+
+Each agent has a unique ElevenLabs voice, custom system prompt, and set of tools it can invoke during conversation.
+
+---
+
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14 (App Router), Tailwind CSS |
-| Voice AI | ElevenLabs Conversational AI |
-| Payments | Celo stablecoins, Yellow Network state channels, optional WDK/x402 rails |
-| Identity | ERC-8004 — Identity, Reputation, Delegation registries on Celo Sepolia |
-| Storage | Upstash Redis (agent data, call history, ratings) |
+| Frontend | Next.js 14 (App Router), React 18, Tailwind CSS |
+| Voice AI | **ElevenLabs Conversational AI**; widget-first refactor in progress |
+| LLM | GPT-4 (via ElevenLabs ConvAI) |
+| Tools | Firecrawl (web search/scrape), Composio (GitHub, Solana) |
+| Payments | Celo stablecoins (cUSD), Superfluid streaming |
+| Identity | ERC-8004 on-chain agent registry (Celo Sepolia) |
+| Storage | Upstash Redis |
 | Wallet | Web3Modal + WalletConnect |
-| Hosting | Hetzner VPS (PM2 standalone) + Vercel (frontend/serverless) |
+| Hosting | Vercel + Hetzner VPS |
 
 ---
 
-## ERC-8004 Contract Addresses (Celo Sepolia)
+## Quick Start
 
-| Contract | Address |
-|---|---|
-| Identity Registry | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
-| Reputation Registry | `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
-| Delegation Registry | `0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00` |
+```bash
+git clone https://github.com/sneldao/voice-agent-hotline.git
+cd voice-agent-hotline
+npm install
+cp .env.local.example .env.local
+# Add your ELEVENLABS_API_KEY and other keys
+npm run dev
+```
 
----
+Then seed agents:
+```bash
+curl -X POST http://localhost:3000/api/agents/seed
+```
 
-## API Endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/agents` | List all active agents |
-| POST | `/api/agents` | Create agent (admin) or register (developer, `register: true`) |
-| GET | `/api/agents/:id` | Get agent by ID |
-| PATCH | `/api/agents/:id` | Approve/reject pending agent |
-| DELETE | `/api/agents/:id` | Delete agent |
-| POST | `/api/agents/seed` | Seed default agents into Redis |
-| GET | `/api/agents/stats` | Aggregate stats for OpenClaw integration |
-| POST | `/api/openclaw/webhook` | OpenClaw social agent webhook |
-| POST | `/api/webhooks/elevenlabs` | ElevenLabs call completion webhook |
+Open `http://localhost:3000`, tap any agent to start a voice call. No wallet required.
 
 ---
 
-## Deployment
+## Routes
 
-The app runs in two modes simultaneously:
+| Path | Purpose |
+|------|---------|
+| `/` | Main app — Discover agents, make calls, view history, profile (tabbed SPA) |
+| `/list-your-agent` | Developer self-registration form for listing ElevenLabs agents |
+| `/dashboard` | Agent owner analytics (call counts, revenue, ratings) |
+| `/admin` | Platform admin panel (approve/reject agents, manage users) |
+| `/widget-probe` | Internal ElevenLabs widget-control spike page |
+| `/marketplace` | Redirects to `/` (legacy) |
+| `/profile` | Redirects to `/` (consolidated into main app tabs) |
+| `/demo` | Redirects to `/` (legacy) |
 
-### Vercel (frontend + serverless API)
-- Auto-deploys from `main` branch
-- API routes run as serverless functions
-- Reads agents from Upstash Redis
+---
 
-### VPS / Hetzner (standalone Next.js server)
-- PM2 manages the process at `/opt/voice-hotline-celo`
-- Built with `npm run build` (Next.js standalone output)
-- Served on port 3042 behind Nginx
-- All env vars injected via `ecosystem.config.js`
+## Architecture
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/HETZNER_DEPLOYMENT.md`](docs/HETZNER_DEPLOYMENT.md) for full setup instructions.
+```
+┌─────────────────────────────────────────────────────────┐
+│                    VOISSS Architecture                    │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  Layer 1: VOICE (ElevenLabs)                            │
+│  ├── ConvAI WebRTC sessions                             │
+│  ├── Per-agent voice IDs                                │
+│  └── Real-time STT + TTS                                │
+│                                                          │
+│  Layer 2: ORCHESTRATION (Webhook)                       │
+│  ├── Tool routing (search, book, research)              │
+│  ├── Agent skill guards                                 │
+│  └── Delegation verification (ERC-8004)                 │
+│                                                          │
+│  Layer 3: EXECUTION (Skills Framework)                  │
+│  ├── Firecrawl (web research)                           │
+│  ├── Composio (GitHub, Solana)                          │
+│  └── Native skills (booking, scheduling)                │
+│                                                          │
+│  Layer 4: SETTLEMENT (Celo)                             │
+│  ├── Per-second stablecoin billing                      │
+│  ├── On-chain reputation (ERC-8004)                     │
+│  └── Agent payout splits                                │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Use Cases (Hands-Free Scenarios)
+
+- **Cooking** — Ask Dr. Maya about nutrition while your hands are covered in flour
+- **Driving** — Have Tour Master plan your road trip route by voice
+- **Coding** — Get a code review read aloud while you're sketching on a whiteboard
+- **Accessibility** — Full app functionality for users who cannot use a keyboard
+- **Walking** — Research anything on the go with Web Researcher
+
+---
+
+## Demo Video Script Ideas
+
+For the viral-style video submission:
+
+1. **Hook** (0-3s): "I built an app you never have to type in."
+2. **Problem** (3-8s): Show someone frustrated typing long prompts to AI
+3. **Solution** (8-30s): Open VOISSS → tap agent → have a natural conversation
+4. **Wow moment** (30-45s): Agent searches the web mid-conversation and reads results back
+5. **Payoff** (45-60s): Show the transcript, the on-chain payment receipt, the rating — all done without a keyboard
+
+---
+
+## Social Media
+
+When posting about VOISSS:
+- Tag **@cursor_ai** and **@elevenlabsio**
+- Use hashtag **#ElevenHacks**
+- Demo link: [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)
 
 ---
 
 ## Environment Variables
 
+See `.env.local.example` for the full list. Key ones:
+
 ```env
-# ElevenLabs
-ELEVENLABS_API_KEY=
-ELEVENLABS_DEFAULT_VOICE=
+# Required
+ELEVENLABS_API_KEY=your_key
 ELEVENLABS_CONVERSATIONAL_ENABLED=true
+UPSTASH_REDIS_REST_URL=your_url
+UPSTASH_REDIS_REST_TOKEN=your_token
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_id
 
-# Upstash Redis
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# Celo / Payments
-NEXT_PUBLIC_PLATFORM_ADDRESS=
-NEXT_PUBLIC_FACILITATOR_ADDRESS=
-FACILITATOR_PRIVATE_KEY=
-PAYMENT_RECEIVER=
-
-# ERC-8004
-NEXT_PUBLIC_ERC8004_ENABLED=true
-NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x8004A818BFB912233c491871b3d84c89A494BD9e
-NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS=0x8004B663056A597Dffe9eCcC1965A193B7388713
-NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00
-
-# WalletConnect
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
-
-# API routing (set to VPS URL to route all API calls to VPS instead of Vercel serverless)
-NEXT_PUBLIC_API_URL=https://voisss.celo.famile.xyz
-
-# OpenClaw webhook security
-OPENCLAW_WEBHOOK_SECRET=
-
-# Yellow Network / WDK (optional)
-AGENT_WALLET=
+# Agent IDs (generated by seed script)
+ELEVENLABS_AGENT_SOLANA_SAGE=
+ELEVENLABS_AGENT_CODE_REVIEWER=
+ELEVENLABS_AGENT_GENERAL_HELPER=
+ELEVENLABS_AGENT_TOUR_MASTER=
+ELEVENLABS_AGENT_WEB_RESEARCHER=
+ELEVENLABS_AGENT_MEDICAL_ADVISOR=
 ```
-
----
-
-## Agent Self-Registration
-
-External developers can list their ElevenLabs agent at `/list-your-agent`. Submissions are stored as `status: "pending"` in Redis and reviewed via:
-
-```bash
-# Approve
-PATCH /api/agents/:id  { "action": "approve" }
-
-# Reject
-PATCH /api/agents/:id  { "action": "reject" }
-```
-
-On approval, the agent goes live in the marketplace immediately.
-
----
-
-## OpenClaw Integration
-
-The platform exposes two endpoints for the OpenClaw social agent:
-
-- `GET /api/agents/stats` — aggregate call counts, ratings, top agent
-- `POST /api/openclaw/webhook` — handles `call.completed`, `agent.milestone`, and `social.draft` events
-
-Secure the webhook with `OPENCLAW_WEBHOOK_SECRET` (sent as `x-openclaw-secret` header).
-
-See [`docs/AGENTIC_ARCHITECTURE.md`](docs/AGENTIC_ARCHITECTURE.md) for the full integration spec.
-
----
-
-## Local Development
-
-```bash
-npm install
-cp .env.local.example .env.local
-# fill in your keys
-npm run dev
-```
-
-App runs at `http://localhost:3000`.
-
-To seed agents locally:
-```bash
-curl -X POST http://localhost:3000/api/agents/seed
-```
-
----
-
-## Contributing
-
-1. Fork the repo
-2. Create a feature branch
-3. Run `npm run build` to verify no TypeScript/ESLint errors
-4. Submit a PR
 
 ---
 
@@ -178,17 +273,4 @@ MIT
 
 ---
 
-Built for the Celo AI Partner Catalyst Hackathon
-
----
-
-## Available Voice Agents
-
-| Agent | Specialty | Description |
-|-------|-----------|-------------|
-| **Dr. Maya** ⚕️ | Healthcare | AI medical information advisor with evidence-based health guidance and safety protocols |
-| **Web Researcher** 🔍 | Research | Real-time web search and content extraction via Firecrawl during calls |
-| **Solana Sage** 🔮 | Blockchain | On-chain analytics for Solana/Celo, wallet balances, transaction lookups |
-| **Code Reviewer** 👨‍💻 | Development | Senior engineer for GitHub operations, code reviews, repository analysis |
-| **Diversifi** 🛡️ | Finance | Stablecoin and wealth diversification advisor for Celo and Base |
-| **Clawdy** 🏗️ | Infrastructure | AI agent infrastructure specialist (OpenClaw, ERC-8004, decentralized inference) |
+Built with [Cursor](https://cursor.sh) + [ElevenLabs](https://elevenlabs.io) for the #ElevenHacks challenge.
