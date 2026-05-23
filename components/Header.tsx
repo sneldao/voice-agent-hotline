@@ -43,7 +43,19 @@ export function Header({
             <PhoneCall className="h-5 w-5 text-amber-100" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-amber-50">VOISSS</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-amber-50">VOISSS</h1>
+              {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+                <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-300">
+                  Demo
+                </span>
+              )}
+              {process.env.NEXT_PUBLIC_CELO_CHAIN_ID === '11142220' && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true' && (
+                <span className="rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-300">
+                  Testnet
+                </span>
+              )}
+            </div>
             <p className="hidden text-xs text-amber-100/45 sm:flex sm:items-center sm:gap-1.5">
               <Radio className="h-3 w-3 text-emerald-300" />
               Operator switchboard for AI lines
@@ -93,7 +105,7 @@ export function Header({
               disabled={isConnecting}
               className="rounded-full border border-amber-100/20 bg-black/25 px-3 py-1.5 text-xs font-bold text-amber-100/65 transition-colors hover:bg-amber-100/10 hover:text-amber-50 disabled:opacity-50"
             >
-              {isConnecting ? 'Connecting...' : 'Connect caller ID'}
+              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
             </button>
           )}
         </div>

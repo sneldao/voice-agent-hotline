@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio, Flame } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
@@ -61,7 +61,7 @@ export function DiscoverTab({
   onLoadMore,
   preferredConciergeId = 'general_helper',
 }: DiscoverTabProps) {
-  const [showBoard, setShowBoard] = useState(false);
+  const [showBoard, setShowBoard] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
   const streak = useStreak();
 
@@ -92,6 +92,16 @@ export function DiscoverTab({
   const hasSearchQuery = searchQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
   const hasNoSearchResults = agents.length === 0 && hasSearchQuery && !isLoading;
+
+  // Compute per-category agent counts for filter badges
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: agents.length };
+    for (const agent of agents) {
+      const cat = agent.category?.toLowerCase() ?? 'general';
+      counts[cat] = (counts[cat] || 0) + 1;
+    }
+    return counts;
+  }, [agents]);
 
   if (isLoading) {
     return (
@@ -130,7 +140,7 @@ export function DiscoverTab({
             LAYER 1 — THE HOOK
             Full-viewport hero. One action: pick up the line.
         ═══════════════════════════════════════════════════════════════════ */}
-        <section className="relative mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 text-center lg:min-h-[50vh]">
+        <section className="relative mx-auto flex min-h-[40vh] max-w-lg flex-col items-center justify-center px-4 text-center lg:min-h-[35vh]">
           {/* Ring animation circles */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="absolute h-56 w-56 animate-ping rounded-full border border-red-500/10 [animation-duration:3s]" />
@@ -186,9 +196,9 @@ export function DiscoverTab({
 
           {/* Scroll hint */}
           <button
-            onClick={() => setShowBoard(true)}
-            className="relative z-10 mt-10 flex flex-col items-center gap-1 text-amber-100/40 transition-colors hover:text-amber-100/70"
-            aria-label="Show the switchboard"
+            onClick={() => document.getElementById('switchboard')?.scrollIntoView({ behavior: 'smooth' })}
+            className="relative z-10 mt-8 flex flex-col items-center gap-1 text-amber-100/40 transition-colors hover:text-amber-100/70"
+            aria-label="Scroll to the switchboard"
           >
             <span className="text-xs font-medium uppercase tracking-widest">Browse the board</span>
             <ChevronDown className="h-5 w-5 animate-bounce" />
@@ -200,6 +210,7 @@ export function DiscoverTab({
             Compact switchboard lines. One tap per agent.
         ═══════════════════════════════════════════════════════════════════ */}
         <section
+          id="switchboard"
           className={`mx-auto mt-12 max-w-2xl transition-all duration-500 ${
             showBoard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'
           }`}
@@ -296,21 +307,29 @@ export function DiscoverTab({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => onCategoryChange(cat.id)}
-                  className={`
-                    rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
-                    ${selectedCategory === cat.id
-                      ? 'border-red-400/50 bg-red-500/20 text-amber-50'
-                      : 'border-amber-100/10 bg-black/25 text-amber-100/50 hover:border-amber-100/25 hover:text-amber-50'
-                    }
-                  `}
-                >
-                  <span className="mr-1.5">{cat.icon}</span>{cat.name}
-                </button>
-              ))}
+              {CATEGORIES.map(cat => {
+                const count = categoryCounts[cat.id] ?? 0;
+                const isAll = cat.id === 'all';
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => onCategoryChange(cat.id)}
+                    className={`
+                      rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
+                      ${selectedCategory === cat.id
+                        ? 'border-red-400/50 bg-red-500/20 text-amber-50'
+                        : count === 0 && !isAll
+                          ? 'border-amber-100/5 bg-black/15 text-amber-100/25 cursor-default'
+                          : 'border-amber-100/10 bg-black/25 text-amber-100/50 hover:border-amber-100/25 hover:text-amber-50'
+                      }
+                    `}
+                    disabled={count === 0 && !isAll}
+                  >
+                    <span className="mr-1.5">{cat.icon}</span>{cat.name}
+                    {!isAll && <span className="ml-1 opacity-60">({count})</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

@@ -172,7 +172,7 @@ export function AgentPreviewSheet({
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                 <Wallet className="h-4 w-4" />
-                {hasFreeCall ? 'First call is on us' : 'Caller ID required for paid calls'}
+                {hasFreeCall ? 'First call is on us' : 'Wallet required for paid calls'}
               </p>
               <p className="mt-1 text-xs leading-5 text-amber-100/80">
                 {hasFreeCall

@@ -565,7 +565,7 @@ function SocialProofStep({ onNext }: { onNext: () => void }) {
 
       <div className="mt-5">
         <Button onClick={onNext} className="w-full bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400">
-          Get my Caller ID
+          Connect Wallet
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
@@ -611,7 +611,7 @@ function WalletStep({
             <CheckCircle className="w-8 h-8 text-white" />
           </div>
         </motion.div>
-        <h2 className="mt-4 text-xl font-bold text-amber-50">Caller ID active! 🎉</h2>
+        <h2 className="mt-4 text-xl font-bold text-amber-50">Wallet connected! 🎉</h2>
         <p className="mt-2 text-sm text-amber-100/50">You're ready to make calls on the hotline.</p>
         <div className="mt-6 w-full">
           <Button onClick={onNext} className="w-full bg-gradient-to-r from-red-600 to-amber-500">
@@ -627,7 +627,7 @@ function WalletStep({
     <div className="flex flex-col items-center text-center py-6">
       <Mascot mood="idle" size={80} />
 
-      <h2 className="mt-4 text-xl font-bold text-amber-50">Grab your Caller ID</h2>
+      <h2 className="mt-4 text-xl font-bold text-amber-50">Connect Your Wallet</h2>
       <p className="mt-2 text-sm text-amber-100/50 max-w-xs">
         Your crypto wallet is your identity on the hotline. No email, no password — just connect and you're in.
       </p>
