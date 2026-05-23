@@ -38,53 +38,26 @@ export function Modal({
       if (e.key === 'Escape') onCloseRef.current();
     };
 
-    // Focus trap
-    const handleTabKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab' || !modalRef.current) return;
-
-      const focusableElements = modalRef.current.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      const firstElement = focusableElements[0] as HTMLElement;
-      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
-
-      if (e.shiftKey) {
-        // Shift + Tab
-        if (document.activeElement === firstElement) {
-          lastElement.focus();
-          e.preventDefault();
-        }
-      } else {
-        // Tab
-        if (document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
-      }
-    };
-
     document.addEventListener('keydown', handleEscape);
-    document.addEventListener('keydown', handleTabKey);
     document.body.style.overflow = 'hidden';
 
-    // Focus the first focusable element in the modal
+    // Defer focus management to avoid blocking the modal paint
     const focusTimer = setTimeout(() => {
       if (modalRef.current) {
         const focusableElement = modalRef.current.querySelector(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         ) as HTMLElement;
         if (focusableElement) {
-          focusableElement.focus();
+          focusableElement.focus({ preventScroll: true });
         } else {
-          modalRef.current.focus();
+          modalRef.current.focus({ preventScroll: true });
         }
       }
-    }, 0);
+    }, 50);
 
     return () => {
       clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('keydown', handleTabKey);
       document.body.style.overflow = '';
 
       // Restore focus to the previously focused element

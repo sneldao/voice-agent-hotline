@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleOptions, withCors } from '@/lib/cors';
 import { redis } from '@/lib/redis';
 import { elevenLabsService } from '@/lib/elevenlabs';
 import { composioService } from '@/lib/composio';
@@ -18,9 +19,9 @@ export async function GET(req: NextRequest) {
       // Get single agent
       const agent = await redis.hgetall(`agent:${agentId}`);
       if (!agent || Object.keys(agent).length === 0) {
-        return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+        return withCors(NextResponse.json({ error: 'Agent not found' }, { status: 404 }), req);
       }
-      return NextResponse.json({ agent });
+      return withCors(NextResponse.json({ agent }), req);
     }
 
     // Pagination and filtering params
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     // List all agents via Set index (non-blocking unlike KEYS)
     const agentIds = await redis.smembers('agent_index');
     if (agentIds.length === 0) {
-      return NextResponse.json({ agents: [], total: 0, page: 1, hasMore: false });
+      return withCors(NextResponse.json({ agents: [], total: 0, page: 1, hasMore: false }), req);
     }
 
     // Batch fetch with pipeline instead of N individual roundtrips
@@ -40,15 +41,33 @@ export async function GET(req: NextRequest) {
     agentIds.forEach(id => pipeline.hgetall(`agent:${id}`));
     const results = await pipeline.exec();
     let agents = (results || [])
-      .map((r: any) => r[1])
-      .filter((a: any) => a && Object.keys(a).length > 0);
+      .map((r: any) => Array.isArray(r) ? r[1] : r)
+      .filter((a: any) => a && Object.keys(a).length > 0)
+      .map((a: any) => ({
+        ...a,
+        // Ensure UI-friendly booleans/numbers for frontend
+        online: a.online === 'true' || a.active === 'true' || a.status === 'active' || (!a.online && !a.active && !a.status),
+        verified: a.status === 'active',
+        specialty: a.specialty || a.category || 'AI Assistant',
+        category: a.category === 'code' ? 'tech' : a.category,
+        bio: a.bio || a.description || a.specialty || '',
+        rate: parseFloat(a.price_per_minute || a.rate || '0.1'),
+        rating: parseFloat(a.rating || '0'),
+        totalRatings: parseInt(a.total_ratings || '0', 10),
+        totalCalls: parseInt(a.total_calls || '0', 10),
+        avatar: a.avatar || a.emoji || '🤖',
+        color: a.color || 'from-cyan-500 to-blue-500',
+      }));
 
     // Server-side filtering
     if (search) {
       agents = agents.filter((a: any) => {
         const name = (a.name || '').toLowerCase();
         const specialty = (a.specialty || '').toLowerCase();
-        return name.includes(search) || specialty.includes(search);
+        const bio = (a.bio || a.description || '').toLowerCase();
+        const category = (a.category || '').toLowerCase();
+        const tags = Array.isArray(a.tags) ? a.tags.join(' ').toLowerCase() : String(a.tags || '').toLowerCase();
+        return name.includes(search) || specialty.includes(search) || bio.includes(search) || category.includes(search) || tags.includes(search);
       });
     }
 
@@ -61,14 +80,21 @@ export async function GET(req: NextRequest) {
     const paginatedAgents = agents.slice(start, start + limit);
     const hasMore = start + limit < total;
 
-    return NextResponse.json(
-      { agents: paginatedAgents, total, page, hasMore },
-      { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60' } }
+    return withCors(
+      NextResponse.json(
+        { agents: paginatedAgents, total, page, hasMore },
+        { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60' } }
+      ),
+      req
     );
   } catch (error: any) {
     console.error('[Agents API] GET error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return withCors(NextResponse.json({ error: error.message }, { status: 500 }), req);
   }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return handleOptions(req);
 }
 
 const NATIVE_TOOLS = {

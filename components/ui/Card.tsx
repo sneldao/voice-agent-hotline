@@ -25,7 +25,7 @@ export function Card({
       className={`
         rounded-2xl
         ${variants[variant]}
-        ${interactive ? 'cursor-pointer' : ''}
+        ${interactive ? 'cursor-pointer active:scale-[0.99] transition-transform' : ''}
         ${animated ? 'animate-fade-in' : ''}
         ${className}
       `}

@@ -4,12 +4,15 @@ node_modules/
 # Next.js build output
 .next/
 out/
+*.tsbuildinfo
 
 # Environment files
 .env
 .env.local
 .env.production
 .env.hetzner
+
+docs/CSS_IDEAS.md
 
 # OS files
 .DS_Store
@@ -43,3 +46,4 @@ dump.rdb
 .junie
 .kilocode
 .blackboxcli/
+.aider*

@@ -13,7 +13,8 @@
 //   3. Deploy ERC-8004 contracts, register each agent, add ERC8004_TOKEN_<KEY> env vars.
 //   4. The webhook, skills framework, and reputation service all read from here.
 
-export type SkillType = 'book' | 'order' | 'schedule' | 'research';
+import type { SkillType } from './types';
+export type { SkillType };
 
 export interface AgentRegistryEntry {
   /** Stable internal key */
@@ -144,6 +145,41 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     tokenId: process.env.ERC8004_TOKEN_WEB_RESEARCHER
       ? BigInt(process.env.ERC8004_TOKEN_WEB_RESEARCHER)
       : null,
+  },
+
+  medical_advisor: {
+    key: 'medical_advisor',
+    name: 'Dr. Maya',
+    emoji: '⚕️',
+    tagline: 'AI health information advisor — evidence-based wellness guidance',
+    color: 'from-emerald-500 to-teal-600',
+    elevenLabsAgentId: process.env.ELEVENLABS_AGENT_MEDICAL_ADVISOR ?? null,
+    voiceId: process.env.ELEVENLABS_VOICE_MEDICAL_ADVISOR ?? 'EXAVITQu4vr4xnSDxMaL', // Sarah
+    systemPrompt: `You are Dr. Maya, a knowledgeable and empathetic health information advisor. You provide evidence-based medical information, explain conditions and symptoms, discuss treatment options, and offer general wellness guidance. IMPORTANT SAFETY RULES: 1) Always include the phrase "I'm an AI information assistant, not a doctor" at the start of your first response in any health-related conversation. 2) Never diagnose — always say "this information is for educational purposes only" and recommend consulting a healthcare professional. 3) For emergencies or chest pain, severe bleeding, difficulty breathing, or signs of stroke, immediately state: "This sounds like an emergency. Please call your local emergency number now." 4) Be clear about the limits of your knowledge — you don't have access to the user's complete medical history. 5) Never prescribe medication or suggest specific dosages. 6) When discussing mental health, check in gently: "How are you feeling overall? If you're struggling, please reach out to a mental health professional." 7) Use plain, accessible language — avoid jargon without explanation. 8) If asked about a topic beyond general health info, say "I focus on general health information and wellness topics. For specialized medical advice, please consult a healthcare professional." Be warm, clear, and always prioritize user safety over engagement.`,
+    elevenLabsTools: ['search_web'],
+    specialties: ['health', 'medical', 'wellness', 'healthcare', 'symptoms', 'nutrition', 'mental-health'],
+    allowedSkills: ['research'],
+    composioTools: ['WEB_SEARCH'],
+    tokenId: process.env.ERC8004_TOKEN_MEDICAL_ADVISOR
+      ? BigInt(process.env.ERC8004_TOKEN_MEDICAL_ADVISOR)
+      : null,
+  },
+
+  // ── Voice Router (not a user-facing agent — used for intent routing) ──────
+  voice_router: {
+    key: 'voice_router',
+    name: 'VOISSS Router',
+    emoji: '📡',
+    tagline: 'Voice intake and routing',
+    color: 'from-cyan-500 to-blue-600',
+    elevenLabsAgentId: process.env.ELEVENLABS_AGENT_VOICE_ROUTER ?? null,
+    voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam
+    systemPrompt: 'Internal router agent — not user-facing.',
+    elevenLabsTools: ['route_to_agent'],
+    specialties: ['routing'],
+    allowedSkills: ['research'],
+    composioTools: [],
+    tokenId: null,
   },
 };
 

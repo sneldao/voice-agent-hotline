@@ -371,8 +371,16 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 8. Return narration string for ElevenLabs to speak ───────────────────
-    const narration = formatNarration(tool_name, result.data);
-    console.log(`[Webhook] ✅ ${tool_name} → narrating: "${narration.slice(0, 80)}…"`);
+    let narration = formatNarration(tool_name, result.data);
+
+    // Label simulated results for action skills so users know no real action was taken
+    const isActionSkill = ['book', 'order', 'schedule'].includes(skillType);
+    const isSimulated = isActionSkill && !COMPOSIO_TOOLS[tool_name] && !(result.data as Record<string, unknown>)?.txHash;
+    if (isSimulated) {
+      narration = `[Simulated] ${narration} Note: this is a demo — no real ${skillType} was placed.`;
+    }
+
+    console.log(`[Webhook] ${tool_name} → narrating: "${narration.slice(0, 80)}…"${isSimulated ? ' (simulated)' : ''}`);
 
     return NextResponse.json({ result: narration });
 
