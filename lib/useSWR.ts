@@ -1,11 +1,14 @@
 'use client';
 
 import useSWR from 'swr';
+import { apiUrl } from './api';
 import type { Agent } from './types';
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
+    // Don't retry on 404 — user just doesn't exist yet
+    if (res.status === 404) return null;
     throw new Error(`Request failed: ${res.status}`);
   }
   return res.json();
@@ -13,14 +16,14 @@ const fetcher = async (url: string) => {
 
 export function useUserBalance(address?: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
-    address ? `/api/users/${address}` : null,
+    address ? apiUrl(`/api/users/${address}`) : null,
     fetcher,
     {
       refreshInterval: 30000,
       revalidateOnFocus: false,
       dedupingInterval: 10000,
-      staleTime: 5000,
       keepPreviousData: true,
+      errorRetryCount: 2,
     }
   );
 
@@ -51,7 +54,7 @@ export function useAgents(params?: UseAgentsParams) {
   queryParts.push(`page=${page}`);
   queryParts.push(`limit=${limit}`);
 
-  const key = `/api/agents?${queryParts.join('&')}`;
+  const key = apiUrl(`/api/agents?${queryParts.join('&')}`);
 
   const { data, error, isLoading, mutate } = useSWR(key, fetcher, {
     refreshInterval: 60000,
@@ -66,7 +69,7 @@ export function useAgents(params?: UseAgentsParams) {
     total: data?.total || 0,
     hasMore: data?.hasMore || false,
     isLoading,
-    error,
+    error: error instanceof Error ? error.message : error ? 'Request failed' : null,
     mutate,
   };
 }

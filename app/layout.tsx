@@ -3,7 +3,7 @@ import { Space_Grotesk, IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/lib/WalletContextNew';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { DarkModeToggle } from '@/components/DarkModeToggle';
+import { WidgetEngineProvider } from '@/components/WidgetEngine';
 
 // Google Fonts loaded via CDN for reliable delivery
 const displayFont = Space_Grotesk({
@@ -30,11 +30,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://voisss-agent-hotline.vercel.app'),
   title: {
-    default: 'VOISSS - Voice Agent Hotline',
+    default: 'VOISSS — A phonebook for AI you can talk to',
     template: '%s | VOISSS',
   },
-  description: 'Talk to verified AI agents. Pay per second via x402 micropayments on Celo. Delegate agents to take actions with ERC-8004 permissions.',
-  keywords: ['AI agents', 'voice calls', 'Celo', 'x402', 'micropayments', 'ERC-8004', 'blockchain', 'Web3'],
+  description: 'Say what you need. VOISSS connects the right voice. Hands-free AI agents powered by ElevenLabs — no keyboard required. Built with Cursor.',
+  keywords: ['AI agents', 'voice AI', 'ElevenLabs', 'hands-free', 'no keyboard', 'voice calls', 'conversational AI', 'speech-to-text', 'text-to-speech', 'Cursor'],
   authors: [{ name: 'VOISSS Team' }],
   creator: 'VOISSS',
   publisher: 'VOISSS',
@@ -46,15 +46,15 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://voisss-agent-hotline.vercel.app',
-    siteName: 'VOISSS - Voice Agent Hotline',
-    title: 'VOISSS - Voice Agent Hotline',
-    description: 'Talk to verified AI agents. Pay per second via x402 micropayments on Celo.',
+    siteName: 'VOISSS',
+    title: 'VOISSS — A phonebook for AI you can talk to',
+    description: 'Say what you need. VOISSS connects the right voice. No keyboard, no forms — just speak and get things done.',
     images: [
       {
         url: '/og-image.svg',
         width: 1200,
         height: 630,
-        alt: 'VOISSS - Voice Agent Hotline',
+        alt: 'VOISSS - Voice Agent Hotline - No Keyboard Required',
         type: 'image/svg+xml',
       },
     ],
@@ -63,8 +63,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@voisss',
     creator: '@voisss',
-    title: 'VOISSS - Voice Agent Hotline',
-    description: 'Talk to verified AI agents. Pay per second via x402 micropayments on Celo.',
+    title: 'VOISSS — A phonebook for AI you can talk to',
+    description: 'Say what you need. Get connected to the right voice. No keyboard required. Built with Cursor + ElevenLabs for #ElevenHacks.',
     images: ['/og-image.svg'],
   },
   icons: {
@@ -107,10 +107,11 @@ export default function RootLayout({
         
         <WalletProvider>
           <ThemeProvider>
-            <DarkModeToggle />
-            <main id="main-content">
-              {children}
-            </main>
+            <WidgetEngineProvider>
+              <div>
+                {children}
+              </div>
+            </WidgetEngineProvider>
           </ThemeProvider>
         </WalletProvider>
       </body>

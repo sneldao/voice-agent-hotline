@@ -7,12 +7,12 @@
 import { Hash, Address, parseEther } from 'viem';
 import { erc8004Service, DelegationScope } from './erc8004';
 import { composioService } from './composio';
+import type { SkillType } from './types';
+export type { SkillType };
 
 // ============================================
 // Skill Types
 // ============================================
-
-export type SkillType = 'book' | 'order' | 'schedule' | 'research';
 
 export type SkillStatus = 'idle' | 'pending' | 'executing' | 'completed' | 'failed';
 
