@@ -31,7 +31,7 @@
     "@x402/core": "^2.7.0",
     "@x402/evm": "^2.8.0",
     "@x402/fetch": "^2.7.0",
-    "autoprefixer": "^10.4.24",
+    "autoprefixer": "^10.4.27",
     "dotenv": "^17.3.1",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.263.1",
