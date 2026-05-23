@@ -31,6 +31,14 @@ if [ ! -d ".next/standalone" ]; then
   exit 0
 fi
 
+# Skip cleanup on Vercel — Vercel needs the full .next directory (including .next/server)
+# for its own deployment pipeline. This script is only meaningful for standalone
+# (Hetzner / VPS) deploys.
+if [ -n "$VERCEL" ]; then
+  echo "[cleanup-standalone] Vercel environment detected — skipping cleanup."
+  exit 0
+fi
+
 echo "[cleanup-standalone] Copying static assets into standalone…"
 # Copy/refresh static + public so the standalone server can serve them
 mkdir -p .next/standalone/.next
