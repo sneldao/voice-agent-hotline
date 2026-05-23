@@ -154,7 +154,7 @@ function HomeInner() {
   // #19: Removed preflight — useWidgetConversation fetches a signed URL via
   // /api/webrtc/signal when starting. A separate availability check is a wasted round-trip.
   // The hook will surface an error if the agent is unavailable.
-  const startCallWithAgentRef = useRef<(agent: Agent) => Promise<void>>();
+  const startCallWithAgentRef = useRef<((agent: Agent) => Promise<void>) | undefined>(undefined);
   startCallWithAgentRef.current = async (agent: Agent) => {
     const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
