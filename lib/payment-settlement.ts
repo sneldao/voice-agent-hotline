@@ -100,6 +100,9 @@ const TRANSFER_WITH_AUTHORIZATION_ABI = [
 // ============================================
 // Types
 // ============================================
+import { EIP712Signature, SettlementResult } from './types';
+export type { EIP712Signature, SettlementResult };
+
 export interface PaymentAuthorization {
   from: Address;
   to: Address;
@@ -109,23 +112,8 @@ export interface PaymentAuthorization {
   nonce: `0x${string}`;
 }
 
-export interface EIP712Signature {
-  v: number;
-  r: `0x${string}`;
-  s: `0x${string}`;
-}
-
 export interface SignedAuthorization extends PaymentAuthorization {
   signature: EIP712Signature;
-}
-
-export interface SettlementResult {
-  success: boolean;
-  txHash?: Hash;
-  blockNumber?: bigint;
-  gasUsed?: bigint;
-  actualAmount?: string;
-  error?: string;
 }
 
 export interface PaymentReceipt {

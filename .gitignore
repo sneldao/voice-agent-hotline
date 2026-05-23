@@ -12,6 +12,8 @@ out/
 .env.production
 .env.hetzner
 
+docs/CSS_IDEAS.md
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -44,3 +46,4 @@ dump.rdb
 .junie
 .kilocode
 .blackboxcli/
+.aider*
