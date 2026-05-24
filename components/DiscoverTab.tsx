@@ -181,7 +181,7 @@ export function DiscoverTab({
           </button>
 
           {/* Copy */}
-          <h1 className="relative z-10 mt-8 animate-fadeIn text-3xl font-bold text-amber-50 sm:text-4xl [animation-delay:200ms]">
+          <h1 className="relative z-10 mt-8 animate-fadeIn text-3xl font-bold text-amber-50 sm:text-4xl [animation-delay:200ms]" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.5)' }}>
             {isConnecting ? 'Connecting...' : 'Pick up the line.'}
           </h1>
           <p className="relative z-10 mt-3 max-w-xs animate-fadeIn text-base text-amber-100/60 [animation-delay:400ms]">
