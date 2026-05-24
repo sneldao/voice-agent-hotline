@@ -13,6 +13,19 @@ import type { ReactNode } from 'react';
 // UI remains the visible experience. The widget handles WebRTC negotiation,
 // audio capture, and agent dispatch internally.
 
+export interface HealthStatus {
+  /** Whether the shadow root is accessible */
+  shadowRootAccessible: boolean;
+  /** Number of buttons found in shadow DOM (expected ≥1 when configured) */
+  shadowButtonCount: number;
+  /** Whether imperative API methods exist on the host element */
+  hasImperativeAPI: boolean;
+  /** Names of imperative methods found (start candidates) */
+  imperativeMethods: string[];
+  /** Timestamp of last health check */
+  checkedAt: number | null;
+}
+
 export interface WidgetEngineState {
   /** Whether the widget custom element is defined and mounted */
   isReady: boolean;
@@ -20,6 +33,8 @@ export interface WidgetEngineState {
   isActive: boolean;
   /** The agent-id currently set on the widget */
   currentAgentId: string | null;
+  /** Shadow DOM health status for diagnosis */
+  health: HealthStatus;
 }
 
 export interface WidgetEngineAPI {
@@ -36,6 +51,8 @@ export interface WidgetEngineAPI {
   endConversation: () => void;
   /** Subscribe to widget events */
   addEventListener: (event: string, handler: EventListener) => () => void;
+  /** Run a health check on the widget shadow DOM */
+  runHealthCheck: () => HealthStatus;
 }
 
 const WidgetEngineContext = createContext<WidgetEngineAPI | null>(null);
@@ -57,6 +74,13 @@ export function WidgetEngineProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
+  const [health, setHealth] = useState<HealthStatus>({
+    shadowRootAccessible: false,
+    shadowButtonCount: 0,
+    hasImperativeAPI: false,
+    imperativeMethods: [],
+    checkedAt: null,
+  });
   const scriptLoadedRef = useRef(false);
 
   // Load the widget script once
@@ -202,6 +226,49 @@ export function WidgetEngineProvider({ children }: { children: ReactNode }) {
     setIsActive(false);
   }, []);
 
+  const runHealthCheck = useCallback((): HealthStatus => {
+    const el = widgetRef.current;
+    if (!el) {
+      const result: HealthStatus = {
+        shadowRootAccessible: false,
+        shadowButtonCount: 0,
+        hasImperativeAPI: false,
+        imperativeMethods: [],
+        checkedAt: Date.now(),
+      };
+      setHealth(result);
+      return result;
+    }
+
+    const shadowRoot = el.shadowRoot;
+    const shadowButtonCount = shadowRoot ? shadowRoot.querySelectorAll('button').length : 0;
+    const imperativeMethods = START_CANDIDATES.filter((m) => typeof (el as any)[m] === 'function');
+
+    const result: HealthStatus = {
+      shadowRootAccessible: !!shadowRoot,
+      shadowButtonCount,
+      hasImperativeAPI: imperativeMethods.length > 0,
+      imperativeMethods,
+      checkedAt: Date.now(),
+    };
+
+    if (!shadowRoot || shadowButtonCount === 0) {
+      console.warn('[WidgetEngine] Health check degraded:', result);
+    } else {
+      console.log('[WidgetEngine] Health check passed:', result);
+    }
+
+    setHealth(result);
+    return result;
+  }, []);
+
+  // Auto health check once widget is ready + mounted
+  useEffect(() => {
+    if (!isReady || !widgetRef.current) return;
+    const timer = setTimeout(() => runHealthCheck(), 1000);
+    return () => clearTimeout(timer);
+  }, [isReady, runHealthCheck]);
+
   const addEventListenerFn = useCallback((event: string, handler: EventListener) => {
     const el = widgetRef.current;
     if (!el) return () => {};
@@ -210,13 +277,14 @@ export function WidgetEngineProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const api: WidgetEngineAPI = {
-    state: { isReady, isActive, currentAgentId },
+    state: { isReady, isActive, currentAgentId, health },
     getElement,
     setAgentId: setAgentIdAttr,
     setSignedUrl,
     startConversation,
     endConversation,
     addEventListener: addEventListenerFn,
+    runHealthCheck,
   };
 
   return (

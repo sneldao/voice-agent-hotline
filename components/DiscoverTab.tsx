@@ -1,14 +1,17 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio, Flame } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio, Flame, X } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { PullToRefresh, RefreshButton, showSuccess } from '@/components/ui';
 import { AgentCard } from '@/app/page-components';
-import { playDialTone } from '@/lib/sounds';
+import { playDialTone, playPop } from '@/lib/sounds';
 import { useStreak } from '@/lib/useStreak';
 import type { Agent } from '@/lib/types';
+import type { UseCase } from '@/lib/useOnboarding';
+import { USE_CASES } from '@/lib/useOnboarding';
 
 // ─── Compact line data for the switchboard ─────────────────────────────────
 const LINES: { id: string; emoji: string; label: string; desk: string }[] = [
@@ -44,6 +47,14 @@ interface DiscoverTabProps {
   onLoadMore: () => void;
   /** Agent ID to use for the main dial button. Defaults to 'general_helper'. */
   preferredConciergeId?: string;
+  /** Whether to show the inline use-case selection banner */
+  showUseCaseBanner?: boolean;
+  /** Currently selected use-case for personalization */
+  selectedUseCase?: UseCase | null;
+  /** Callback when a use-case chip is tapped */
+  onSetUseCase?: (useCase: UseCase) => void;
+  /** Callback when the banner is dismissed */
+  onDismissUseCaseBanner?: () => void;
 }
 
 export function DiscoverTab({
@@ -60,6 +71,10 @@ export function DiscoverTab({
   hasMore,
   onLoadMore,
   preferredConciergeId = 'general_helper',
+  showUseCaseBanner = false,
+  selectedUseCase = null,
+  onSetUseCase,
+  onDismissUseCaseBanner,
 }: DiscoverTabProps) {
   const [showBoard, setShowBoard] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -150,6 +165,7 @@ export function DiscoverTab({
 
           {/* The Dial */}
           <button
+            id="coachmark-dial"
             onClick={handleDialClick}
             disabled={!concierge || isConnecting}
             className="rotary-dial relative z-10 flex h-40 w-40 animate-scaleIn items-center justify-center rounded-full transition-all duration-300 hover:scale-[1.04] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 sm:h-48 sm:w-48"
@@ -178,7 +194,10 @@ export function DiscoverTab({
           </p>
 
           {/* First call free badge */}
-          <div className="relative z-10 mt-4 animate-fadeIn [animation-delay:800ms] inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
+          <div
+            id="coachmark-free-badge"
+            className="relative z-10 mt-4 animate-fadeIn [animation-delay:800ms] inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5"
+          >
             <span className="text-xs font-semibold text-emerald-300">⚡ First call free — no wallet needed</span>
           </div>
 
@@ -206,6 +225,106 @@ export function DiscoverTab({
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════════
+            LAYER 1.5 — USE-CASE BANNER (inline onboarding)
+            Shown on first visit — no modal, no blocking.
+        ═══════════════════════════════════════════════════════════════════ */}
+        <AnimatePresence>
+          {showUseCaseBanner && (
+            <motion.section
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+              className="mx-auto mt-8 max-w-2xl"
+            >
+              <div className="relative rounded-2xl border border-amber-100/15 bg-gradient-to-br from-[#17100d] to-[#1f1611] p-5 shadow-lg shadow-black/40">
+                {/* Close button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    playPop();
+                    onDismissUseCaseBanner?.();
+                  }}
+                  className="absolute right-3 top-3 rounded-full p-1.5 text-amber-100/30 transition-colors hover:bg-amber-100/10 hover:text-amber-100/60"
+                  aria-label="Dismiss recommendations"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-red-500/20 to-amber-500/20 text-lg">
+                    🎯
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-50">What brings you here?</h3>
+                    <p className="text-xs text-amber-100/45">
+                      Pick a focus and I'll match you with the best voices. No sign-up needed.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {USE_CASES.map((uc, i) => {
+                    const isSelected = selectedUseCase === uc.id;
+                    return (
+                      <motion.button
+                        key={uc.id}
+                        type="button"
+                        onClick={() => {
+                          playPop();
+                          onSetUseCase?.(uc.id);
+                        }}
+                        initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                          borderColor: isSelected ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 237, 213, 0.1)',
+                          backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 237, 213, 0.03)',
+                        }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 260,
+                          damping: 22,
+                          delay: 0.06 * i,
+                        }}
+                        whileHover={{
+                          scale: 1.03,
+                          borderColor: 'rgba(255, 237, 213, 0.25)',
+                          transition: { type: 'spring', stiffness: 400, damping: 15 },
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left shadow-sm ${
+                          isSelected
+                            ? 'shadow-red-500/10'
+                            : 'shadow-black/10 hover:shadow-amber-500/5'
+                        }`}
+                      >
+                        <motion.span
+                          className="text-lg"
+                          animate={isSelected ? { scale: [1, 1.2, 1], rotate: [0, -5, 5, 0] } : {}}
+                          transition={{ duration: 0.4 }}
+                        >
+                          {uc.emoji}
+                        </motion.span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-amber-50 truncate">{uc.label}</p>
+                          <p className="text-[10px] text-amber-100/40 truncate">{uc.description}</p>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-3 text-center text-[11px] text-amber-100/30">
+                  Your picks are saved locally. Change them anytime.
+                </p>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* ═══════════════════════════════════════════════════════════════════
             LAYER 2 — THE BOARD
             Compact switchboard lines. One tap per agent.
         ═══════════════════════════════════════════════════════════════════ */}
@@ -216,7 +335,7 @@ export function DiscoverTab({
           }`}
           aria-hidden={!showBoard}
         >
-          <div className="mb-6 text-center">
+          <div id="coachmark-switchboard" className="mb-6 text-center">
             <h2 className="text-xl font-bold text-amber-50">The Switchboard</h2>
             <p className="mt-1 text-sm text-amber-100/50">Tap a line to connect</p>
           </div>
@@ -347,7 +466,7 @@ export function DiscoverTab({
               </button>
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {agents.map(agent => (
                 <AgentCard
                   key={agent.id}

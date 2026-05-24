@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { track } from '@/lib/track';
 
 export type OnboardingStep =
   | 'splash'
@@ -23,6 +24,8 @@ interface OnboardingState {
   hasMadeFirstCall: boolean;
   isOpen: boolean;
   selectedUseCase: UseCase | null;
+  /** Whether the inline use-case banner has been manually dismissed */
+  dismissedUseCaseBanner: boolean;
 }
 
 interface UseOnboardingReturn extends OnboardingState {
@@ -36,7 +39,20 @@ interface UseOnboardingReturn extends OnboardingState {
   resetOnboarding: () => void;
   totalSteps: number;
   currentStepIndex: number;
+  /** Whether to show the inline use-case selection banner on DiscoverTab */
+  showUseCaseBanner: boolean;
+  /** Dismiss the use-case banner permanently */
+  dismissUseCaseBanner: () => void;
 }
+
+export const USE_CASES: { id: UseCase; emoji: string; label: string; description: string }[] = [
+  { id: 'coding', emoji: '💻', label: 'Code & Tech', description: 'Debug, review, build' },
+  { id: 'health', emoji: '⚕️', label: 'Health', description: 'Doctor visit prep' },
+  { id: 'research', emoji: '🔍', label: 'Research', description: 'Find answers fast' },
+  { id: 'crypto', emoji: '🪙', label: 'Crypto & Web3', description: 'Wallets, DeFi, chains' },
+  { id: 'travel', emoji: '🌍', label: 'Travel', description: 'Plan trips by voice' },
+  { id: 'general', emoji: '🤖', label: 'General Help', description: 'A bit of everything' },
+];
 
 const STORAGE_KEY = 'voisss-onboarding';
 const PREFERENCES_KEY = 'voisss-preferences';
@@ -62,6 +78,7 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
     hasMadeFirstCall: false,
     isOpen: false,
     selectedUseCase: null,
+    dismissedUseCaseBanner: false,
   });
 
   // Load onboarding state from localStorage
@@ -82,12 +99,14 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
         isOpen: false,
       }));
     } else {
-      // First time user
+      // First time user — inline banner instead of blocking modal
       setState(prev => ({
         ...prev,
         isFirstTime: true,
-        isOpen: true,
+        isOpen: false,
         selectedUseCase: parsedPrefs.useCase || null,
+        // Show use-case banner unless they already have a preference
+        dismissedUseCaseBanner: !!parsedPrefs.useCase,
       }));
     }
   }, []);
@@ -109,8 +128,9 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
       hasConnectedWallet: state.hasConnectedWallet,
       hasFundedWallet: state.hasFundedWallet,
       hasMadeFirstCall: state.hasMadeFirstCall,
+      dismissedUseCaseBanner: state.dismissedUseCaseBanner,
     }));
-  }, [state.hasSeenWelcome, state.hasConnectedWallet, state.hasFundedWallet, state.hasMadeFirstCall]);
+  }, [state.hasSeenWelcome, state.hasConnectedWallet, state.hasFundedWallet, state.hasMadeFirstCall, state.dismissedUseCaseBanner]);
 
   const startOnboarding = useCallback(() => {
     setState(prev => ({
@@ -160,11 +180,12 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
   }, []);
 
   const setUseCase = useCallback((useCase: UseCase) => {
-    setState(prev => ({ ...prev, selectedUseCase: useCase }));
+    setState(prev => ({ ...prev, selectedUseCase: useCase, dismissedUseCaseBanner: true }));
     if (typeof window !== 'undefined') {
       const prefs = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}');
       localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...prefs, useCase }));
     }
+    track('use_case_selected', { useCase });
   }, []);
 
   const markStepComplete = useCallback((step: string) => {
@@ -172,6 +193,11 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
       ...prev,
       [`has${step.charAt(0).toUpperCase() + step.slice(1).replace(/-/g, '')}`]: true,
     }));
+  }, []);
+
+  const dismissUseCaseBanner = useCallback(() => {
+    setState(prev => ({ ...prev, dismissedUseCaseBanner: true }));
+    track('banner_dismissed', {});
   }, []);
 
   const resetOnboarding = useCallback(() => {
@@ -186,10 +212,13 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
       hasConnectedWallet: false,
       hasFundedWallet: false,
       hasMadeFirstCall: false,
-      isOpen: true,
+      isOpen: false,
       selectedUseCase: null,
+      dismissedUseCaseBanner: false,
     });
   }, []);
+
+  const showUseCaseBanner = state.isFirstTime && !state.selectedUseCase && !state.dismissedUseCaseBanner;
 
   return {
     ...state,
@@ -200,7 +229,9 @@ export function useOnboarding(walletConnected: boolean, walletBalance: number): 
     skipOnboarding,
     setUseCase,
     markStepComplete,
+    dismissUseCaseBanner,
     resetOnboarding,
+    showUseCaseBanner,
     totalSteps: STEPS.length,
     currentStepIndex: STEPS.indexOf(state.currentStep),
   };

@@ -88,7 +88,7 @@ export function verifyElevenLabsWebhook(req: NextRequest): boolean {
 export function verifyApiKey(req: NextRequest): boolean {
   const key = req.headers.get('x-api-key');
   const expected = process.env.API_SECRET_KEY;
-  if (!expected) return true; // No key configured = skip check (dev mode)
+  if (!expected) return false; // Fail closed — must configure API_SECRET_KEY
   return key === expected;
 }
 

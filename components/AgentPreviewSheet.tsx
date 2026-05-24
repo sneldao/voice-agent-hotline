@@ -74,8 +74,8 @@ export function AgentPreviewSheet({
   const persona = getPreviewPersona(agent);
 
   return (
-    <div className="fixed inset-0 z-[60] flex h-dvh items-end justify-center overflow-y-auto bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 shadow-2xl shadow-black/60">
+    <div className="fixed inset-0 z-[60] flex h-dvh items-end justify-center overflow-y-auto bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4 lg:items-center lg:justify-end lg:pb-8 lg:pr-8">
+      <div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 shadow-2xl shadow-black/60 lg:mx-0 lg:max-w-md">
         <div className="flex items-start gap-4 border-b border-gray-800 p-4">
           <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} text-2xl`}>
             {agent.avatar || agent.name.charAt(0)}

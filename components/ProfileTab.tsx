@@ -1,20 +1,29 @@
 'use client';
 
-import { User, Wallet, LogOut, ExternalLink, Flame, Trophy, Phone } from 'lucide-react';
+import { User, Wallet, LogOut, ExternalLink, Flame, Trophy, Phone, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ProfileSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
 import { Button, Card, Avatar } from '@/components/ui';
 import { DelegationPanel } from '@/components/DelegationPanel';
 import { useStreak } from '@/lib/useStreak';
+import type { UseCase } from '@/lib/useOnboarding';
+import { USE_CASES } from '@/lib/useOnboarding';
 
 interface ProfileTabProps {
   balance: number;
   address?: string | null;
   isLoading?: boolean;
   onDisconnect?: () => void;
+  /** Currently selected use-case for agent personalization */
+  selectedUseCase?: UseCase | null;
+  /** Callback to change the use-case preference */
+  onSetUseCase?: (useCase: UseCase) => void;
+  /** Total cUSD spent across all calls (on-chain + simulated) */
+  totalSpent?: number;
 }
 
-export function ProfileTab({ balance, address, isLoading, onDisconnect }: ProfileTabProps) {
+export function ProfileTab({ balance, address, isLoading, onDisconnect, selectedUseCase, onSetUseCase, totalSpent = 0 }: ProfileTabProps) {
   const displayAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : 'Not connected';
@@ -49,6 +58,67 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect }: Profil
           </button>
         </div>
       </div>
+
+      {/* Your Interests — use-case preferences for personalization */}
+      {onSetUseCase && (
+        <div className="rounded-xl border border-amber-100/12 bg-gradient-to-br from-[#17100d] to-[#1f1611] p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <h3 className="text-sm font-bold text-amber-50">Your Interests</h3>
+            <p className="text-[10px] text-amber-100/35 ml-auto">Personalizes agent recommendations</p>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            {USE_CASES.map((uc) => {
+              const isSelected = selectedUseCase === uc.id;
+              return (
+                <motion.button
+                  key={uc.id}
+                  type="button"
+                  onClick={() => onSetUseCase(uc.id)}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${
+                    isSelected
+                      ? 'border-red-500/45 bg-red-500/12 shadow-sm shadow-red-500/8'
+                      : 'border-amber-100/8 bg-amber-100/[0.02] hover:border-amber-100/20 hover:bg-amber-100/[0.05]'
+                  }`}
+                >
+                  <span className="text-base">{uc.emoji}</span>
+                  <span className="text-[11px] font-semibold text-amber-50 truncate">{uc.label}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+          {selectedUseCase && (
+            <p className="mt-2 text-[10px] text-emerald-400/70 text-center">
+              ✓ Personalized — agents are sorted to match your interests
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Celo On-Chain Stats */}
+      {totalSpent > 0 && (
+        <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-900/15 to-blue-900/10 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm">⬡</span>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300">Celo Network</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] text-cyan-200/50 uppercase tracking-wide">Total spent</p>
+              <p className="text-lg font-bold text-cyan-200">${totalSpent.toFixed(2)}</p>
+              <p className="text-[10px] text-cyan-200/30">cUSD on voice calls</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-cyan-200/50 uppercase tracking-wide">Network</p>
+              <p className="text-lg font-bold text-cyan-200">
+                {process.env.NEXT_PUBLIC_CELO_CHAIN_ID === '11142220' ? 'Celo Testnet' : 'Celo'}
+              </p>
+              <p className="text-[10px] text-cyan-200/30">x402 micropayments</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Streak & Stats Card */}
       <div className="grid grid-cols-3 gap-3">

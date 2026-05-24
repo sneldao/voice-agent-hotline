@@ -4,33 +4,36 @@ import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef, useState
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ToastProvider, showError, showInfo } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
 import { useWebRTCSupport } from '@/lib/useWebRTCSupport';
 import { useUserBalance, useAgents } from '@/lib/useSWR';
-import { Search, Phone, User } from 'lucide-react';
+import { Search, Phone, User, PhoneCall, AlertCircle } from 'lucide-react';
 import { generateCallId } from '@/lib/ids';
 import type { Agent } from '@/lib/types';
 import { Header } from '@/components/Header';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { AgentPreviewSheet } from '@/components/AgentPreviewSheet';
-import { Onboarding } from '@/components/Onboarding';
 import { getRelatedAgentRecommendations } from '@/lib/agent-recommendations';
 import { readCallLaunchParams } from '@/lib/product-launch';
 import { useOnboarding } from '@/lib/useOnboarding';
 import { usePersonalizedAgents, getPreferredConcierge } from '@/lib/usePersonalization';
 import { useFreeCall } from '@/lib/useFreeCall';
-import { useStreak } from '@/lib/useStreak';
-
-// #17: Lazy-load all heavy components — only DiscoverTab is needed on first paint
+import { useStreak } from '@/lib/useStreak';  // #17: Lazy-load all heavy components — only DiscoverTab is needed on first paint
 const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ default: m.ActiveCall })), { ssr: false });
 const CallsHistoryTab = dynamic(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
 const ProfileTab = dynamic(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
 
 // DiscoverTab is the landing view — keep it eager
 import { DiscoverTab } from '@/components/DiscoverTab';
+import { Coachmarks } from '@/components/Coachmarks';
+import { track } from '@/lib/track';
+
+// Welcome toast shown once on first visit
+const WELCOME_SHOWN_KEY = 'voisss-welcome-toast-shown';
 
 interface PageState {
   activeTab: 'discover' | 'calls' | 'profile';
@@ -107,6 +110,7 @@ function HomeInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isStartingCall, setIsStartingCall] = useState(false);
+  const [confirmingAgent, setConfirmingAgent] = useState<Agent | null>(null);
 
   // #18 & #21: Debounce BOTH search and category together; reset page on change
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
@@ -131,6 +135,21 @@ function HomeInner() {
   const onboarding = useOnboarding(connected, userBalance || 0);
   const freeCall = useFreeCall();
   const streak = useStreak();
+
+  // Show a welcome toast for first-time visitors instead of a blocking modal
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!onboarding.isFirstTime) return;
+    const alreadyShown = localStorage.getItem(WELCOME_SHOWN_KEY);
+    if (alreadyShown) return;
+    localStorage.setItem(WELCOME_SHOWN_KEY, 'true');
+    track('page_visited_first_time', { referrer: document.referrer || null });
+    // Delay slightly so the page renders before the toast appears
+    const timer = setTimeout(() => {
+      showInfo("Hey, I'm Vox! 👋 Tap the dial or browse the agents below. No typing needed.");
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [onboarding.isFirstTime]);
 
   const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
     search: debouncedQuery,
@@ -219,8 +238,8 @@ function HomeInner() {
     if (agent) {
       const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
       if (isDemoMode) {
-        // In demo mode, skip the preview sheet and start the call directly
-        startCallWithAgent(agent);
+        // In demo mode, show confirmation before starting the call
+        setConfirmingAgent(agent);
       } else {
         dispatch({ type: 'PREVIEW_AGENT', agent });
       }
@@ -293,6 +312,7 @@ function HomeInner() {
       <div className="switchboard-shell min-h-screen text-white font-sans">
         <OfflineBanner />
         <ToastProvider />
+        <Coachmarks />
         <Header
           connected={connected}
           userBalance={userBalance}
@@ -300,22 +320,9 @@ function HomeInner() {
           formatAddress={formatAddress}
           onConnect={connect}
           onDisconnect={disconnect}
+          onNavigateToProfile={() => dispatch({ type: 'SET_TAB', tab: 'profile' })}
         />
-        <Onboarding
-          isOpen={onboarding.isOpen}
-          currentStep={onboarding.currentStep}
-          walletConnected={connected}
-          walletBalance={userBalance || 0}
-          selectedUseCase={onboarding.selectedUseCase}
-          currentStepIndex={onboarding.currentStepIndex}
-          totalSteps={onboarding.totalSteps}
-          onClose={onboarding.closeOnboarding}
-          onNext={onboarding.nextStep}
-          onPrev={onboarding.prevStep}
-          onSkip={onboarding.skipOnboarding}
-          onSetUseCase={onboarding.setUseCase}
-          onConnect={connect}
-        />
+        {/* Inline use-case banner — shown on DiscoverTab for first-time visitors */}
         <main id="main-content" className="mx-auto max-w-6xl px-4 pb-28 sm:px-6 lg:px-8" role="main">
           {inCall && selectedAgent && callId ? (
             <ActiveCall
@@ -345,13 +352,19 @@ function HomeInner() {
           ) : (
             <>
               {activeTab === 'discover' && (
-                <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>
-                  <DiscoverTab
+                <ErrorBoundary fallback={<TabError label="Discover" onRetry={() => dispatch({ type: 'SET_TAB', tab: 'discover' })} />}>                    <DiscoverTab
                     agents={displayedAgents}
                     isLoading={isLoadingAgents && displayedAgents.length === 0}
                     error={agentsError}
                     onSelect={handleSelectAgent}
-                    onVoiceCall={startCallWithAgent}
+                    onVoiceCall={(agent) => {
+                      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+                      if (isDemoMode) {
+                        setConfirmingAgent(agent);
+                      } else {
+                        startCallWithAgent(agent);
+                      }
+                    }}
                     searchQuery={searchQuery}
                     onSearchChange={handleSearchChange}
                     selectedCategory={selectedCategory}
@@ -360,6 +373,10 @@ function HomeInner() {
                     hasMore={hasMore}
                     onLoadMore={handleLoadMore}
                     preferredConciergeId={getPreferredConcierge(onboarding.selectedUseCase)}
+                    showUseCaseBanner={onboarding.showUseCaseBanner}
+                    selectedUseCase={onboarding.selectedUseCase}
+                    onSetUseCase={onboarding.setUseCase}
+                    onDismissUseCaseBanner={onboarding.dismissUseCaseBanner}
                   />
                 </ErrorBoundary>
               )}
@@ -386,6 +403,9 @@ function HomeInner() {
                       balance={userBalance}
                       address={address}
                       isLoading={isLoadingBalance}
+                      selectedUseCase={onboarding.selectedUseCase}
+                      onSetUseCase={onboarding.setUseCase}
+                      totalSpent={localCallHistory.totalSpent}
                     />
                   </ErrorBoundary>
                 </Suspense>
@@ -404,6 +424,69 @@ function HomeInner() {
           onConnect={connect}
           onCallNow={startCallWithAgent}
         />
+        {/* ═══════════════════════════════════════════════════════════════════
+            CALL CONFIRMATION OVERLAY
+            Shown before mic activation — prevents accidental calls.
+        ═══════════════════════════════════════════════════════════════════ */}
+        <AnimatePresence>
+          {confirmingAgent && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setConfirmingAgent(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                className="mx-4 w-full max-w-sm overflow-hidden rounded-2xl border border-amber-100/15 bg-gradient-to-br from-[#1a110e] to-[#231712] shadow-2xl shadow-black/60"
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              >
+                <div className="p-6 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-red-500/20 to-amber-500/20">
+                    <PhoneCall className="h-8 w-8 text-amber-200" />
+                  </div>
+                  <h3 className="text-lg font-bold text-amber-50">
+                    Ready to connect?
+                  </h3>
+                  <p className="mt-2 text-sm text-amber-100/60">
+                    Your microphone will activate to speak with{' '}
+                    <span className="font-semibold text-amber-200">{confirmingAgent.name}</span>.
+                  </p>
+                  <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-amber-100/10 bg-amber-100/5 px-4 py-2.5 text-xs text-amber-100/45">
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-300" />
+                    Tap "Connect" when you're ready to start the voice session
+                  </div>
+                </div>
+                <div className="flex gap-3 border-t border-amber-100/10 px-6 py-4">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingAgent(null)}
+                    className="flex-1 rounded-xl border border-amber-100/15 px-4 py-2.5 text-sm font-semibold text-amber-100/60 transition-colors hover:bg-amber-100/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const agent = confirmingAgent;
+                      setConfirmingAgent(null);
+                      startCallWithAgent(agent);
+                    }}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:from-red-500 hover:to-amber-400 active:scale-[0.97]"
+                  >
+                    Connect
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <nav className="fixed bottom-0 left-0 right-0 border-t border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl" role="navigation" aria-label="Main navigation">
           <div className="mx-auto flex max-w-2xl justify-around px-4 py-2">
             {[

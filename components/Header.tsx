@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { PhoneCall, Wallet, LogOut, ChevronDown, Radio } from 'lucide-react';
+import { PhoneCall, Wallet, LogOut, ChevronDown, Radio, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -11,6 +11,8 @@ interface HeaderProps {
   formatAddress: () => string;
   onConnect: () => void;
   onDisconnect?: () => void;
+  /** Navigate to the Profile tab (used by the Interests dropdown item) */
+  onNavigateToProfile?: () => void;
 }
 
 export function Header({
@@ -20,6 +22,7 @@ export function Header({
   formatAddress,
   onConnect,
   onDisconnect,
+  onNavigateToProfile,
 }: HeaderProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -59,9 +62,19 @@ export function Header({
             <p className="hidden text-xs text-amber-100/45 sm:flex sm:items-center sm:gap-1.5">
               <Radio className="h-3 w-3 text-emerald-300" />
               Operator switchboard for AI lines
-            </p>
-          </div>
-        </div>
+                </p>
+              </div>
+            </div>
+            <a
+              href="https://celo.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-3 hidden items-center gap-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/8 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-300 transition-colors hover:bg-cyan-500/15 sm:inline-flex"
+              aria-label="Powered by Celo"
+            >
+              <span className="text-xs">⬡</span>
+              Celo
+            </a>
 
         {/* Wallet */}
         <div className="flex items-center gap-2" role="group" aria-label="User wallet">
@@ -89,6 +102,16 @@ export function Header({
                   >
                     📊 Dashboard
                   </Link>
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onNavigateToProfile?.();
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-amber-100/70 transition-colors hover:bg-amber-100/10"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    Interests
+                  </button>
                   <button
                     onClick={() => { setShowMenu(false); onDisconnect?.(); }}
                     className="flex w-full items-center gap-2 border-t border-amber-100/10 px-3 py-2.5 text-sm text-red-300 transition-colors hover:bg-red-500/10"
