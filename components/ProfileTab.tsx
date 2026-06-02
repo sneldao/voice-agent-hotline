@@ -19,7 +19,7 @@ interface ProfileTabProps {
   selectedUseCase?: UseCase | null;
   /** Callback to change the use-case preference */
   onSetUseCase?: (useCase: UseCase) => void;
-  /** Total cUSD spent across all calls (on-chain + simulated) */
+  /** Total USDC spent across all calls (on-chain + simulated) */
   totalSpent?: number;
 }
 
@@ -96,23 +96,23 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect, selected
         </div>
       )}
 
-      {/* Celo On-Chain Stats */}
+      {/* Arbitrum On-Chain Stats */}
       {totalSpent > 0 && (
         <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-900/15 to-blue-900/10 p-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-sm">⬡</span>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300">Celo Network</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300">Arbitrum Network</h3>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-[10px] text-cyan-200/50 uppercase tracking-wide">Total spent</p>
               <p className="text-lg font-bold text-cyan-200">${totalSpent.toFixed(2)}</p>
-              <p className="text-[10px] text-cyan-200/30">cUSD on voice calls</p>
+              <p className="text-[10px] text-cyan-200/30">USDC on voice calls</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] text-cyan-200/50 uppercase tracking-wide">Network</p>
               <p className="text-lg font-bold text-cyan-200">
-                {process.env.NEXT_PUBLIC_CELO_CHAIN_ID === '11142220' ? 'Celo Testnet' : 'Celo'}
+                {process.env.NEXT_PUBLIC_ARBITRUM_CHAIN_ID === '421614' ? 'Arbitrum Testnet' : 'Arbitrum'}
               </p>
               <p className="text-[10px] text-cyan-200/30">x402 micropayments</p>
             </div>
@@ -167,7 +167,7 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect, selected
                 variant="secondary"
                 size="sm"
                 className="flex-1 bg-white/10 border-white/20 hover:bg-white/20"
-                onClick={() => window.open('https://app.uniswap.org/#/swap?outputCurrency=0x765DE816845861e75A25fCA122bb6898B8B1282a&chain=celo', '_blank')}
+                onClick={() => window.open('https://app.uniswap.org/#/swap?outputCurrency=0xaf88d065e77c8cC2239327C5EDb3A432268e5831&chain=arbitrum', '_blank')}
               >
                 <ExternalLink className="w-3 h-3 mr-1" />
                 Add Funds

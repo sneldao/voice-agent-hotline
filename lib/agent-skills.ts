@@ -2,7 +2,7 @@
 // Agent Skills Framework
 // ============================================
 // Defines skill types and execution framework for agentic applications
-// Following Celo's guidance on "everyday utility" for agentic apps
+// Following Arbitrum's guidance on "everyday utility" for agentic apps
 
 import { Hash, Address, parseEther } from 'viem';
 import { erc8004Service, DelegationScope } from './erc8004';

@@ -1,5 +1,5 @@
 // ============================================
-// Superfluid Streaming Integration (Celo)
+// Superfluid Streaming Integration (Arbitrum)
 // ============================================
 // Continuous USDCx streaming payments for voice call billing.
 // Uses CFAv1Forwarder – the same address on every EVM chain.
@@ -13,27 +13,31 @@ import {
   Address,
   Hash,
 } from 'viem';
-import { celo } from 'viem/chains';
+import { arbitrum } from 'viem/chains';
+import {
+  ACTIVE_CHAIN,
+  ACTIVE_CHAIN_ID,
+  RPC_URL,
+  CFA_V1_FORWARDER as CFA,
+  SUPERFLUID_USDCX,
+} from './arbitrum-chain';
 
 // ============================================
 // Configuration
 // ============================================
 
 // CFAv1Forwarder is deployed at the same address on every Superfluid-enabled chain.
-export const CFA_V1_FORWARDER = '0xcfA132E353cB4E398080B9700609bb008eceB125' as Address;
+export const CFA_V1_FORWARDER = CFA;
 
 // Super-token used for voice-call streaming.
 // Override with NEXT_PUBLIC_SUPERFLUID_TOKEN env var for custom tokens.
-// Default: cUSDx on Celo mainnet (Superfluid-wrapped cUSD)
-export const SUPERFLUID_TOKEN: Address = (
-  process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN ||
-  '0x3acb9a08697b6db4cd977e8ab42b6f24722e6d6e' // cUSDx – Celo mainnet
-) as Address;
-export const SUPERFLUID_TOKEN_SYMBOL = process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN_SYMBOL || 'cUSDx';
+// Default: USDCx on Arbitrum One (Superfluid-wrapped USDC)
+export const SUPERFLUID_TOKEN: Address = SUPERFLUID_USDCX;
+export const SUPERFLUID_TOKEN_SYMBOL = process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN_SYMBOL || 'USDCx';
 
-// Always use Celo mainnet for Superfluid (deployed and live)
-export const ACTIVE_CHAIN = celo;
-export const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
+// Always use Arbitrum One for Superfluid (deployed and live)
+export const ACTIVE_CHAIN_SF = ACTIVE_CHAIN;
+export const RPC_URL_SF = RPC_URL;
 
 // ============================================
 // CFAv1Forwarder ABI (minimal surface)
@@ -144,8 +148,8 @@ export class SuperfluidStreamingService {
     this.superToken = superToken ?? SUPERFLUID_TOKEN;
 
     this.publicClient = createPublicClient({
-      chain: ACTIVE_CHAIN,
-      transport: http(RPC_URL),
+      chain: ACTIVE_CHAIN_SF,
+      transport: http(RPC_URL_SF),
     });
   }
 
@@ -247,6 +251,6 @@ export function calculatePerSecondCost(monthlyUSDC: number): number {
 }
 
 export function getExplorerTxUrl(txHash: string): string {
-  const baseUrl = ACTIVE_CHAIN.blockExplorers?.default?.url || 'https://celoscan.io';
+  const baseUrl = ACTIVE_CHAIN_SF.blockExplorers?.default?.url || 'https://arbiscan.io';
   return `${baseUrl}/tx/${txHash}`;
 }

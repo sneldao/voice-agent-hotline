@@ -4,18 +4,18 @@
 // Client-side hook for Superfluid stream management.
 //
 // Stream creation/deletion is signed directly by the user's connected wallet.
-// Stream existence checks use public Celo RPC reads, with no server key.
+// Stream existence checks use public Arbitrum RPC reads, with no server key.
 // ============================================
 
 'use client';
 
 import { useState, useCallback } from 'react';
 import {
-  ACTIVE_CHAIN,
+  ACTIVE_CHAIN_SF,
   CFA_V1_FORWARDER,
   CFA_V1_FORWARDER_ABI,
   SUPERFLUID_TOKEN,
-  RPC_URL,
+  RPC_URL_SF,
   SuperfluidStreamingService,
   StreamingPaymentState,
   monthlyUsdcToTokenUnits,
@@ -27,8 +27,8 @@ import { enqueueRefund } from './refundQueue';
 // Shared read-only instance (public RPC, no wallet needed).
 const readService = new SuperfluidStreamingService();
 const publicClient = createPublicClient({
-  chain: ACTIVE_CHAIN,
-  transport: http(RPC_URL),
+  chain: ACTIVE_CHAIN_SF,
+  transport: http(RPC_URL_SF),
 });
 
 /**

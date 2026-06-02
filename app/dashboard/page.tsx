@@ -92,7 +92,7 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // cUSD on Celo mainnet
+  // USDC on Arbitrum One
   const CUSD_ADDRESS = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
 
   // Encode ERC-20 transfer(address,uint256) calldata
@@ -151,7 +151,7 @@ export default function DashboardPage() {
     const paid = parseFloat(agent.totalPaid || '0');
     const unpaid = revenue - paid;
     if (unpaid < 0.01) {
-      showToast('Minimum withdrawal is 0.01 cUSD', 'error');
+      showToast('Minimum withdrawal is 0.01 USDC', 'error');
       return;
     }
     const eth = (window as any).ethereum;
@@ -161,7 +161,7 @@ export default function DashboardPage() {
     }
     setPayoutLoading(agent.id);
     try {
-      // cUSD has 18 decimals
+      // USDC has 6 decimals on Arbitrum
       const amountWei = BigInt(Math.floor(unpaid * 1e18));
       const data = encodeTransfer(address, amountWei);
       const txHash = await eth.request({
@@ -174,7 +174,7 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId: agent.id, walletAddress: address, txHash, amount: unpaid.toFixed(6) }),
       });
-      showToast(`Withdrew ${unpaid.toFixed(4)} cUSD ✓ — tx: ${(txHash as string).slice(0, 10)}…`);
+      showToast(`Withdrew ${unpaid.toFixed(4)} USDC ✓ — tx: ${(txHash as string).slice(0, 10)}…`);
       fetchData();
     } catch (err: any) {
       if (err?.code === 4001) {
@@ -203,7 +203,7 @@ export default function DashboardPage() {
     }
     setMintLoading(agent.id);
     try {
-      const agentURI = `https://voisss.celo.famile.xyz/api/agents/${agent.id}`;
+      const agentURI = `https://voisss-agent-hotline.vercel.app/api/agents/${agent.id}`;
       const rateWei = BigInt(Math.floor(parseFloat(String(agent.rate || '0.10')) * 1e18));
       const specialties = agent.category ? [agent.category] : ['general'];
       const data = encodeRegisterAgent(agentURI, rateWei, specialties);
@@ -305,7 +305,7 @@ export default function DashboardPage() {
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
                 <div className="text-2xl font-bold text-emerald-400">{totalEarnings.toFixed(4)}</div>
-                <div className="text-slate-400 text-xs mt-1">Earned (cUSD)</div>
+                <div className="text-slate-400 text-xs mt-1">Earned (USDC)</div>
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
                 <div className="text-2xl font-bold text-amber-400">{totalUnpaid.toFixed(4)}</div>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                               )}
                               {agent.erc8004_token_id && (
                                 <a
-                                  href={`https://celoscan.io/token/${process.env.NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS}?a=${agent.erc8004_token_id}`}
+                                  href={`https://arbiscan.io/token/${process.env.NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS}?a=${agent.erc8004_token_id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-xs px-2 py-0.5 rounded-full bg-violet-900 text-violet-300 hover:bg-violet-800 transition-colors"
@@ -399,7 +399,7 @@ export default function DashboardPage() {
                               ? 'Sending…'
                               : unpaid < 0.01
                               ? 'No balance'
-                              : `Withdraw ${unpaid.toFixed(4)} cUSD`}
+                              : `Withdraw ${unpaid.toFixed(4)} USDC`}
                           </button>
                           {agent.status === 'active' && !agent.erc8004_token_id && (
                             <button
@@ -441,9 +441,9 @@ export default function DashboardPage() {
                             {history.slice(0, 5).map((p, i) => (
                               <div key={i} className="flex items-center justify-between text-xs text-slate-400 bg-slate-800 rounded px-3 py-1.5">
                                 <span>{new Date(parseInt(p.timestamp)).toLocaleDateString()}</span>
-                                <span className="text-emerald-400 font-medium">{parseFloat(p.amount).toFixed(4)} cUSD</span>
+                                <span className="text-emerald-400 font-medium">{parseFloat(p.amount).toFixed(4)} USDC</span>
                                 <a
-                                  href={`https://celoscan.io/tx/${p.txHash}`}
+                                  href={`https://arbiscan.io/tx/${p.txHash}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-violet-400 hover:text-violet-300"

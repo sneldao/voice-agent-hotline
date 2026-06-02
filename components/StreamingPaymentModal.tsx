@@ -215,7 +215,7 @@ export function StreamingPaymentModal({
         )}
 
         <p className="text-xs text-center text-gray-600">
-          Powered by Superfluid on Celo • Your wallet signs the stream directly and payment stops instantly when you end the call
+          Powered by Superfluid on Arbitrum • Your wallet signs the stream directly and payment stops instantly when you end the call
         </p>
       </div>
     </div>

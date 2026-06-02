@@ -12,21 +12,21 @@ type EthereumProvider = {
   removeListener: (event: string, handler: (...args: any[]) => void) => void;
 };
 
-// Celo chain configuration
-const celo = {
-  chainId: 42220,
-  name: 'Celo',
-  currency: 'CELO',
-  explorerUrl: 'https://celoscan.io',
-  rpcUrl: 'https://forno.celo.org',
+// Arbitrum chain configuration
+const arbitrumOne = {
+  chainId: 42161,
+  name: 'Arbitrum One',
+  currency: 'ETH',
+  explorerUrl: 'https://arbiscan.io',
+  rpcUrl: 'https://arb1.arbitrum.io/rpc',
 };
 
-const celoTestnet = {
-  chainId: 11142220,
-  name: 'Celo Sepolia',
-  currency: 'CELO',
-  explorerUrl: 'https://sepolia.celoscan.io',
-  rpcUrl: 'https://forno.celo-sepolia.celo-testnet.org',
+const arbitrumSepolia = {
+  chainId: 421614,
+  name: 'Arbitrum Sepolia',
+  currency: 'ETH',
+  explorerUrl: 'https://sepolia.arbiscan.io',
+  rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
 };
 
 // Initialize Web3Modal
@@ -41,8 +41,8 @@ const metadata = {
 
 // Determine which chain to use based on environment
 const isProduction = process.env.NODE_ENV === 'production';
-const chains = isProduction ? [celo] : [celo, celoTestnet];
-const defaultChain = isProduction ? celo : celoTestnet;
+const chains = isProduction ? [arbitrumOne] : [arbitrumSepolia, arbitrumOne];
+const defaultChain = isProduction ? arbitrumOne : arbitrumSepolia;
 
 const ethersConfig = defaultConfig({
   metadata,

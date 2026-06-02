@@ -269,7 +269,7 @@ export function ActiveCall({
         callId,
         agentAddress: payoutAddress as `0x${string}`,
         amount,
-        token: 'cUSD',
+        token: 'USDC',
       });
 
       if (settlement.txHash) {
@@ -486,21 +486,12 @@ export function ActiveCall({
 
       {paymentMode === 'streaming' && streamingPreflight && (
         <div className="border-b border-amber-100/10 bg-[#17100d]/85 px-4 py-2">
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <span className="rounded-full border border-amber-100/15 bg-black/25 px-2 py-1 text-amber-100/70">
-              Chain: {streamingPreflight.chainName}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="payment-badge border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Streaming {streamingPreflight.tokenSymbol}
             </span>
-            <span className="rounded-full border border-amber-100/15 bg-black/25 px-2 py-1 text-amber-100/70">
-              Token: {streamingPreflight.tokenSymbol}
-            </span>
-            <span className="rounded-full border border-amber-100/15 bg-black/25 px-2 py-1 text-amber-100/70">
-              Payout: {shortAddress(streamingPreflight.payoutAddress)}
-            </span>
-            {typeof streamingPreflight.availableBalance === 'number' && typeof streamingPreflight.requiredBalance === 'number' && (
-              <span className="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">
-                Reserve: {streamingPreflight.availableBalance.toFixed(3)} / {streamingPreflight.requiredBalance.toFixed(3)}
-              </span>
-            )}
+            <span className="text-amber-100/40">to {shortAddress(streamingPreflight.payoutAddress)}</span>
           </div>
         </div>
       )}
@@ -515,7 +506,7 @@ export function ActiveCall({
       <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-center overflow-y-auto p-4">
         {isFinalizing && (
           <div className="mb-4 w-full max-w-md rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center">
-            <p className="text-sm font-medium text-amber-200">Finalizing payment on Celo</p>
+            <p className="text-sm font-medium text-amber-200">Finalizing payment on Arbitrum</p>
             <p className="mt-1 text-xs text-amber-300/80">
               Waiting for settlement before opening the receipt.
             </p>

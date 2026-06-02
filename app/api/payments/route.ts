@@ -13,7 +13,7 @@ const paymentSessions = new Map<string, {
   createdAt: number;
 }>();
 
-const CUSD_TOKEN = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
+const USDC_TOKEN = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'; // Native USDC on Arbitrum
 
 export async function POST(request: Request) {
   try {
@@ -91,10 +91,10 @@ function handleCreateSession({
       ratePerMinute: session.ratePerMinute,
       requirements: {
         scheme: 'exact',
-        network: 'celo',
+        network: 'arbitrum',
         maxAmountRequired: '0',
         payTo: process.env.PAYMENT_RECEIVER || '0x0000',
-        asset: CUSD_TOKEN,
+        asset: USDC_TOKEN,
         description: `Voice call with agent ${agentId}`,
         mimeType: 'application/json',
       },
@@ -133,13 +133,13 @@ function handleAuthorize(callId: string): Response {
     data: {
       status: 'pending',
       amount,
-      currency: 'cUSD',
+      currency: 'USDC',
       requirements: {
         scheme: 'exact',
-        network: 'celo',
+        network: 'arbitrum',
         maxAmountRequired: amount,
         payTo: process.env.PAYMENT_RECEIVER || '0x0000',
-        asset: CUSD_TOKEN,
+        asset: USDC_TOKEN,
         description: `Additional minute with agent ${session.agentId}`,
         mimeType: 'application/json',
         extra: { callId, agentId: session.agentId, validUntil: String(validUntil), nonce },
@@ -203,7 +203,7 @@ function handleStatus(callId: string): Response {
       freeMinutesRemaining,
       minutesUsed,
       totalCost: (totalCost || 0).toFixed(4),
-      currency: 'cUSD',
+      currency: 'USDC',
     },
   });
 }

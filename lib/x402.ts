@@ -1,13 +1,13 @@
 import { createPublicClient, http } from 'viem';
-import { celo } from 'viem/chains';
+import { arbitrum } from 'viem/chains';
+import { ACTIVE_USDC, EXPLORER_URL } from './arbitrum-chain';
 
-// Celo mainnet addresses
-const CUSD_TOKEN = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
-const USDC_TOKEN = '0xcebA9300f2b948710d2653dD7B07f33A8B32118C';
+// Arbitrum USDC (native)
+const USDC_TOKEN = ACTIVE_USDC;
 
 export interface PaymentRequirements {
   scheme: 'exact' | 'upto';
-  network: 'celo';
+  network: 'arbitrum';
   maxAmountRequired: string;
   payTo: string;
   asset: string;
@@ -51,10 +51,10 @@ export class X402Payments {
   ): PaymentRequirements {
     return {
       scheme: 'exact',
-      network: 'celo',
+      network: 'arbitrum',
       maxAmountRequired: amount.toString(),
       payTo: this.receiver,
-      asset: CUSD_TOKEN,
+      asset: USDC_TOKEN,
       description,
       mimeType: 'application/json',
     };
@@ -83,7 +83,7 @@ export class X402Payments {
       domain: {
         name: 'USD Coin',
         version: '2',
-        chainId: 42220,
+        chainId: 42161,
         verifyingContract: requirements.asset as `0x${string}`,
       },
       types: {

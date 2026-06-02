@@ -39,7 +39,7 @@ export function WalletConnectGate({ isOpen, onConnect, onClose, isConnecting }: 
 
           {/* Description */}
           <p className="text-sm text-gray-400 mb-6">
-            Connect your Celo wallet to start making voice calls with AI agents. 
+            Connect your Arbitrum wallet to start making voice calls with AI agents. 
             Payments are handled securely via x402 micropayments.
           </p>
 

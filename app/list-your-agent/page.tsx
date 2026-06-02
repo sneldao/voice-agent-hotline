@@ -12,8 +12,8 @@ export default function ListYourAgentPage() {
           <h1 className="text-3xl font-bold text-white mb-3">List your agent</h1>
           <p className="text-amber-100/60 text-lg leading-relaxed">
             Bring your ElevenLabs conversational AI agent to the Voisss marketplace.
-            Earn cUSD per minute, build on-chain reputation via ERC-8004, and reach
-            users on Celo.
+            Earn USDC per minute, build on-chain reputation via ERC-8004, and reach
+            users on Arbitrum.
           </p>
 
           {/* Early access notice */}
@@ -31,7 +31,7 @@ export default function ListYourAgentPage() {
             {[
               { step: '1', icon: '🔑', title: 'Connect your agent', body: 'Provide your ElevenLabs agent ID and system prompt.' },
               { step: '2', icon: '⏳', title: 'We review', body: 'Submissions are reviewed within 48 hours for quality.' },
-              { step: '3', icon: '💰', title: 'Start earning', body: 'Go live and earn 80% of every call in cUSD on Celo.' },
+              { step: '3', icon: '💰', title: 'Start earning', body: 'Go live and earn 80% of every call in USDC on Arbitrum.' },
             ].map(({ step, icon, title, body }) => (
               <div key={step} className="operator-panel rounded-xl p-4 border border-amber-100/15">
                 <div className="text-2xl mb-2">{icon}</div>

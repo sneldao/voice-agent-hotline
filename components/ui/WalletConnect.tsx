@@ -43,7 +43,7 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
     }
   }, [connect, onConnect]);
 
-  const isCorrectNetwork = chainId === 42220; // Celo mainnet
+  const isCorrectNetwork = chainId === 42161; // Arbitrum One
 
   const getWalletIcon = (type: string | null) => {
     switch (type) {
@@ -80,7 +80,7 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400">
-                {isCorrectNetwork ? 'Celo' : 'Wrong Network'}
+                {isCorrectNetwork ? 'Arbitrum' : 'Wrong Network'}
               </span>
               <span className={`w-2 h-2 rounded-full ${isCorrectNetwork ? 'bg-green-500' : 'bg-red-500'}`} />
             </div>
@@ -128,7 +128,7 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
         {!isCorrectNetwork && (
           <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-lg">
             <p className="text-xs text-red-400 text-center">
-              Please switch to Celo (chain ID: 42220)
+              Please switch to Arbitrum (chain ID: 42161)
             </p>
           </div>
         )}

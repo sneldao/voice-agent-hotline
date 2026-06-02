@@ -1,7 +1,7 @@
 // ============================================
 // ERC-8004 Agent Delegation Protocol Integration
 // ============================================
-// Uses viem to interact with ERC-8004 contracts on Celo mainnet
+// Uses viem to interact with ERC-8004 contracts on Arbitrum
 // Reference: https://eips.ethereum.org/EIPS/eip-8004
 
 import {
@@ -13,35 +13,8 @@ import {
   Address,
   Hash
 } from 'viem';
-import { celo } from 'viem/chains';
-
-// ============================================
-// Configuration
-// ============================================
-const CELO_MAINNET = {
-  ...celo,
-  rpcUrls: {
-    default: { http: ['https://forno.celo.org'] },
-    public: { http: ['https://forno.celo.org'] },
-  },
-};
-
-const CELO_TESTNET = {
-  id: 11142220,
-  name: 'Celo Sepolia',
-  network: 'celo-sepolia',
-  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-  rpcUrls: {
-    default: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
-    public: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
-  },
-  blockExplorers: {
-    default: { name: 'Celoscan', url: 'https://sepolia.celoscan.io' },
-  },
-  testnet: true,
-};
-
-const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? CELO_MAINNET : CELO_TESTNET;
+import { arbitrum, arbitrumSepolia } from 'viem/chains';
+import { ACTIVE_CHAIN, ACTIVE_USDC, RPC_URL } from './arbitrum-chain';
 
 // ERC-8004 Contract Addresses - MUST be configured for production
 function getContractAddresses(): {
@@ -66,11 +39,11 @@ function getContractAddresses(): {
   return { identity, reputation, delegation };
 }
 
-// Celo Token Addresses
-const CELO_TOKENS = {
-  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-  USDC: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
-  CELO: '0x471EcE3750Da237f93B8E339c536898b6AEDf5c7',
+// Arbitrum Token Addresses
+const ARB_TOKENS = {
+  USDC: ACTIVE_USDC,
+  USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+  ETH: '0x0000000000000000000000000000000000000000',
 };
 
 // ============================================
@@ -645,7 +618,7 @@ export function ratePerMinuteToWei(rateCentsPerMinute: number): bigint {
 }
 
 /**
- * Check if Celo network is available
+ * Check if Arbitrum network is available
  */
 export async function checkCeloConnection(): Promise<boolean> {
   const client = getPublicClient();

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { apiUrl } from './api';
 import { useWallet, signMessage } from './WalletContextNew';
-import { CELO_TOKENS } from './payment-settlement';
+import { ARB_TOKENS } from './payment-settlement';
 import { validateAddress } from './address';
 import { getExplorerTxUrl } from './superfluid-streaming';
 import type { Address } from 'viem';
@@ -53,7 +53,7 @@ interface UseRealPaymentReturn {
     callId: string;
     agentAddress: Address;
     amount: bigint;
-    token?: 'cUSD' | 'USDC';
+    token?: 'USDC' | 'USDT';
   }) => Promise<SettlementAttempt>;
   resetPayment: () => void;
 }
@@ -74,12 +74,12 @@ export function useRealPayment(): UseRealPaymentReturn {
     callId,
     agentAddress,
     amount,
-    token = 'cUSD',
+    token = 'USDC',
   }: {
     callId: string;
     agentAddress: Address;
     amount: bigint;
-    token?: 'cUSD' | 'USDC';
+    token?: 'USDC' | 'USDT';
   }): Promise<SettlementAttempt> => {
     if (!address) {
       setPayment({ isProcessing: false, isSettled: false, isSimulated: false, mode: 'user_settled', error: 'Wallet not connected' });
@@ -101,16 +101,16 @@ export function useRealPayment(): UseRealPaymentReturn {
         return { success: true, isSimulated: true };
       }
 
-      const tokenAddress = token === 'USDC' ? CELO_TOKENS.USDC : CELO_TOKENS.cUSD;
+      const tokenAddress = token === 'USDC' ? ARB_TOKENS.USDC : ARB_TOKENS.USDC;
       const validBefore = BigInt(Math.floor(Date.now() / 1000) + 3600);
       const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
         .map(b => b.toString(16).padStart(2, '0')).join('')}` as `0x${string}`;
 
       // Step 1: Sign EIP-712 transferWithAuthorization
       const domain = {
-        name: token === 'USDC' ? 'USD Coin' : 'Celo Dollar',
+        name: 'USD Coin',
         version: '2',
-        chainId: 42220,
+        chainId: 42161,
         verifyingContract: tokenAddress,
       };
 

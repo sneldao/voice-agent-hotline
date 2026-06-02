@@ -270,6 +270,7 @@ function HomeInner() {
   }, []);
 
   const handleSwitchTab = useCallback((tab: string) => {
+    try { navigator.vibrate?.(20); } catch { /* unsupported */ }
     dispatch({ type: 'SET_TAB', tab: tab as PageState['activeTab'] });
   }, []);
 
@@ -487,23 +488,28 @@ function HomeInner() {
           )}
         </AnimatePresence>
 
-        <nav className="fixed bottom-0 left-0 right-0 border-t border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl" role="navigation" aria-label="Main navigation">
-          <div className="mx-auto flex max-w-2xl justify-around px-4 py-2">
+        <nav className="switchboard-tab-bar fixed bottom-0 left-0 right-0 z-50" role="navigation" aria-label="Main navigation">
+          <div className="mx-auto flex max-w-2xl items-center justify-around px-4 py-2">
             {[
-              { id: 'discover', label: 'Discover', Icon: Search },
-              { id: 'calls', label: 'Calls', Icon: Phone },
-              { id: 'profile', label: 'Profile', Icon: User },
+              { id: 'discover', label: 'Board', Icon: Search, badge: null },
+              { id: 'calls', label: 'Calls', Icon: Phone, badge: localCallHistory.totalCalls || null },
+              { id: 'profile', label: 'You', Icon: User, badge: null },
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => dispatch({ type: 'SET_TAB', tab: tab.id as PageState['activeTab'] })}
+                onClick={() => handleSwitchTab(tab.id)}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
-                className={`flex flex-col items-center gap-1 rounded-xl px-6 py-2 transition-all ${
-                  activeTab === tab.id ? 'bg-red-500/15 text-amber-100' : 'text-amber-100/40 hover:text-amber-100/75'
+                className={`switchboard-tab relative flex flex-col items-center gap-0.5 rounded-xl px-7 py-2 transition-all ${
+                  activeTab === tab.id
+                    ? 'text-amber-50 scale-105'
+                    : 'text-amber-100/50 hover:text-amber-100/75'
                 }`}
               >
-                <tab.Icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{tab.label}</span>
+                <tab.Icon className={`w-5 h-5 transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''}`} />
+                <span className="text-[11px] font-semibold tracking-wide">{tab.label}</span>
+                {tab.badge && typeof tab.badge === 'number' && tab.badge > 0 && (
+                  <span className="switchboard-tab-badge">{tab.badge > 99 ? '99+' : tab.badge}</span>
+                )}
               </button>
             ))}
           </div>

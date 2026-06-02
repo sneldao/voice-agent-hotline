@@ -220,7 +220,7 @@ export default function AdminPage() {
                       {agent.category && <span>Category: <span className="text-amber-100/70">{agent.category}</span></span>}
                       {agent.rate && <span>Rate: <span className="text-amber-100/70">${agent.rate}/min</span></span>}
                       {agent.totalCalls && <span>Calls: <span className="text-amber-100/70">{agent.totalCalls}</span></span>}
-                      {agent.totalRevenue && <span>Revenue: <span className="text-amber-100/70">{parseFloat(agent.totalRevenue).toFixed(4)} cUSD</span></span>}
+                      {agent.totalRevenue && <span>Revenue: <span className="text-amber-100/70">{parseFloat(agent.totalRevenue).toFixed(4)} USDC</span></span>}
                       {agent.wallet_address && (
                         <span>Wallet: <span className="text-amber-100/70 font-mono">{agent.wallet_address.slice(0, 8)}…{agent.wallet_address.slice(-4)}</span></span>
                       )}

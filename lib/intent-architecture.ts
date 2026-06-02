@@ -32,7 +32,7 @@ export interface IntentConstraints {
   maxAmount?: bigint;        // Maximum amount willing to spend
   maxDuration?: number;      // Maximum call duration in seconds
   agentId?: string;          // Target agent
-  token?: Address;           // Payment token (cUSD, USDC)
+  token?: Address;           // Payment token (USDC, USDT)
   ratePerMinute?: number;    // For streaming payments
 }
 

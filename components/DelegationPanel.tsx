@@ -228,7 +228,7 @@ export function DelegationPanel() {
           The delegation contracts are not yet deployed. Agent permissions are running in sandbox mode.
         </p>
         <p className="text-xs text-gray-600">
-          To enable: deploy ERC-8004 contracts on Celo and set{' '}
+          To enable: deploy ERC-8004 contracts on Arbitrum and set{' '}
           <code className="font-mono bg-gray-800 px-1 rounded">NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS</code> in .env.local.
         </p>
       </Card>
@@ -432,14 +432,14 @@ export function DelegationPanel() {
         className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-400 hover:to-purple-400"
       >
         {isGranting ? (
-          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating delegation on Celo…</>
+          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating delegation on Arbitrum…</>
         ) : (
           <><ShieldCheck className="w-4 h-4 mr-2" /> Grant Permissions via ERC-8004</>
         )}
       </Button>
 
       <p className="text-xs text-center text-gray-600 mt-2">
-        Stored on-chain on Celo. Revocable at any time.
+        Stored on-chain on Arbitrum. Revocable at any time.
       </p>
     </Card>
   );

@@ -129,7 +129,7 @@ export async function PUT(req: NextRequest) {
           domain: {
             name: 'AgentSmartWallet',
             version: '1',
-            chainId: 42220,
+            chainId: 42161,
           },
           types: {
             Intent: [

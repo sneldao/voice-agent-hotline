@@ -5,7 +5,7 @@
 // and earn from voice calls
 
 import { redis } from './redis';
-import { CELO_TOKENS } from './payment-settlement';
+import { ARB_TOKENS } from './payment-settlement';
 import type { Address } from 'viem';
 
 // ============================================

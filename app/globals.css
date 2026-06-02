@@ -490,6 +490,152 @@ nav, header, main, footer,
   @apply outline-none ring-2 ring-cyan-500 ring-offset-2 ring-offset-gray-900;
 }
 
+/* ─── WCAG AA Contrast Overrides ──────────────────────────────────────────── */
+/* Bump low-opacity amber text to meet ~4.5:1 on dark backgrounds */
+.agent-card-body,
+.agent-card-meta,
+.text-amber-100\/65,
+.text-amber-100\/55,
+.text-amber-100\/45,
+.text-amber-100\/40 {
+  color: rgba(254, 243, 199, 0.82) !important;
+}
+.text-amber-100\/70 {
+  color: rgba(254, 243, 199, 0.88) !important;
+}
+
+/* ─── Redesigned Tab Bar (switchboard patch-panel style) ──────────────────── */
+.switchboard-tab-bar {
+  border-top: 1px solid rgba(237, 214, 152, 0.18);
+  background: linear-gradient(180deg, rgba(18, 14, 12, 0.98), rgba(28, 18, 13, 0.96));
+  box-shadow: 
+    inset 0 1px 0 rgba(237, 214, 152, 0.10),
+    0 -8px 24px rgba(0, 0, 0, 0.40);
+  backdrop-filter: blur(20px);
+}
+
+.switchboard-tab {
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.switchboard-tab::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, #d50000, #f5a623);
+  transition: width 0.25s ease;
+  box-shadow: 0 0 10px rgba(213, 0, 0, 0.40);
+}
+
+.switchboard-tab[aria-current="page"]::before {
+  width: 60%;
+}
+
+.switchboard-tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #d50000, #f5a623);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(213, 0, 0, 0.35);
+}
+
+/* ─── Agent Card Enhancements ──────────────────────────────────────────────── */
+.agent-card-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.12);
+  color: rgba(52, 211, 153, 0.90);
+  border: 1px solid rgba(16, 185, 129, 0.20);
+}
+
+.agent-card-activity.pulse-dot::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  animation: activity-pulse 2s ease-in-out infinite;
+}
+
+@keyframes activity-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* Price tag on agent cards */
+.agent-card-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(237, 214, 152, 0.10);
+  color: rgba(254, 243, 199, 0.92);
+  border: 1px solid rgba(237, 214, 152, 0.18);
+}
+
+/* Voice preview chip */
+.voice-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.10);
+  color: rgba(252, 165, 165, 0.90);
+  border: 1px solid rgba(239, 68, 68, 0.20);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.voice-preview-chip:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.voice-preview-chip.playing {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.50);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+}
+
+/* ─── Active Call Simplified Payment Badge ─────────────────────────────────── */
+.payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *,

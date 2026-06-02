@@ -91,7 +91,7 @@ export function CallSummary({
   if (!isOpen) return null;
 
   const explorerUrl = payment?.explorerUrl || (txHash ? getExplorerTxUrl(txHash) : undefined);
-  const tokenLabel = payment?.mode === 'superfluid_stream' ? SUPERFLUID_TOKEN_SYMBOL : 'cUSD';
+  const tokenLabel = payment?.mode === 'superfluid_stream' ? SUPERFLUID_TOKEN_SYMBOL : 'USDC';
   const status: 'settled' | 'processing' | 'pending' | 'error' | 'simulated' = payment?.isProcessing
     ? 'processing'
     : payment?.error
@@ -104,12 +104,12 @@ export function CallSummary({
 
   const statusConfig = {
     settled: {
-      label: 'Payment settled on Celo',
+      label: 'Payment settled on Arbitrum',
       className: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
       icon: <CheckCircle className="w-6 h-6 text-emerald-400" />,
     },
     processing: {
-      label: 'Settling payment on Celo',
+      label: 'Settling payment on Arbitrum',
       className: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
       icon: <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />,
     },

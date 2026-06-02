@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       from: from || '',
       to: to || '',
       amount: amount || '',
-      token: token || 'cUSD',
+      token: token || 'USDC',
       method: method || 'user_settled',
       timestamp: Date.now().toString(),
       settled: 'true',
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
             totalRevenue: (currentRevenue + agentShare).toFixed(6),
             platformRevenue: (currentPlatformRevenue + platformShare).toFixed(6),
           });
-          console.log(`[API:Settle] Split: agent=${agentShare.toFixed(6)} cUSD (80%), platform=${platformShare.toFixed(6)} cUSD (20%)`);
+          console.log(`[API:Settle] Split: agent=${agentShare.toFixed(6)} USDC (80%), platform=${platformShare.toFixed(6)} USDC (20%)`);
         }
       }
     }

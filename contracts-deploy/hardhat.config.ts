@@ -6,7 +6,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000";
-const CELOSCAN_API_KEY = process.env.CELOSCAN_API_KEY || "";
+const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -19,37 +19,37 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    celoSepolia: {
-      url: "https://forno.celo-sepolia.celo-testnet.org",
+    arbitrumSepolia: {
+      url: "https://sepolia-rollup.arbitrum.io/rpc",
       accounts: [PRIVATE_KEY],
-      chainId: 11142220,
+      chainId: 421614,
     },
-    celoMainnet: {
-      url: "https://forno.celo.org",
+    arbitrumOne: {
+      url: "https://arb1.arbitrum.io/rpc",
       accounts: [PRIVATE_KEY],
-      chainId: 42220,
+      chainId: 42161,
     },
   },
   etherscan: {
     apiKey: {
-      celoSepolia: CELOSCAN_API_KEY,
-      celoMainnet: CELOSCAN_API_KEY,
+      arbitrumSepolia: ARBISCAN_API_KEY,
+      arbitrumOne: ARBISCAN_API_KEY,
     },
     customChains: [
       {
-        network: "celoSepolia",
-        chainId: 11142220,
+        network: "arbitrumSepolia",
+        chainId: 421614,
         urls: {
-          apiURL: "https://api-sepolia.celoscan.io/api",
-          browserURL: "https://sepolia.celoscan.io",
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
       {
-        network: "celoMainnet",
-        chainId: 42220,
+        network: "arbitrumOne",
+        chainId: 42161,
         urls: {
-          apiURL: "https://api.celoscan.io/api",
-          browserURL: "https://celoscan.io",
+          apiURL: "https://api.arbiscan.io/api",
+          browserURL: "https://arbiscan.io",
         },
       },
     ],

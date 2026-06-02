@@ -15,7 +15,7 @@
 import {
   paymentSettlement,
   SignedAuthorization,
-  CELO_TOKENS,
+  ARB_TOKENS,
   calculateCallCost,
   SettlementResult,
 } from '../payment-settlement';
@@ -31,8 +31,8 @@ export interface PaymentConfig {
   platformFeePercent: number;
   /** How often (ms) the billing tick runs (default 1 000 = every second). */
   billingIntervalMs: number;
-  /** Which ERC-20 token to settle in ('cUSD' | 'USDC'). */
-  settlementToken: 'cUSD' | 'USDC';
+  /** Which ERC-20 token to settle in ('USDC' | 'USDT'). */
+  settlementToken: 'USDC' | 'USDT';
 }
 
 export interface CallSession {
@@ -68,7 +68,7 @@ export class VoicePaymentService {
     this.config = {
       platformFeePercent: config?.platformFeePercent ?? 10,
       billingIntervalMs: config?.billingIntervalMs ?? 1_000,
-      settlementToken: config?.settlementToken ?? 'cUSD',
+      settlementToken: config?.settlementToken ?? 'USDC',
     };
   }
 
@@ -230,7 +230,7 @@ export class VoicePaymentService {
     if (session.status !== 'active' && session.status !== 'pending') return session;
 
     const tokenAddress =
-      this.config.settlementToken === 'USDC' ? CELO_TOKENS.USDC : CELO_TOKENS.cUSD;
+      this.config.settlementToken === 'USDT' ? ARB_TOKENS.USDT : ARB_TOKENS.USDC;
 
     // Build a partial authorization for the actual amount billed
     // (we don't modify the signature – just adjust the value before settlement).

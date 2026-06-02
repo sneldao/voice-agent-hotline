@@ -12,7 +12,8 @@ import {
 } from '@/lib/agent-registry';
 import { firecrawlScrape } from '@/lib/firecrawl';
 import { Address, Hash, createWalletClient, http } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { arbitrum, arbitrumSepolia } from 'viem/chains';
+import { ACTIVE_CHAIN_ID, RPC_URL } from '@/lib/arbitrum-chain';
 import { privateKeyToAccount } from 'viem/accounts';
 
 /**
@@ -138,11 +139,11 @@ function getFacilitatorWallet() {
   const key = process.env.FACILITATOR_PRIVATE_KEY;
   if (!key || !key.startsWith('0x') || key.length !== 66) return null;
   const account = privateKeyToAccount(key as `0x${string}`);
-  const chain = process.env.NODE_ENV === 'production' ? celo : celoAlfajores;
+  const chain = process.env.NODE_ENV === 'production' ? arbitrum : arbitrumSepolia;
   return createWalletClient({
     account,
     chain,
-    transport: http(process.env.CELO_RPC_URL || 'https://forno.celo.org'),
+    transport: http(process.env.ARBITRUM_RPC_URL || RPC_URL),
   });
 }
 

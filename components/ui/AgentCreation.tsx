@@ -506,7 +506,7 @@ export function AgentRegistrationForm() {
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Earnings & contact</h3>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-300">Rate per minute (cUSD) <span className="text-red-400">*</span></label>
+          <label className="text-sm font-medium text-gray-300">Rate per minute (USDC) <span className="text-red-400">*</span></label>
           <div className="flex items-center gap-4">
             <input
               type="range" min="5" max="100" step="1"
@@ -522,9 +522,9 @@ export function AgentRegistrationForm() {
           <p className="text-xs text-gray-500">Platform takes 20%. You earn ${(form.rate * 0.8).toFixed(2)}/min.</p>
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-300">Celo wallet address <span className="text-red-400">*</span></label>
+          <label className="text-sm font-medium text-gray-300">Arbitrum wallet address <span className="text-red-400">*</span></label>
           <Input placeholder="0x..." value={form.wallet_address} onChange={e => set('wallet_address', e.target.value)} icon="💳" />
-          <p className="text-xs text-gray-500">Earnings paid in cUSD to this address.</p>
+          <p className="text-xs text-gray-500">Earnings paid in USDC to this address.</p>
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-300">Contact email</label>

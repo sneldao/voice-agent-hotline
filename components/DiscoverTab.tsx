@@ -2,11 +2,11 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio, Flame, X } from 'lucide-react';
+import { Mic, Search, PhoneCall, ChevronDown, Loader2, Radio, Flame, X, Volume2 } from 'lucide-react';
 import { AgentCardSkeleton } from './Skeletons';
 import { EmptyState } from './EmptyState';
-import { PullToRefresh, RefreshButton, showSuccess } from '@/components/ui';
-import { AgentCard } from '@/app/page-components';
+import { PullToRefresh, RefreshButton, showSuccess, showInfo } from '@/components/ui';
+import { AgentCard, getPersona } from '@/app/page-components';
 import { playDialTone, playPop } from '@/lib/sounds';
 import { useStreak } from '@/lib/useStreak';
 import type { Agent } from '@/lib/types';
@@ -101,8 +101,33 @@ export function DiscoverTab({
 
   const handleLineClick = useCallback((lineId: string) => {
     const agent = agents.find(a => a.id === lineId);
-    if (agent) onSelect(agent);
+    if (agent) {
+      try { navigator.vibrate?.(30); } catch { /* unsupported */ }
+      onSelect(agent);
+    }
   }, [agents, onSelect]);
+
+  /** Voice preview — plays a short description of the agent's voice */
+  const handleVoicePreview = useCallback((agent: Agent) => {
+    // Show a toast with voice info since we can't actually play audio inline
+    const persona = getPersona(agent);
+    showInfo(`${persona.voiceId} voice — ${persona.tone.toLowerCase()}, ${persona.desk.toLowerCase()}`);
+    try { navigator.vibrate?.(15); } catch { /* unsupported */ }
+  }, []);
+
+  /** Search suggestions based on partial input */
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return agents
+      .filter(a =>
+        a.name.toLowerCase().includes(q) ||
+        a.specialty.toLowerCase().includes(q) ||
+        (a.category || '').toLowerCase().includes(q)
+      )
+      .slice(0, 4)
+      .map(a => ({ id: a.id, label: a.name, subtitle: a.specialty }));
+  }, [agents, searchQuery]);
 
   const hasSearchQuery = searchQuery.trim().length > 0;
   const hasNoResults = agents.length === 0 && !hasSearchQuery && !isLoading;
@@ -421,6 +446,29 @@ export function DiscoverTab({
                     Clear
                   </button>
                 )}
+                {/* Search suggestions dropdown */}
+                {searchSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-amber-100/15 bg-[#17100d]/95 shadow-2xl shadow-black/60 backdrop-blur-xl">
+                    {searchSuggestions.map(s => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          onSearchChange(s.label);
+                          const agent = agents.find(a => a.id === s.id);
+                          if (agent) onSelect(agent);
+                        }}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-amber-100/5"
+                      >
+                        <Search className="h-4 w-4 flex-shrink-0 text-amber-100/40" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-amber-100 truncate">{s.label}</p>
+                          <p className="text-xs text-amber-100/45 truncate">{s.subtitle}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <RefreshButton onRefresh={handleRefresh} />
             </div>
@@ -472,6 +520,7 @@ export function DiscoverTab({
                   key={agent.id}
                   agent={agent}
                   onClick={() => onSelect(agent)}
+                  onVoicePreview={handleVoicePreview}
                 />
               ))}
             </div>

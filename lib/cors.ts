@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://voisss-agent-hotline.vercel.app',
-  'https://voisss.celo.famile.xyz',
+  'https://voisss-agent-hotline.vercel.app',
   'http://localhost:3000',
 ];
 

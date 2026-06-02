@@ -87,7 +87,7 @@ export function ShareModal({
     // Tagline
     ctx.font = 'italic 36px system-ui';
     ctx.fillStyle = '#64748b';
-    ctx.fillText('AI-powered voice conversations on Celo', 80, 550);
+    ctx.fillText('AI-powered voice conversations on Arbitrum', 80, 550);
 
     // Convert to data URL
     const dataUrl = canvas.toDataURL('image/png');

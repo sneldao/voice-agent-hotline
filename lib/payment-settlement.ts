@@ -1,7 +1,7 @@
 // ============================================
-// Real On-Chain Payment Settlement for Celo
+// Real On-Chain Payment Settlement for Arbitrum
 // ============================================
-// Implements actual x402 payment settlement on Celo mainnet
+// Implements x402 payment settlement on Arbitrum
 // Using transferWithAuthorization for gasless payments
 
 import { 
@@ -14,33 +14,22 @@ import {
   Hash
 } from 'viem';
 import { erc20Abi } from './abis/erc20';
-import { celo } from 'viem/chains';
+import { arbitrum, arbitrumSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
-
-// Celo Sepolia chain definition (viem doesn't export it yet)
-const celoSepolia = {
-  id: 11142220,
-  name: 'Celo Sepolia',
-  network: 'celo-sepolia',
-  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-  rpcUrls: {
-    default: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
-    public: { http: ['https://forno.celo-sepolia.celo-testnet.org'] },
-  },
-  blockExplorers: {
-    default: { name: 'Celoscan', url: 'https://sepolia.celoscan.io' },
-  },
-  testnet: true,
-};
+import { 
+  ACTIVE_CHAIN,
+  ACTIVE_CHAIN_ID,
+  ACTIVE_USDC,
+  EXPLORER_URL,
+} from './arbitrum-chain';
 import { getRedis } from './redis';
 
 // ============================================
-// Celo Token Addresses
+// Arbitrum Token Addresses
 // ============================================
-export const CELO_TOKENS = {
-  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a' as Address,
-  USDC: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C' as Address,
-  CELO: '0x471EcE3750Da237f93B8E339c536898b6AEDf5c7' as Address,
+export const ARB_TOKENS = {
+  USDC: ACTIVE_USDC,
+  USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9' as Address,
 };
 
 // ============================================
@@ -131,9 +120,7 @@ export interface PaymentReceipt {
 // ============================================
 // Configuration
 // ============================================
-const ACTIVE_CHAIN = process.env.NODE_ENV === 'production' ? celo : celoSepolia;
-
-const RPC_URL = process.env.CELO_RPC_URL || 'https://forno.celo.org';
+const PAYMENT_RPC_URL = process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
 
 // ============================================
 // Payment Settlement Service
@@ -145,7 +132,7 @@ export class PaymentSettlement {
   constructor() {
     this.publicClient = createPublicClient({
       chain: ACTIVE_CHAIN as any,
-      transport: http(RPC_URL),
+      transport: http(PAYMENT_RPC_URL),
     });
 
     // Initialize facilitator wallet lazily — only when a valid key is provided
@@ -156,7 +143,7 @@ export class PaymentSettlement {
         this.facilitatorWallet = createWalletClient({
           account,
           chain: ACTIVE_CHAIN as any,
-          transport: http(RPC_URL),
+          transport: http(PAYMENT_RPC_URL),
         });
       } catch (e) {
         console.warn('[Settlement] Invalid FACILITATOR_PRIVATE_KEY, settlement disabled');
@@ -201,9 +188,9 @@ export class PaymentSettlement {
   }
 
   /**
-   * Get token decimals (cUSD/USDC = 18)
+   * Get token decimals (USDC = 6 on Arbitrum)
    */
-  async getTokenDecimals(token: Address = CELO_TOKENS.cUSD): Promise<number> {
+  async getTokenDecimals(token: Address = ARB_TOKENS.USDC): Promise<number> {
     try {
       const decimals = await this.publicClient.readContract({
         address: token,
@@ -213,7 +200,7 @@ export class PaymentSettlement {
       return decimals;
     } catch (error) {
       console.error('[Settlement] Error getting decimals:', error);
-      return 18; // Default for cUSD/USDC
+      return 6; // Default for USDC on Arbitrum
     }
   }
 
@@ -223,7 +210,7 @@ export class PaymentSettlement {
   async isAuthorizationUsed(
     authorizer: Address,
     nonce: `0x${string}`,
-    token: Address = CELO_TOKENS.cUSD
+    token: Address = ARB_TOKENS.USDC
   ): Promise<boolean> {
     try {
       const state = await this.publicClient.readContract({
@@ -244,7 +231,7 @@ export class PaymentSettlement {
    */
   async getBalance(
     address: Address,
-    token: Address = CELO_TOKENS.cUSD
+    token: Address = ARB_TOKENS.USDC
   ): Promise<bigint> {
     try {
       const balance = await this.publicClient.readContract({
@@ -266,7 +253,7 @@ export class PaymentSettlement {
    */
   async settlePayment(
     authorization: SignedAuthorization,
-    token: Address = CELO_TOKENS.cUSD,
+    token: Address = ARB_TOKENS.USDC,
     callId?: string
   ): Promise<SettlementResult> {
     if (!this.facilitatorWallet) {
@@ -404,7 +391,7 @@ export class PaymentSettlement {
     authorization: SignedAuthorization,
     actualDurationSeconds: number,
     ratePerMinuteCents: number,
-    token: Address = CELO_TOKENS.cUSD,
+    token: Address = ARB_TOKENS.USDC,
     callId?: string
   ): Promise<SettlementResult> {
     // Calculate actual cost
@@ -510,8 +497,8 @@ export class PaymentSettlement {
 export const EIP712_DOMAIN = {
   name: 'USD Coin',
   version: '2',
-  chainId: 42220, // Celo mainnet
-  verifyingContract: CELO_TOKENS.cUSD,
+  chainId: ACTIVE_CHAIN_ID,
+  verifyingContract: ACTIVE_USDC,
 };
 
 export const EIP712_TYPES = {

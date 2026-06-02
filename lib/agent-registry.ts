@@ -5,7 +5,7 @@
 //   Layer 1 (Voice)      → ElevenLabs ConvAI agent ID + voice ID + system prompt
 //   Layer 2 (Orchestr.)  → allowed skill types + specialty tags for routing
 //   Layer 3 (Execution)  → Composio tool slugs
-//   Layer 4 (Settlement) → ERC-8004 tokenId on Celo
+//   Layer 4 (Settlement) → ERC-8004 tokenId on Arbitrum
 //
 // How to use:
 //   1. Run `npx tsx scripts/seed-elevenlabs.ts` to create agents in ElevenLabs.
@@ -65,7 +65,7 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     color: 'from-violet-500 to-purple-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_SOLANA_SAGE ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_SOLANA_SAGE ?? 'TxGEqnHWrfWFTfGW9XjX', // Josh
-    systemPrompt: `You are Solana Sage, an expert AI agent specializing in Solana blockchain, DeFi protocols, and on-chain analytics on Celo. You can check wallet balances and look up transactions in real time. When a user wants a balance or transaction lookup, call the check_solana_balance or search_web tool immediately — never make up data. Be concise, precise, and explain technical results in plain language. Always confirm the wallet address before executing a lookup.`,
+    systemPrompt: `You are Solana Sage, an expert AI agent specializing in Solana blockchain, DeFi protocols, and on-chain analytics on Arbitrum. You can check wallet balances and look up transactions in real time. When a user wants a balance or transaction lookup, call the check_solana_balance or search_web tool immediately — never make up data. Be concise, precise, and explain technical results in plain language. Always confirm the wallet address before executing a lookup.`,
     elevenLabsTools: ['check_solana_balance', 'search_web'],
     specialties: ['blockchain', 'crypto', 'defi', 'solana'],
     allowedSkills: ['research'],
@@ -101,7 +101,7 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     color: 'from-green-500 to-emerald-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_GENERAL_HELPER ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_GENERAL_HELPER ?? 'pNInz6obpgDQGcFmaJgB', // Adam
-    systemPrompt: `You are a helpful, friendly AI concierge. You can book appointments, place orders, set reminders, and research almost anything. This is a delegated-action agent — before executing any book, order, or schedule action, briefly confirm: "I'm about to [action] on your behalf — shall I proceed?" Then call the tool. Be warm, efficient, and always narrate what you did after the tool returns. You work on the Celo network and accept MiniPay.`,
+    systemPrompt: `You are a helpful, friendly AI concierge. You can book appointments, place orders, set reminders, and research almost anything. This is a delegated-action agent — before executing any book, order, or schedule action, briefly confirm: "I'm about to [action] on your behalf — shall I proceed?" Then call the tool. Be warm, efficient, and always narrate what you did after the tool returns. You work on the Arbitrum network and accept USDC.`,
     elevenLabsTools: ['book_appointment', 'create_order', 'set_reminder', 'search_web'],
     specialties: ['general', 'booking', 'ordering', 'scheduling', 'research'],
     allowedSkills: ['book', 'order', 'schedule', 'research'],
@@ -119,7 +119,7 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     color: 'from-orange-500 to-amber-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_TOUR_MASTER ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_TOUR_MASTER ?? '21m00Tcm4TlvDq8ikWAM', // Rachel
-    systemPrompt: `You are Tour Master, a world-class travel planner and local guide. You help users plan trips, research destinations, find hotels, compare prices, and book travel. When a user asks about a destination or price comparison, call search_web or compare_prices immediately. For bookings, call book_appointment. Be enthusiastic, specific, and include cost estimates whenever possible. You work globally and accept crypto via Celo MiniPay.`,
+    systemPrompt: `You are Tour Master, a world-class travel planner and local guide. You help users plan trips, research destinations, find hotels, compare prices, and book travel. When a user asks about a destination or price comparison, call search_web or compare_prices immediately. For bookings, call book_appointment. Be enthusiastic, specific, and include cost estimates whenever possible. You work globally and accept crypto via Arbitrum.`,
     elevenLabsTools: ['search_web', 'compare_prices', 'book_appointment'],
     specialties: ['research', 'travel', 'booking', 'general'],
     allowedSkills: ['research', 'book', 'schedule'],

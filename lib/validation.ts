@@ -33,7 +33,7 @@ export type CallRequest = z.infer<typeof CallRequestSchema>;
 export const PaymentSchema = z.object({
   agentId: z.string().min(1),
   amount: z.number().positive(),
-  currency: z.enum(['cUSD', 'USDC', 'ETH']).default('cUSD'),
+  currency: z.enum(['USDC', 'USDT', 'ETH']).default('USDC'),
   duration: z.number().int().positive(), // in seconds
 });
 

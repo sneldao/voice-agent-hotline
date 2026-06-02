@@ -53,7 +53,7 @@ export function Header({
                   Demo
                 </span>
               )}
-              {process.env.NEXT_PUBLIC_CELO_CHAIN_ID === '11142220' && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true' && (
+              {process.env.NEXT_PUBLIC_ARBITRUM_CHAIN_ID === '421614' && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true' && (
                 <span className="rounded-full border border-cyan-500/40 bg-cyan-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-300">
                   Testnet
                 </span>
@@ -66,7 +66,7 @@ export function Header({
               </div>
             </div>
             <a
-              href="https://celo.org"
+              href="https://arbitrum.io"
               target="_blank"
               rel="noopener noreferrer"
               className="ml-3 hidden items-center gap-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/8 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-300 transition-colors hover:bg-cyan-500/15 sm:inline-flex"
