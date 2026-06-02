@@ -255,13 +255,26 @@ export function DiscoverTab({
         ═══════════════════════════════════════════════════════════════════ */}
         <AnimatePresence>
           {showUseCaseBanner && (
-            <motion.section
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-              className="mx-auto mt-8 max-w-2xl"
-            >
+            <>
+              {/* Backdrop dim + blur — separates onboarding from the page */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
+                onClick={() => {
+                  playPop();
+                  onDismissUseCaseBanner?.();
+                }}
+              />
+              <motion.section
+                initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                className="fixed inset-x-0 top-[20%] z-50 mx-auto max-w-lg px-4"
+              >
               <div className="relative rounded-2xl border border-amber-100/15 bg-gradient-to-br from-[#17100d] to-[#1f1611] p-5 shadow-lg shadow-black/40">
                 {/* Close button */}
                 <button

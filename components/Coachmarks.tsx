@@ -37,6 +37,72 @@ const STEPS: Step[] = [
   },
 ];
 
+// ─── Spotlight cutout ─────────────────────────────────────────────────────
+
+interface SpotlightCutoutProps {
+  rect: DOMRect | null;
+  /** Padding around the target, in px */
+  padding?: number;
+  /** Corner radius of the cutout */
+  radius?: number;
+}
+
+function SpotlightCutout({ rect, padding = 10, radius = 18 }: SpotlightCutoutProps) {
+  if (!rect) return null;
+
+  const x = rect.left - padding;
+  const y = rect.top - padding;
+  const w = rect.width + padding * 2;
+  const h = rect.height + padding * 2;
+
+  // Use an SVG mask: the entire viewport is black (dimmed), 
+  // but we cut out a rounded rectangle where the target lives.
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <mask id="coachmark-spotlight-mask">
+          {/* White = visible, black = hidden */}
+          <rect x="0" y="0" width="100%" height="100%" fill="white" />
+          <rect
+            x={x}
+            y={y}
+            width={w}
+            height={h}
+            rx={radius}
+            ry={radius}
+            fill="black"
+          />
+        </mask>
+      </defs>
+      {/* Dimmed overlay with spotlight cutout */}
+      <rect
+        x="0"
+        y="0"
+        width="100%"
+        height="100%"
+        fill="rgba(8, 6, 5, 0.72)"
+        mask="url(#coachmark-spotlight-mask)"
+      />
+      {/* Subtle glow border around the cutout */}
+      <rect
+        x={x - 1}
+        y={y - 1}
+        width={w + 2}
+        height={h + 2}
+        rx={radius + 1}
+        ry={radius + 1}
+        fill="none"
+        stroke="rgba(251, 191, 36, 0.25)"
+        strokeWidth="2"
+        mask="url(#coachmark-spotlight-mask)"
+      />
+    </svg>
+  );
+}
+
 export function Coachmarks() {
   const [stepIndex, setStepIndex] = useState<number | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -148,26 +214,12 @@ export function Coachmarks() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[60] pointer-events-none"
+          transition={{ duration: 0.3 }}
+          className="fixed inset-0 z-[60]"
         >
-          {/* Highlight ring around target element */}
-          {rect && (
-            <motion.div
-              key={`ring-${stepIndex}`}
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.92 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-              className="pointer-events-none absolute rounded-xl border-2 border-amber-400/50 shadow-[0_0_20px_8px_rgba(251,191,36,0.12)]"
-              style={{
-                left: rect.left - 8,
-                top: rect.top - 8,
-                width: rect.width + 16,
-                height: rect.height + 16,
-              }}
-            />
-          )}
+          {/* Backdrop blur + spotlight cutout */}
+          <div className="absolute inset-0 backdrop-blur-[2px]" />
+          <SpotlightCutout rect={rect} padding={12} radius={20} />
 
           {/* Tooltip card */}
           {rect && (
@@ -176,8 +228,8 @@ export function Coachmarks() {
               initial={{ opacity: 0, y: step.placement === 'top' ? 12 : -12, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: step.placement === 'top' ? 8 : -8, scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 26, delay: 0.1 }}
-              className="absolute z-[61] w-72 pointer-events-auto"
+              transition={{ type: 'spring', stiffness: 360, damping: 26, delay: 0.15 }}
+              className="absolute z-[61] w-72"
               style={getTooltipPosition(rect, step.placement)}
             >
               {/* Arrow pointing toward target */}
@@ -235,7 +287,7 @@ export function Coachmarks() {
           )}
 
           {/* Step dots indicator */}
-          <div className="fixed bottom-8 left-1/2 z-[61] flex -translate-x-1/2 items-center gap-2 pointer-events-auto">
+          <div className="fixed bottom-8 left-1/2 z-[61] flex -translate-x-1/2 items-center gap-2">
             {STEPS.map((_, i) => (
               <button
                 key={i}
