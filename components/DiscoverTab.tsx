@@ -209,12 +209,12 @@ export function DiscoverTab({
           <h1 className="relative z-10 mt-8 animate-fadeIn text-3xl font-bold text-amber-50 sm:text-4xl [animation-delay:200ms]" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.5)' }}>
             {isConnecting ? 'Connecting...' : 'Pick up the line.'}
           </h1>
-          <p className="relative z-10 mt-3 max-w-xs animate-fadeIn text-base text-amber-100/60 [animation-delay:400ms]">
+          <p className="relative z-10 mt-3 max-w-xs animate-fadeIn text-base text-amber-100/80 [animation-delay:400ms]">
             {isConnecting
               ? 'Patching you through to the AI concierge'
               : 'Tap the dial to talk. No typing, no forms — just speak.'}
           </p>
-          <p className="relative z-10 mt-2 animate-fadeIn text-sm text-amber-100/40 [animation-delay:600ms]">
+          <p className="relative z-10 mt-2 animate-fadeIn text-sm text-amber-100/70 [animation-delay:600ms]">
             {agents.length} specialist{agents.length !== 1 ? 's' : ''} standing by
           </p>
 
@@ -241,7 +241,7 @@ export function DiscoverTab({
           {/* Scroll hint */}
           <button
             onClick={() => document.getElementById('switchboard')?.scrollIntoView({ behavior: 'smooth' })}
-            className="relative z-10 mt-8 flex flex-col items-center gap-1 text-amber-100/40 transition-colors hover:text-amber-100/70"
+            className="relative z-10 mt-8 flex flex-col items-center gap-1 text-amber-100/60 transition-colors hover:text-amber-100/80"
             aria-label="Scroll to the switchboard"
           >
             <span className="text-xs font-medium uppercase tracking-widest">Browse the board</span>

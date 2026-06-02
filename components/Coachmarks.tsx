@@ -215,10 +215,10 @@ export function Coachmarks() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[60]"
+          className="fixed inset-0 z-[60] pointer-events-none"
         >
-          {/* Backdrop blur + spotlight cutout */}
-          <div className="absolute inset-0 backdrop-blur-[2px]" />
+          {/* Backdrop blur + spotlight cutout — visual only, doesn't block clicks */}
+          <div className="absolute inset-0 backdrop-blur-[2px] pointer-events-none" />
           <SpotlightCutout rect={rect} padding={12} radius={20} />
 
           {/* Tooltip card */}
@@ -229,7 +229,7 @@ export function Coachmarks() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: step.placement === 'top' ? 8 : -8, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26, delay: 0.15 }}
-              className="absolute z-[61] w-72"
+              className="absolute z-[61] w-72 pointer-events-auto"
               style={getTooltipPosition(rect, step.placement)}
             >
               {/* Arrow pointing toward target */}
@@ -287,7 +287,7 @@ export function Coachmarks() {
           )}
 
           {/* Step dots indicator */}
-          <div className="fixed bottom-8 left-1/2 z-[61] flex -translate-x-1/2 items-center gap-2">
+          <div className="fixed bottom-8 left-1/2 z-[61] flex -translate-x-1/2 items-center gap-2 pointer-events-auto">
             {STEPS.map((_, i) => (
               <button
                 key={i}
