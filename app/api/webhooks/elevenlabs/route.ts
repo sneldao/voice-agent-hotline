@@ -13,8 +13,10 @@ import {
 import { firecrawlScrape } from '@/lib/firecrawl';
 import { Address, Hash, createWalletClient, http } from 'viem';
 import { arbitrum, arbitrumSepolia } from 'viem/chains';
-import { ACTIVE_CHAIN_ID, RPC_URL } from '@/lib/arbitrum-chain';
 import { privateKeyToAccount } from 'viem/accounts';
+import { ACTIVE_CHAIN_ID, RPC_URL } from '@/lib/arbitrum-chain';
+import { veniceAI } from '@/lib/venice-ai';
+import { oneshotRelayer } from '@/lib/oneshot-relayer';
 
 /**
  * ElevenLabs Conversational AI Webhook Handler
@@ -46,6 +48,9 @@ const TOOL_SKILL: Record<string, SkillType> = {
   get_github_repo_content:  'research',
   get_weather:              'research',
   compare_prices:           'research',
+  venice_research:          'research',
+  venice_code_review:       'research',
+  gasless_settle:           'book',
 };
 
 /**
@@ -123,6 +128,27 @@ function formatNarration(toolName: string, data: unknown): string {
         }
         return 'I compared prices and found some options. Would you like details?';
       }
+      case 'venice_research': {
+        const points = d?.keyPoints as string[] | undefined;
+        if (points?.length) {
+          return `${d.summary} Key points: ${points.join('. ')}.`;
+        }
+        return d?.summary || 'I completed the Venice AI research. Would you like me to go deeper?';
+      }
+      case 'venice_code_review': {
+        const issues = d?.issues as Array<{ severity: string; description: string }> | undefined;
+        const critical = issues?.filter(i => i.severity === 'high').length || 0;
+        if (critical > 0) {
+          return `${d.summary} I found ${critical} critical issues and ${issues!.length - critical} other concerns. Would you like me to go through them?`;
+        }
+        return d?.summary || 'I reviewed the code. Would you like me to elaborate on my findings?';
+      }
+      case 'gasless_settle': {
+        if (d?.txHash) {
+          return `Payment settled via 1Shot Permissionless Relayer. Transaction: ${(d.txHash as string).slice(0, 10)}... No gas fees were charged.`;
+        }
+        return 'Payment settlement was initiated via 1Shot. You can check the transaction on Arbiscan.';
+      }
       default:
         return typeof data === 'string' ? data : 'Done! Is there anything else I can help with?';
     }
@@ -186,6 +212,67 @@ async function recordTaskCompletion(
     console.log(`[Webhook] ✅ On-chain reputation recorded for tokenId ${tokenId}`);
   } catch (err) {
     console.warn('[Webhook] On-chain reputation update failed (non-fatal):', err);
+  }
+}
+
+// ============================================
+// Venice AI Tool Handlers
+// ============================================
+
+async function handleVeniceResearch(
+  query: string,
+  context?: string
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  if (!veniceAI.isConfigured) {
+    return { success: false, error: 'Venice AI is not configured. Set VENICE_API_KEY.' };
+  }
+  try {
+    const result = await veniceAI.research(query, context);
+    return {
+      success: true,
+      data: { summary: result.summary, keyPoints: result.keyPoints, confidence: result.confidence, model: result.model, source: 'Venice AI (privacy-first)' },
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Venice research failed' };
+  }
+}
+
+async function handleVeniceCodeReview(
+  code: string,
+  language?: string,
+  focus?: string[]
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  if (!veniceAI.isConfigured) {
+    return { success: false, error: 'Venice AI is not configured. Set VENICE_API_KEY.' };
+  }
+  try {
+    const result = await veniceAI.codeReview({ code, language, focus });
+    return {
+      success: true,
+      data: { summary: result.summary, issues: result.issues, suggestions: result.suggestions, source: 'Venice AI (privacy-first code review)' },
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Venice code review failed' };
+  }
+}
+
+// ============================================
+// 1Shot Gasless Settlement Handler
+// ============================================
+
+async function handleGaslessSettlement(
+  calldata: string,
+  token: string
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  try {
+    const result = await oneshotRelayer.relayPayment({
+      calldata: calldata as `0x${string}`,
+      token: token as `0x${string}`,
+    });
+    if (!result.success) return { success: false, error: result.error || '1Shot relay failed' };
+    return { success: true, data: { txHash: result.txHash, explorerUrl: result.explorerUrl, settledVia: '1Shot Permissionless Relayer (gasless)' } };
+  } catch (err: any) {
+    return { success: false, error: err.message || '1Shot settlement failed' };
   }
 }
 
@@ -310,7 +397,35 @@ export async function POST(req: NextRequest) {
     // ── 6. Execute tool ──────────────────────────────────────────────────────
     let result: { success: boolean; data?: unknown; error?: string };
 
-    if (tool_name === 'firecrawl_scrape') {
+    if (tool_name === 'venice_research') {
+      const query = parameters.query as string;
+      const context = parameters.context as string | undefined;
+      if (!query) {
+        result = { success: false, error: 'Missing required parameter: query' };
+      } else {
+        console.log(`[Webhook] venice_research → Venice AI (privacy-first)`);
+        result = await handleVeniceResearch(query, context);
+      }
+    } else if (tool_name === 'venice_code_review') {
+      const code = parameters.code as string;
+      const language = parameters.language as string | undefined;
+      const focus = parameters.focus as string[] | undefined;
+      if (!code) {
+        result = { success: false, error: 'Missing required parameter: code' };
+      } else {
+        console.log(`[Webhook] venice_code_review → Venice AI (privacy-first)`);
+        result = await handleVeniceCodeReview(code, language, focus);
+      }
+    } else if (tool_name === 'gasless_settle') {
+      const calldata = parameters.calldata as string;
+      const token = parameters.token as string;
+      if (!calldata || !token) {
+        result = { success: false, error: 'Missing required parameters: calldata, token' };
+      } else {
+        console.log(`[Webhook] gasless_settle → 1Shot Permissionless Relayer`);
+        result = await handleGaslessSettlement(calldata, token);
+      }
+    } else if (tool_name === 'firecrawl_scrape') {
       // Direct Firecrawl scrape — bypass skills framework
       const url = parameters.url as string;
       if (!url) {

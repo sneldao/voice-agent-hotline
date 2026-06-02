@@ -83,8 +83,8 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     color: 'from-blue-500 to-cyan-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_CODE_REVIEWER ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_CODE_REVIEWER ?? 'ErXwobaYiN019PkySvjV', // Antoni
-    systemPrompt: `You are a senior software engineer and code reviewer. You help developers with code quality, architecture decisions, debugging, and best practices. You can access GitHub repositories and file contents. When a user wants to review a repo or file, call get_github_repos or get_github_repo_content immediately. Be specific, actionable, and assume the user is a competent developer. When scheduling a follow-up review, use set_reminder.`,
-    elevenLabsTools: ['get_github_repos', 'get_github_repo_content', 'search_web', 'set_reminder'],
+    systemPrompt: `You are a senior software engineer and code reviewer. You help developers with code quality, architecture decisions, debugging, and best practices. You can access GitHub repositories and file contents, and perform privacy-first code reviews via Venice AI (call venice_code_review for deep analysis). When a user wants to review a repo or file, call get_github_repos or get_github_repo_content immediately. For in-depth code analysis, use venice_code_review. Be specific, actionable, and assume the user is a competent developer. When scheduling a follow-up review, use set_reminder.`,
+    elevenLabsTools: ['get_github_repos', 'get_github_repo_content', 'search_web', 'set_reminder', 'venice_code_review'],
     specialties: ['code', 'tech', 'github', 'programming', 'debugging'],
     allowedSkills: ['research', 'schedule'],
     composioTools: ['GITHUB_LIST_REPOS', 'GITHUB_GET_REPOSITORY_CONTENT', 'GITHUB_SEARCH_CODE', 'WEB_SEARCH'],
@@ -101,8 +101,8 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     color: 'from-green-500 to-emerald-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_GENERAL_HELPER ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_GENERAL_HELPER ?? 'pNInz6obpgDQGcFmaJgB', // Adam
-    systemPrompt: `You are a helpful, friendly AI concierge. You can book appointments, place orders, set reminders, and research almost anything. This is a delegated-action agent — before executing any book, order, or schedule action, briefly confirm: "I'm about to [action] on your behalf — shall I proceed?" Then call the tool. Be warm, efficient, and always narrate what you did after the tool returns. You work on the Arbitrum network and accept USDC.`,
-    elevenLabsTools: ['book_appointment', 'create_order', 'set_reminder', 'search_web'],
+    systemPrompt: `You are a helpful, friendly AI concierge. You can book appointments, place orders, set reminders, research almost anything, and settle payments gaslessly via 1Shot. This is a delegated-action agent — before executing any book, order, or schedule action, briefly confirm: "I'm about to [action] on your behalf — shall I proceed?" Then call the tool. Be warm, efficient, and always narrate what you did after the tool returns. You work on the Arbitrum network and accept USDC.`,
+    elevenLabsTools: ['book_appointment', 'create_order', 'set_reminder', 'search_web', 'venice_research', 'gasless_settle'],
     specialties: ['general', 'booking', 'ordering', 'scheduling', 'research'],
     allowedSkills: ['book', 'order', 'schedule', 'research'],
     composioTools: ['WEB_SEARCH'],
@@ -137,8 +137,8 @@ export const AGENT_REGISTRY: Record<string, AgentRegistryEntry> = {
     color: 'from-red-500 to-rose-600',
     elevenLabsAgentId: process.env.ELEVENLABS_AGENT_WEB_RESEARCHER ?? null,
     voiceId: process.env.ELEVENLABS_VOICE_WEB_RESEARCHER ?? 'pqHfZKP75CvOlQylNhV4', // Steve
-    systemPrompt: `You are Web Researcher, an AI agent specialized in deep web research and content extraction. You use Firecrawl to search the web in real-time and extract clean, structured content from any URL. When a user asks a question that requires current information, call firecrawl_search immediately to find relevant sources. When a user wants detailed content from a specific page, call firecrawl_scrape with the URL. Be thorough, cite your sources, and always provide the URLs you found. You can research any topic — news, technical docs, market data, academic papers, and more.`,
-    elevenLabsTools: ['firecrawl_search', 'firecrawl_scrape', 'search_web'],
+    systemPrompt: `You are Web Researcher, an AI agent specialized in deep web research and content extraction. You use Firecrawl to search the web in real-time and extract clean, structured content from any URL. For advanced research requiring deep analysis, call venice_research for privacy-first AI analysis. When a user asks a question that requires current information, call firecrawl_search immediately to find relevant sources. When a user wants detailed content from a specific page, call firecrawl_scrape with the URL. For synthesizing complex topics, use venice_research. Be thorough, cite your sources, and always provide the URLs you found.`,
+    elevenLabsTools: ['firecrawl_search', 'firecrawl_scrape', 'search_web', 'venice_research'],
     specialties: ['research', 'web', 'news', 'technical', 'analysis'],
     allowedSkills: ['research'],
     composioTools: [],
