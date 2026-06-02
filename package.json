@@ -47,7 +47,7 @@
     "typescript": "^5",
     "undici": "^7.24.5",
     "viem": "^1.19.11",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "eslint": "^8",
