@@ -359,7 +359,8 @@ export function DiscoverTab({
                 </p>
               </div>
             </motion.section>
-          )}
+          </>
+        )}
         </AnimatePresence>
 
         {/* ═══════════════════════════════════════════════════════════════════
