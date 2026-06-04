@@ -21,7 +21,7 @@ else
     SERVER_SSH="$SERVER_INPUT"
 fi
 
-APP_NAME="voice-hotline-arbitrum"
+APP_NAME="voice-hotline"
 REMOTE_DIR="/opt/$APP_NAME"
 
 RED='\033[0;31m'

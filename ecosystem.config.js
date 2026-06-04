@@ -18,7 +18,7 @@
  *   pm2 startup
  *
  * Env vars are written by deploy.sh into .env.hetzner.
- * After deploy.sh runs, reload with: pm2 reload voice-hotline-arbitrum
+ * After deploy.sh runs, reload with: pm2 reload voice-hotline
  */
 
 const path = require('path');
@@ -39,14 +39,14 @@ function loadEnv(envPath) {
   return vars;
 }
 
-const env = loadEnv('/opt/voice-hotline-arbitrum/.env.hetzner');
+const env = loadEnv('/opt/voice-hotline/.env.hetzner');
 
 module.exports = {
   apps: [
     {
-      name: 'voice-hotline-arbitrum',
-      script: '/opt/voice-hotline-arbitrum/.next/standalone/server.js',
-      cwd: '/opt/voice-hotline-arbitrum',
+      name: 'voice-hotline',
+      script: '/opt/voice-hotline/.next/standalone/server.js',
+      cwd: '/opt/voice-hotline',
       instances: 1,
       exec_mode: 'fork',
       env: {

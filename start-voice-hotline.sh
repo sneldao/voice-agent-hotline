@@ -12,4 +12,4 @@ export UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_REST_TOKEN}"
 # Arbitrum RPC
 export ARBITRUM_RPC_URL="https://sepolia-rollup.arbitrum.io/rpc"
 
-cd /opt/voice-hotline-arbitrum/.next/standalone && exec node server.js
+cd /opt/voice-hotline/.next/standalone && exec node server.js

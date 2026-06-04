@@ -10,7 +10,7 @@ User=www-data
 Group=www-data
 
 # Working directory
-WorkingDirectory=/opt/voice-hotline-arbitrum
+WorkingDirectory=/opt/voice-hotline
 
 # Environment
 Environment=NODE_ENV=production
@@ -19,8 +19,8 @@ Environment=HOSTNAME=0.0.0.0
 
 # Start with PM2
 ExecStart=/usr/bin/pm2 start ecosystem.config.js
-ExecReload=/usr/bin/pm2 reload voice-hotline-arbitrum
-ExecStop=/usr/bin/pm2 stop voice-hotline-arbitrum
+ExecReload=/usr/bin/pm2 reload voice-hotline
+ExecStop=/usr/bin/pm2 stop voice-hotline
 
 # Restart policy
 Restart=always
@@ -37,7 +37,7 @@ PrivateTmp=true
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=voice-hotline-arbitrum
+SyslogIdentifier=voice-hotline
 
 [Install]
 WantedBy=multi-user.target

@@ -4,7 +4,7 @@ set -e
 # ================================================
 # Voice Hotline Arbitrum — Server Deploy
 # ================================================
-# Run on the Hetzner server, from /opt/voice-hotline-arbitrum.
+# Run on the Hetzner server, from /opt/voice-hotline.
 #
 # Required env vars (set before running or export inline):
 #   UPSTASH_REDIS_REST_URL
@@ -17,7 +17,7 @@ set -e
 # .next/standalone/server.js — no secrets live there.
 # ================================================
 
-PROJECT_DIR="/opt/voice-hotline-arbitrum"
+PROJECT_DIR="/opt/voice-hotline"
 cd "$PROJECT_DIR"
 
 UPSTASH_URL="${UPSTASH_REDIS_REST_URL:-https://game-corgi-122374.upstash.io}"
@@ -61,7 +61,7 @@ ENVFILE
 echo "=== Step 6: Reload PM2 with new ecosystem config ==="
 # Delete stale PM2 process (uses old script path / env vars),
 # then re-add using the current ecosystem.config.js.
-pm2 delete voice-hotline-arbitrum 2>/dev/null || true
+pm2 delete voice-hotline 2>/dev/null || true
 pm2 start ecosystem.config.js
 pm2 save
 
@@ -71,7 +71,7 @@ HTTP_CODE=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:3042/api/ag
 if echo "$HTTP_CODE" | grep -qE '^(2|4)0[0-9]$'; then
     echo "✅ API responding (HTTP $HTTP_CODE)"
 else
-    echo "⚠️  API not responding (HTTP $HTTP_CODE) — check: pm2 logs voice-hotline-arbitrum"
+    echo "⚠️  API not responding (HTTP $HTTP_CODE) — check: pm2 logs voice-hotline"
 fi
 
 echo ""

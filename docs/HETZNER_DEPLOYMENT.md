@@ -1,6 +1,6 @@
 # Hetzner VPS Deployment
 
-App directory: `/opt/voice-hotline-arbitrum` — Port 3042 — PM2: `voice-hotline-arbitrum`
+App directory: `/opt/voice-hotline` — Port 3042 — PM2: `voice-hotline`
 
 ---
 
@@ -38,8 +38,8 @@ Final server size: **~52 MB** (was 2.0 GB before cleanup).
 ## Initial Setup (one-time)
 
 ```bash
-git clone https://github.com/sneldao/voice-agent-hotline voice-hotline-arbitrum
-cd voice-hotline-arbitrum
+git clone https://github.com/sneldao/voice-agent-hotline voice-hotline
+cd voice-hotline
 cp .env.hetzner.example .env.hetzner
 # Edit .env.hetzner with your credentials
 export UPSTASH_REDIS_REST_TOKEN=your_token
@@ -74,14 +74,14 @@ Secrets are written to `.env.hetzner` by deploy.sh and read by `ecosystem.config
 
 ```bash
 # Rebuild from scratch
-cd /opt/voice-hotline-arbitrum
+cd /opt/voice-hotline
 git fetch origin main && git reset --hard origin/main
 UPSTASH_REDIS_REST_URL=https://game-corgi-122374.upstash.io \
 UPSTASH_REDIS_REST_TOKEN=your_token \
 bash scripts/deploy.sh
 
 # Check disk usage
-du -sh /opt/voice-hotline-arbitrum
+du -sh /opt/voice-hotline
 ```
 
 ---
