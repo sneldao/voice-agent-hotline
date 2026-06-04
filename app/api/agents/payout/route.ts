@@ -4,7 +4,7 @@
 // POST /api/agents/payout — record a client-confirmed on-chain payout
 // GET  /api/agents/payout — get payout history and unpaid balance for an agent
 //
-// The actual cUSD transfer is signed by the agent's own wallet in the browser.
+// The actual USDC transfer is signed by the agent's own wallet in the browser.
 // This endpoint only validates ownership and records the confirmed tx hash.
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const paidAmount = parseFloat(amount);
     if (paidAmount < MIN_PAYOUT) {
       return NextResponse.json(
-        { error: `Minimum payout is ${MIN_PAYOUT} cUSD` },
+        { error: `Minimum payout is ${MIN_PAYOUT} USDC` },
         { status: 400 }
       );
     }
@@ -61,13 +61,13 @@ export async function POST(req: NextRequest) {
     await redis.hset(`agent:${agentId}`, { totalPaid: newTotalPaid.toFixed(6) });
     await redis.lpush(`payouts:${agentId}`, JSON.stringify(payoutRecord));
 
-    console.log(`[API:Payout] Recorded ${paidAmount.toFixed(6)} cUSD payout to ${walletAddress}, tx: ${txHash}`);
+    console.log(`[API:Payout] Recorded ${paidAmount.toFixed(6)} USDC payout to ${walletAddress}, tx: ${txHash}`);
 
     return NextResponse.json({
       success: true,
       txHash,
       amount: paidAmount.toFixed(6),
-      explorerUrl: `https://celoscan.io/tx/${txHash}`,
+      explorerUrl: `https://arbiscan.io/tx/${txHash}`,
     });
   } catch (error: any) {
     console.error('[API:Payout] Error:', error);

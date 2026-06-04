@@ -18,7 +18,7 @@
  *   pm2 startup
  *
  * Env vars are written by deploy.sh into .env.hetzner.
- * After deploy.sh runs, reload with: pm2 reload voice-hotline-celo
+ * After deploy.sh runs, reload with: pm2 reload voice-hotline-arbitrum
  */
 
 const path = require('path');
@@ -39,14 +39,14 @@ function loadEnv(envPath) {
   return vars;
 }
 
-const env = loadEnv('/opt/voice-hotline-celo/.env.hetzner');
+const env = loadEnv('/opt/voice-hotline-arbitrum/.env.hetzner');
 
 module.exports = {
   apps: [
     {
-      name: 'voice-hotline-celo',
-      script: '/opt/voice-hotline-celo/.next/standalone/server.js',
-      cwd: '/opt/voice-hotline-celo',
+      name: 'voice-hotline-arbitrum',
+      script: '/opt/voice-hotline-arbitrum/.next/standalone/server.js',
+      cwd: '/opt/voice-hotline-arbitrum',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -57,7 +57,7 @@ module.exports = {
         UPSTASH_REDIS_REST_TOKEN: env.UPSTASH_REDIS_REST_TOKEN || '',
         UPSTASH_REDIS_URL: env.UPSTASH_REDIS_URL || '',
         UPSTASH_REDIS_TOKEN: env.UPSTASH_REDIS_TOKEN || '',
-        CELO_RPC_URL: env.CELO_RPC_URL || 'https://forno.celo.org',
+        ARBITRUM_RPC_URL: env.ARBITRUM_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
       },
       error_file: './logs/pm2-err.log',
       out_file: './logs/pm2-out.log',

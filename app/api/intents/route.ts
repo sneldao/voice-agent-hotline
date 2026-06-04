@@ -1,7 +1,7 @@
 // ============================================
 // Intent-Based API
 // ============================================
-// OpenClaw-style intent parsing and execution
+// Intent parsing and execution
 // No private keys on server!
 
 export const dynamic = 'force-dynamic';

@@ -126,7 +126,7 @@ export class ReputationStakingService {
   }
 
   /**
-   * Stake CELO as an agent
+   * Stake ETH as an agent
    */
   async stake(
     agentId: string,
@@ -138,13 +138,13 @@ export class ReputationStakingService {
       if (amount < MIN_STAKE_AMOUNT) {
         return {
           success: false,
-          error: `Minimum stake is ${formatEther(MIN_STAKE_AMOUNT)} CELO`,
+          error: `Minimum stake is ${formatEther(MIN_STAKE_AMOUNT)} ETH`,
         };
       }
       if (amount > MAX_STAKE_AMOUNT) {
         return {
           success: false,
-          error: `Maximum stake is ${formatEther(MAX_STAKE_AMOUNT)} CELO`,
+          error: `Maximum stake is ${formatEther(MAX_STAKE_AMOUNT)} ETH`,
         };
       }
 

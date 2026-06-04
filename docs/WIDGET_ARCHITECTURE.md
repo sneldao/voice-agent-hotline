@@ -2,7 +2,7 @@
 
 ## Status
 
-Current phase: **Widget engine implemented, pending browser verification**.
+Current phase: **Widget engine implemented and verified in browser**.
 
 The app now uses a controlled `<elevenlabs-convai>` widget engine:
 - `components/WidgetEngine.tsx` provides a global `WidgetEngineProvider` that mounts a single offscreen widget element and exposes imperative control via React context.

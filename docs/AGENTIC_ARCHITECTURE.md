@@ -3,10 +3,9 @@
 ## Overview
 
 The platform is a voice agent marketplace where:
-- **Users** connect a wallet, browse agents, and pay per minute via Celo stablecoins
+- **Users** connect a wallet, browse agents, and pay per minute via USDC on Arbitrum
 - **Agents** are ElevenLabs Conversational AI instances with on-chain ERC-8004 identity
 - **Developers** can self-register their own agents via `/list-your-agent`
-- **OpenClaw** acts as the platform's social agent, posting updates and milestones
 
 Voice transport note: the agent lifecycle below is still the correct product architecture. The voice connection uses the official `<elevenlabs-convai>` widget engine, controlled programmatically via `useWidgetConversation`. See `docs/WIDGET_ARCHITECTURE.md` for details.
 
@@ -53,7 +52,7 @@ interface Agent {
   description: string;
   category: string;
   specialty?: string;
-  rate: number;              // per-minute rate in cUSD
+  rate: number;              // per-minute rate in USDC
   avatar: string;            // emoji
   active: boolean;
   status: 'active' | 'pending' | 'rejected';
@@ -111,17 +110,13 @@ Content-Type: application/json
 
 ---
 
-## OpenClaw Integration
-
-OpenClaw is the platform's social agent — it posts updates, milestones, and style tips on Twitter/X and Farcaster.
-
-### Stats Endpoint
+## Stats Endpoint
 
 ```
 GET /api/agents/stats
 ```
 
-Returns aggregate data for OpenClaw to use in weekly posts:
+Returns aggregate platform statistics:
 
 ```json
 {
@@ -135,60 +130,11 @@ Returns aggregate data for OpenClaw to use in weekly posts:
 }
 ```
 
-### Webhook Endpoint
-
-```
-POST /api/openclaw/webhook
-x-openclaw-secret: <OPENCLAW_WEBHOOK_SECRET>
-Content-Type: application/json
-```
-
-Supported event types:
-
-#### `call.completed`
-Increments call count in Redis and returns a draft social post.
-
-```json
-{
-  "event": "call.completed",
-  "agentId": "agent_abc123",
-  "duration": 240,
-  "userId": "0x..."
-}
-```
-
-#### `agent.milestone`
-Returns a milestone celebration draft.
-
-```json
-{
-  "event": "agent.milestone",
-  "agentId": "agent_abc123",
-  "milestone": "100 calls"
-}
-```
-
-#### `social.draft`
-Returns platform-specific content drafts for a given topic.
-
-```json
-{
-  "event": "social.draft",
-  "topic": "weekly-stats"
-}
-```
-
-Available topics: `weekly-stats`, `new-agent`, `erc8004`, `how-it-works`
-
-### Security
-
-Set `OPENCLAW_WEBHOOK_SECRET` in your environment. The webhook validates the `x-openclaw-secret` header on every request. If the secret is unset, validation is skipped (development only).
-
 ---
 
 ## ERC-8004 On-Chain Identity
 
-Each agent has an on-chain identity via the ERC-8004 contracts deployed on Celo Sepolia:
+Each agent has an on-chain identity via the ERC-8004 contracts deployed on Arbitrum Sepolia:
 
 | Registry | Address | Purpose |
 |---|---|---|
@@ -206,19 +152,19 @@ NEXT_PUBLIC_ERC8004_ENABLED=true
 ## Payment Flow
 
 ```
-User connects wallet (Web3Modal + WalletConnect)
+User connects wallet (MetaMask Smart Accounts Kit)
         │
         ▼
-User selects agent → sees per-minute rate in cUSD
+User selects agent → sees per-minute rate in USDC
         │
         ▼
 Call starts → ElevenLabs Conversational AI session opens through the voice engine
         │
         ▼
-Per-minute billing via Yellow Network state channels
+Per-minute billing via x402 transferWithAuthorization (EIP-3009)
         │
         ▼
-Call ends → final settlement on Celo
+Call ends → settlement on Arbitrum via 1Shot Permissionless Relayer (gasless)
         │
         ├─► Platform fee (20%) → PAYMENT_RECEIVER
         └─► Agent earnings (80%) → agent.wallet_address (roadmap)

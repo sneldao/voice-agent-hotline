@@ -9,7 +9,7 @@ export UPSTASH_REDIS_REST_TOKEN="ABApIkNBRDEzODU5MTA0NThlYzc4ZjM4ZjEzZTBkMTVjZDE
 export UPSTASH_REDIS_URL="${UPSTASH_REDIS_REST_URL}"
 export UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_REST_TOKEN}"
 
-# Celo RPC
-export CELO_RPC_URL="https://forno.celo.org"
+# Arbitrum RPC
+export ARBITRUM_RPC_URL="https://sepolia-rollup.arbitrum.io/rpc"
 
-cd /opt/voice-hotline-celo/.next/standalone && exec node server.js
+cd /opt/voice-hotline-arbitrum/.next/standalone && exec node server.js

@@ -5,9 +5,9 @@
 All payments are **user-settled** — the server holds no private keys for payment transactions.
 
 ```
-User Signs EIP-712 Typed Data → User's Wallet Submits On-Chain → Celo Blockchain
+User Signs EIP-712 Typed Data → User's Wallet Submits On-Chain → Arbitrum
                                        ↑
-                              MetaMask / WalletConnect
+                              MetaMask Smart Accounts
                               (user controls keys)
 ```
 
@@ -27,13 +27,12 @@ The server does hold one key:
 
 ## API Security
 
-- **OpenClaw webhook:** protected by `OPENCLAW_WEBHOOK_SECRET` header (`x-openclaw-secret`)
 - **Admin endpoints** (`PATCH /api/agents/:id`, `DELETE /api/agents/:id`): currently rely on network-level access control — add auth middleware before exposing publicly
 - **Seed endpoint** (`POST /api/agents/seed`): should be restricted to internal/admin use in production
 
 ## Wallet Connection
 
-Web3Modal + WalletConnect. The app never receives or stores private keys. All signing happens in the user's wallet extension or mobile app.
+MetaMask Smart Accounts Kit. The app never receives or stores private keys. All signing happens in the user's wallet extension or mobile app.
 
 ## Environment Variables
 

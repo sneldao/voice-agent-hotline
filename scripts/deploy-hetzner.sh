@@ -17,7 +17,7 @@ set -euo pipefail
 # ================================================
 
 REMOTE_HOST="snel-bot"
-REMOTE_DIR="/opt/voice-hotline-celo"
+REMOTE_DIR="/opt/voice-hotline-arbitrum"
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "=== Step 1: Install dependencies (local) ==="
@@ -44,7 +44,7 @@ rsync -az --delete --no-perms --no-owner --no-group \
 
 echo ""
 echo "=== Step 4: Restart PM2 on server ==="
-ssh "$REMOTE_HOST" "pm2 restart voice-hotline-celo"
+ssh "$REMOTE_HOST" "pm2 restart voice-hotline-arbitrum"
 
 echo ""
 echo "=== Step 5: Health check ==="
@@ -53,7 +53,7 @@ HEALTH=$(ssh "$REMOTE_HOST" "curl -sf -o /dev/null -w '%{http_code}' http://loca
 if echo "$HEALTH" | grep -qE '^(2|4)0[0-9]$'; then
   echo "✅ Deployment successful! API responded with HTTP $HEALTH."
 else
-  echo "⚠️  Health check returned $HEALTH. Check: pm2 logs voice-hotline-celo"
+  echo "⚠️  Health check returned $HEALTH. Check: pm2 logs voice-hotline-arbitrum"
 fi
 
 echo ""

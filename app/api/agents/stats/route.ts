@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Agent Stats API
- * Returns aggregate and per-agent statistics for OpenClaw and social integrations.
+ * Returns aggregate and per-agent statistics.
  *
  * GET /api/agents/stats
  */

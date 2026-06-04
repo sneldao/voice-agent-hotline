@@ -1,7 +1,7 @@
 // ============================================
 // Intent-Based Agentic Architecture
 // ============================================
-// OpenClaw-style intent parsing and execution
+// Intent parsing and execution
 // No private keys on servers - ever
 
 import type { Address } from 'viem';
@@ -15,7 +15,7 @@ export type IntentAction =
   | 'stream_payment'  // Start streaming payments
   | 'end_call'        // End call and settle
   | 'dispute_call'    // File a dispute
-  | 'stake_agent'     // Stake CELO as agent
+  | 'stake_agent'     // Stake ETH as agent
   | 'unstake_agent';  // Request unstake
 
 export interface Intent {

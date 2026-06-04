@@ -52,14 +52,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/stake - Stake CELO
+// POST /api/stake - Stake ETH
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
       agentId,
       walletAddress,
-      amount, // in CELO (e.g., "100")
+      amount, // in ETH (e.g., "100")
     }: {
       agentId: string;
       walletAddress: string;
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       txHash: result.txHash,
-      message: `Successfully staked ${amount} CELO`,
+      message: `Successfully staked ${amount} ETH`,
     });
 
   } catch (error: any) {

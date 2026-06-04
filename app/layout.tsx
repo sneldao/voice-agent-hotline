@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     site: '@voisss',
     creator: '@voisss',
     title: 'VOISSS — A phonebook for AI you can talk to',
-    description: 'Say what you need. Get connected to the right voice. No keyboard required. Built with Cursor + ElevenLabs for #ElevenHacks.',
+    description: 'Say what you need. Get connected to the right voice. No keyboard required. Built with Cursor + ElevenLabs.',
     images: ['/og-image.svg'],
   },
   icons: {

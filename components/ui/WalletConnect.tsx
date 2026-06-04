@@ -90,7 +90,7 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <span>{getWalletName(walletType)}</span>
               {balance && (
-                <span>• {parseFloat(balance).toFixed(4)} CELO</span>
+                <span>• {parseFloat(balance).toFixed(4)} ETH</span>
               )}
             </div>
           </div>

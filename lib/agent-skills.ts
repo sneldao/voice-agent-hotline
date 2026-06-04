@@ -837,7 +837,7 @@ export class AgentSkillsFramework {
       canOrder: scope.canOrder || false,
       canSchedule: scope.canSchedule || false,
       canResearch: scope.canResearch || false,
-      maxSpend: scope.maxSpend || parseEther('100'), // Default 100 CELO max
+      maxSpend: scope.maxSpend || parseEther('100'), // Default 100 USDC max
       expiresAt: BigInt(Math.floor(Date.now() / 1000) + (scope.expiresInDays || 30) * 24 * 60 * 60),
     };
 
