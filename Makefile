@@ -1,15 +1,11 @@
 .PHONY: deploy logs status restart
 
-# Deploy to Hetzner.
-# Requires UPSTASH_REDIS_REST_TOKEN in your shell env:
-#   export UPSTASH_REDIS_REST_TOKEN=your_token
-#   make deploy
-# (never commit a real token to git)
+# Deploy to Hetzner — local build, atomic rsync.
+# Builds locally with pnpm, rsyncs standalone bundle
+# to a new release directory, swaps the `current` symlink.
+# No build happens on the server.
 deploy:
-	ssh snel-bot "cd /opt/voice-hotline && \
-		UPSTASH_REDIS_REST_URL=https://game-corgi-122374.upstash.io \
-		UPSTASH_REDIS_REST_TOKEN=$$UPSTASH_REDIS_REST_TOKEN \
-		bash scripts/deploy.sh"
+	bash scripts/deploy-hetzner.sh
 
 # Tail PM2 logs
 logs:

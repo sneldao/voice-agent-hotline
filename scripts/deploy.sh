@@ -2,27 +2,20 @@
 set -e
 
 # ================================================
-# Voice Hotline Arbitrum — Server Deploy
+# Voice Hotline — Server-Side Deploy (fallback)
 # ================================================
 # Run on the Hetzner server, from /opt/voice-hotline.
 #
-# Required env vars (set before running or export inline):
-#   UPSTASH_REDIS_REST_URL
-#   UPSTASH_REDIS_REST_TOKEN
-#   ARBITRUM_RPC_URL  (optional, defaults to sepolia-rollup.arbitrum.io)
+# This is the FALLBACK deploy for when you can't build
+# locally. The preferred flow is `make deploy` which
+# builds locally and rsyncs to the server.
 #
-# All secrets are written to .env.hetzner so PM2 (via
-# ecosystem.config.js) can load them. start.sh is now
-# a dumb launcher that just sets PORT/NODE_ENV and calls
-# .next/standalone/server.js — no secrets live there.
+# This script does NOT touch .env.hetzner — manage
+# that file manually on the server.
 # ================================================
 
 PROJECT_DIR="/opt/voice-hotline"
 cd "$PROJECT_DIR"
-
-UPSTASH_URL="${UPSTASH_REDIS_REST_URL:-https://game-corgi-122374.upstash.io}"
-UPSTASH_TOKEN="${UPSTASH_REDIS_REST_TOKEN:-}"
-ARBITRUM_RPC="${ARBITRUM_RPC_URL:-https://sepolia-rollup.arbitrum.io/rpc}"
 
 echo "=== Step 1: Pull latest ==="
 if [ ! -d .git ]; then
@@ -42,25 +35,28 @@ pnpm install --no-frozen-lockfile
 echo "=== Step 3: Build standalone (postbuild auto-cleans) ==="
 NODE_ENV=production pnpm build
 
-echo "=== Step 4: Drop build-only deps & legacy dirs ==="
+echo "=== Step 4: Drop build-only deps ==="
 rm -rf node_modules
 rm -rf out
 
-echo "=== Step 5: Write .env.hetzner (PM2 reads this) ==="
-cat > "$PROJECT_DIR/.env.hetzner" << ENVFILE
-NODE_ENV=production
-PORT=3042
-HOSTNAME=0.0.0.0
-ARBITRUM_RPC_URL=${ARBITRUM_RPC}
-UPSTASH_REDIS_REST_URL=${UPSTASH_URL}
-UPSTASH_REDIS_REST_TOKEN=${UPSTASH_TOKEN}
-UPSTASH_REDIS_URL=${UPSTASH_URL}
-UPSTASH_REDIS_TOKEN=${UPSTASH_TOKEN}
-ENVFILE
+echo "=== Step 5: Set up current symlink ==="
+# For server-side builds, point current → project root
+# (the standalone is at .next/standalone/ within the project)
+# Copy standalone to a release dir for consistency with the
+# local-build flow
+RELEASES_DIR="$PROJECT_DIR/releases"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+RELEASE_PATH="$RELEASES_DIR/$TIMESTAMP"
+mkdir -p "$RELEASES_DIR"
+cp -r .next/standalone "$RELEASE_PATH"
+ln -sfn "$RELEASE_PATH" "$PROJECT_DIR/current"
 
-echo "=== Step 6: Reload PM2 with new ecosystem config ==="
-# Delete stale PM2 process (uses old script path / env vars),
-# then re-add using the current ecosystem.config.js.
+# Clean up old releases (keep last 3)
+cd "$RELEASES_DIR"
+ls -1t | tail -n +4 | xargs -r rm -rf
+cd "$PROJECT_DIR"
+
+echo "=== Step 6: Reload PM2 ==="
 pm2 delete voice-hotline 2>/dev/null || true
 pm2 start ecosystem.config.js
 pm2 save
@@ -77,3 +73,4 @@ fi
 echo ""
 echo "=== Disk Usage ==="
 du -sh "$PROJECT_DIR"
+du -sh "$PROJECT_DIR/current/" 2>/dev/null || true
