@@ -52,7 +52,7 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect, selected
           <h2 className="text-xl font-bold font-mono">{displayAddress}</h2>
           <button
             onClick={() => navigator.clipboard?.writeText(address)}
-            className="text-xs text-gray-400 hover:text-cyan-400 transition-colors"
+            className="text-xs text-amber-100/50 hover:text-amber-300 transition-colors"
           >
             Copy full address
           </button>

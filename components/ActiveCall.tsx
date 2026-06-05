@@ -83,7 +83,6 @@ export function ActiveCall({
   
   const { isSupported, permissions } = useWebRTCSupport();
   const { saveCall, rateCall, toggleSaveCall, exportTranscript, updateCallReceipt } = useLocalCallHistory();
-  const [showTranscript, setShowTranscript] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [speakerVolume, setSpeakerVolume] = useState(2); // 0=mute, 1=low, 2=full
@@ -143,10 +142,10 @@ export function ActiveCall({
   }, [call.isConnected, isFinalizing]);
 
   useEffect(() => {
-    if (showTranscript && transcriptEndRef.current) {
+    if (transcriptEndRef.current) {
       transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [transcripts, showTranscript]);
+  }, [transcripts]);
 
   // #23: Use a ref for startCall to avoid effect re-triggers from dependency changes
   const startCallRef = useRef(startCall);
@@ -473,28 +472,28 @@ export function ActiveCall({
           </div>
         
           <div className="flex items-center gap-2">
-            <div className={`hidden rounded-full border px-3 py-1.5 text-xs font-medium sm:inline-flex sm:items-center sm:gap-1.5 ${paymentBadge.className}`}>
-              <Radio className="h-3.5 w-3.5" />
-              {paymentBadge.label}
-            </div>
             <div className="rounded-full border border-amber-100/15 bg-black/25 px-3 py-1.5 text-right">
               <span className="text-sm font-bold tabular-nums text-amber-200">${(call.cost || 0).toFixed(4)}</span>
             </div>
           </div>
         </div>
+        {paymentMode === 'streaming' && streamingPreflight && (
+          <details className="border-t border-amber-100/10 px-4 py-2">
+            <summary className="cursor-pointer text-xs text-amber-100/45 hover:text-amber-100/65">Payment info</summary>
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${paymentBadge.className}`}>
+                <Radio className="h-3 w-3" />
+                {paymentBadge.label}
+              </span>
+              <span className="payment-badge border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Streaming {streamingPreflight.tokenSymbol}
+              </span>
+              <span className="text-amber-100/40">to {shortAddress(streamingPreflight.payoutAddress)}</span>
+            </div>
+          </details>
+        )}
       </div>
-
-      {paymentMode === 'streaming' && streamingPreflight && (
-        <div className="border-b border-amber-100/10 bg-[#17100d]/85 px-4 py-2">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="payment-badge border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
-              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Streaming {streamingPreflight.tokenSymbol}
-            </span>
-            <span className="text-amber-100/40">to {shortAddress(streamingPreflight.payoutAddress)}</span>
-          </div>
-        </div>
-      )}
 
       {call.isReconnecting && (
         <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-200">
@@ -523,16 +522,8 @@ export function ActiveCall({
           </div>
         </div>
 
-        <button
-          onClick={() => setShowTranscript(!showTranscript)}
-          className="mb-4 rounded-full border border-amber-100/15 bg-black/20 px-4 py-2 text-sm font-semibold text-amber-100/60 transition-colors hover:text-amber-50"
-        >
-          {showTranscript ? 'Hide' : 'Show'} Transcript ({transcripts.length} messages)
-        </button>
-
-        {showTranscript && (
-          <div className="mb-4 h-48 w-full max-w-md overflow-y-auto rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-4">
-            {transcripts.length === 0 ? (
+        <div className="mb-4 h-48 w-full max-w-md overflow-y-auto rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-4">
+          {transcripts.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3">
                 <div className="flex items-center gap-1.5">
                   {[0, 1, 2].map(i => (
@@ -569,7 +560,6 @@ export function ActiveCall({
             )}
             <div ref={transcriptEndRef} />
           </div>
-        )}
 
         {/* #9: Single large duration counter + live indicator */}
         <div 

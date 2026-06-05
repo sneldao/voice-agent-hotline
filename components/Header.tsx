@@ -128,7 +128,7 @@ export function Header({
               disabled={isConnecting}
               className="rounded-full border border-amber-100/20 bg-black/25 px-3 py-1.5 text-xs font-bold text-amber-100/65 transition-colors hover:bg-amber-100/10 hover:text-amber-50 disabled:opacity-50"
             >
-              {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              {isConnecting ? 'Connecting...' : 'Sign In'}
             </button>
           )}
         </div>

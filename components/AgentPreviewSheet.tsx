@@ -172,12 +172,12 @@ export function AgentPreviewSheet({
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                 <Wallet className="h-4 w-4" />
-                {hasFreeCall ? 'First call is on us' : 'Wallet required for paid calls'}
+                {hasFreeCall ? 'First call is on us' : 'Account needed for paid calls'}
               </p>
               <p className="mt-1 text-xs leading-5 text-amber-100/80">
                 {hasFreeCall
                   ? 'No wallet needed — try a free call and see how it feels.'
-                  : 'Connect before starting so the hotline can settle against a real address.'}
+                  : 'Sign in before starting so the hotline can settle against a real address.'}
               </p>
             </div>
           ) : !hasEnoughBalance ? (

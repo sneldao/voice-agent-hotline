@@ -8,16 +8,14 @@
  *
  * Usage:
  *   import { track } from '@/lib/track';
- *   track('coachmark_completed', { steps: 3 });
+ *   track('onboarding_completed', { steps: 5 });
  */
 
 export type TrackEvent =
-  | 'coachmark_started'
-  | 'coachmark_step_viewed'
-  | 'coachmark_completed'
-  | 'coachmark_skipped'
+  | 'onboarding_step_viewed'
+  | 'onboarding_skipped'
+  | 'onboarding_completed'
   | 'use_case_selected'
-  | 'banner_dismissed'
   | 'page_visited_first_time';
 
 interface EventPayload {

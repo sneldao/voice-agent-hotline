@@ -18,6 +18,7 @@ SKIP_PATTERNS=(
   ".env.backend.example"
   ".env.hetzner.example"
   "package-lock.json"
+  "pnpm-lock.yaml"
   ".githooks/"
   "contracts-deploy/"
   "tsconfig.tsbuildinfo"

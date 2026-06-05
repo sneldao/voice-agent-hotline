@@ -29,11 +29,8 @@ const ProfileTab = dynamic(() => import('@/components/ProfileTab').then(m => ({ 
 
 // DiscoverTab is the landing view — keep it eager
 import { DiscoverTab } from '@/components/DiscoverTab';
-import { Coachmarks } from '@/components/Coachmarks';
+import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { track } from '@/lib/track';
-
-// Welcome toast shown once on first visit
-const WELCOME_SHOWN_KEY = 'voisss-welcome-toast-shown';
 
 interface PageState {
   activeTab: 'discover' | 'calls' | 'profile';
@@ -136,19 +133,11 @@ function HomeInner() {
   const freeCall = useFreeCall();
   const streak = useStreak();
 
-  // Show a welcome toast for first-time visitors instead of a blocking modal
+  // Track first visit
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!onboarding.isFirstTime) return;
-    const alreadyShown = localStorage.getItem(WELCOME_SHOWN_KEY);
-    if (alreadyShown) return;
-    localStorage.setItem(WELCOME_SHOWN_KEY, 'true');
     track('page_visited_first_time', { referrer: document.referrer || null });
-    // Delay slightly so the page renders before the toast appears
-    const timer = setTimeout(() => {
-      showInfo("Hey, I'm Vox! 👋 Tap the dial or browse the agents below. No typing needed.");
-    }, 800);
-    return () => clearTimeout(timer);
   }, [onboarding.isFirstTime]);
 
   const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
@@ -313,7 +302,19 @@ function HomeInner() {
       <div className="switchboard-shell min-h-screen text-white font-sans">
         <OfflineBanner />
         <ToastProvider />
-        <Coachmarks />
+        {onboarding.showOnboarding && (
+          <OnboardingFlow
+            currentStep={onboarding.currentStep}
+            selectedUseCase={onboarding.selectedUseCase}
+            onNext={onboarding.nextStep}
+            onPrev={onboarding.prevStep}
+            onSkip={onboarding.skipOnboarding}
+            onComplete={onboarding.closeOnboarding}
+            onSetUseCase={onboarding.setUseCase}
+            stepIndex={onboarding.currentStepIndex}
+            totalSteps={onboarding.totalSteps}
+          />
+        )}
         <Header
           connected={connected}
           userBalance={userBalance}
@@ -323,7 +324,6 @@ function HomeInner() {
           onDisconnect={disconnect}
           onNavigateToProfile={() => dispatch({ type: 'SET_TAB', tab: 'profile' })}
         />
-        {/* Inline use-case banner — shown on DiscoverTab for first-time visitors */}
         <main id="main-content" className="mx-auto max-w-6xl px-4 pb-28 sm:px-6 lg:px-8" role="main">
           {inCall && selectedAgent && callId ? (
             <ActiveCall
@@ -374,10 +374,6 @@ function HomeInner() {
                     hasMore={hasMore}
                     onLoadMore={handleLoadMore}
                     preferredConciergeId={getPreferredConcierge(onboarding.selectedUseCase)}
-                    showUseCaseBanner={onboarding.showUseCaseBanner}
-                    selectedUseCase={onboarding.selectedUseCase}
-                    onSetUseCase={onboarding.setUseCase}
-                    onDismissUseCaseBanner={onboarding.dismissUseCaseBanner}
                   />
                 </ErrorBoundary>
               )}
@@ -491,9 +487,9 @@ function HomeInner() {
         <nav className="switchboard-tab-bar fixed bottom-0 left-0 right-0 z-50" role="navigation" aria-label="Main navigation">
           <div className="mx-auto flex max-w-2xl items-center justify-around px-4 py-2">
             {[
-              { id: 'discover', label: 'Board', Icon: Search, badge: null },
-              { id: 'calls', label: 'Calls', Icon: Phone, badge: localCallHistory.totalCalls || null },
-              { id: 'profile', label: 'You', Icon: User, badge: null },
+              { id: 'discover', label: 'Home', Icon: Search, badge: null },
+              { id: 'calls', label: 'History', Icon: Phone, badge: localCallHistory.totalCalls || null },
+              { id: 'profile', label: 'Profile', Icon: User, badge: null },
             ].map(tab => (
               <button
                 key={tab.id}

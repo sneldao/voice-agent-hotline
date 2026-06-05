@@ -153,7 +153,7 @@ export function CallSummary({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-[#0b0806]/95 backdrop-blur-sm overflow-y-auto">
       <div className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
@@ -164,12 +164,12 @@ export function CallSummary({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">Call Complete</h2>
-                <p className="text-sm text-gray-400">with {agent.name}</p>
+                <p className="text-sm text-amber-100/50">with {agent.name}</p>
               </div>
             </div>
             <button 
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 text-amber-100/50 hover:text-amber-50 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -185,7 +185,7 @@ export function CallSummary({
                   href={explorerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-400 hover:text-cyan-300 transition-colors"
+                  className="text-sm text-amber-100/50 hover:text-amber-300 transition-colors"
                 >
                   View on CeloScan →
                 </a>
@@ -208,8 +208,8 @@ export function CallSummary({
               onClick={() => setActiveTab('overview')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'overview' 
-                  ? 'bg-cyan-500 text-white' 
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  ? 'bg-red-500/20 text-amber-50 border border-red-400/50' 
+                  : 'bg-black/25 text-amber-100/50 hover:bg-amber-100/10'
               }`}
             >
               Overview
@@ -218,8 +218,8 @@ export function CallSummary({
               onClick={() => setActiveTab('transcript')}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'transcript' 
-                  ? 'bg-cyan-500 text-white' 
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  ? 'bg-red-500/20 text-amber-50 border border-red-400/50' 
+                  : 'bg-black/25 text-amber-100/50 hover:bg-amber-100/10'
               }`}
             >
               Transcript ({transcripts.length})
@@ -229,10 +229,10 @@ export function CallSummary({
           {activeTab === 'overview' ? (
             <>
               {/* Receipt */}
-              <div className="bg-gray-900 rounded-xl p-5 mb-6 border border-gray-800">
+              <div className="rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-5 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-xs uppercase tracking-widest text-gray-500">Receipt</p>
+                    <p className="text-xs uppercase tracking-widest text-amber-100/45">Receipt</p>
                     <p className="text-white font-semibold">Call settlement</p>
                   </div>
                   <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusConfig.className}`}>
@@ -240,21 +240,21 @@ export function CallSummary({
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-gray-800/60 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Total Cost</p>
-                    <p className="text-lg font-semibold text-white">${(cost || 0).toFixed(4)}</p>
+                  <div className="bg-black/25 rounded-lg p-3">
+                    <p className="text-xs text-amber-100/45">Total Cost</p>
+                    <p className="text-lg font-semibold text-amber-50">${(cost || 0).toFixed(4)}</p>
                   </div>
-                  <div className="bg-gray-800/60 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Duration</p>
-                    <p className="text-lg font-semibold text-white">{formatDuration(duration)}</p>
+                  <div className="bg-black/25 rounded-lg p-3">
+                    <p className="text-xs text-amber-100/45">Duration</p>
+                    <p className="text-lg font-semibold text-amber-50">{formatDuration(duration)}</p>
                   </div>
-                  <div className="bg-gray-800/60 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Token</p>
-                    <p className="text-lg font-semibold text-white">{tokenLabel}</p>
+                  <div className="bg-black/25 rounded-lg p-3">
+                    <p className="text-xs text-amber-100/45">Token</p>
+                    <p className="text-lg font-semibold text-amber-50">{tokenLabel}</p>
                   </div>
-                  <div className="bg-gray-800/60 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Call ID</p>
-                    <p className="text-sm text-gray-200 font-mono truncate">{callId || '—'}</p>
+                  <div className="bg-black/25 rounded-lg p-3">
+                    <p className="text-xs text-amber-100/45">Call ID</p>
+                    <p className="text-sm text-amber-100/70 font-mono truncate">{callId || '—'}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between">
@@ -263,12 +263,12 @@ export function CallSummary({
                       href={explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-cyan-400 text-sm font-medium hover:text-cyan-300 transition-colors"
+                      className="text-amber-300 text-sm font-medium hover:text-amber-200 transition-colors"
                     >
                       Open CeloScan →
                     </a>
                   ) : (
-                    <span className="text-xs text-gray-500">On-chain receipt will appear once settled.</span>
+                    <span className="text-xs text-amber-100/45">On-chain receipt will appear once settled.</span>
                   )}
                   {payment?.error && (
                     <span className="text-xs text-red-400">{payment.error}</span>
@@ -299,13 +299,13 @@ export function CallSummary({
               </div>
 
               {/* Rating Section */}
-              <div className="bg-gray-900 rounded-xl p-6 mb-6">
+              <div className="rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-6 mb-6">
                 {!hasRated ? (
                   <>
-                    <h3 className="text-lg font-semibold text-white mb-2">
+                    <h3 className="text-lg font-semibold text-amber-50 mb-2">
                       How was your call?
                     </h3>
-                    <p className="text-gray-400 text-sm mb-4">
+                    <p className="text-amber-100/50 text-sm mb-4">
                       Your feedback helps improve our agents
                     </p>
                     
@@ -317,7 +317,7 @@ export function CallSummary({
                           className={`p-2 rounded-lg transition-colors ${
                             rating >= star 
                               ? 'bg-yellow-500/20 text-yellow-400' 
-                              : 'bg-gray-800 text-gray-600 hover:bg-gray-700'
+                              : 'bg-black/25 text-amber-100/25 hover:bg-amber-100/10'
                           }`}
                         >
                           <Star className={`w-6 h-6 ${rating >= star ? 'fill-current' : ''}`} />
@@ -331,7 +331,7 @@ export function CallSummary({
                           value={feedback}
                           onChange={(e) => setFeedback(e.target.value)}
                           placeholder="What went well? What could be better?"
-                          className="w-full p-3 bg-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 resize-none"
+                          className="w-full p-3 bg-black/25 rounded-lg text-amber-50 placeholder-amber-100/30 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
                           rows={3}
                         />
                         <div className="flex gap-2">
@@ -378,8 +378,8 @@ export function CallSummary({
 
               {/* Related Agents */}
               {relatedAgents.length > 0 && (
-                <div className="bg-gray-900 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">
+                <div className="rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-6">
+                  <h3 className="text-lg font-semibold text-amber-50 mb-4">
                     You might also like
                   </h3>
                   <div className="space-y-3">
@@ -387,19 +387,19 @@ export function CallSummary({
                       <button
                         key={relatedAgent.id}
                         onClick={() => onSelectRelatedAgent(relatedAgent.id)}
-                        className="w-full flex items-center gap-4 p-4 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors text-left group"
+                        className="w-full flex items-center gap-4 p-4 bg-black/25 rounded-xl hover:bg-amber-100/10 transition-colors text-left group"
                       >
-                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${relatedAgent.color || 'from-gray-600 to-gray-700'} flex items-center justify-center`}>
+                        <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${relatedAgent.color || 'from-amber-600 to-red-600'} flex items-center justify-center`}>
                           <span className="text-xl">{relatedAgent.avatar || relatedAgent.name.charAt(0)}</span>
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-white">{relatedAgent.name}</p>
-                          <p className="text-sm text-gray-400">{relatedAgent.specialty}</p>
-                          <p className="text-sm text-cyan-400">{relatedAgent.reason}</p>
+                          <p className="font-medium text-amber-50">{relatedAgent.name}</p>
+                          <p className="text-sm text-amber-100/50">{relatedAgent.specialty}</p>
+                          <p className="text-sm text-red-400">{relatedAgent.reason}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-gray-400">${relatedAgent.rate}/min</p>
-                          <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-cyan-400 transition-colors inline-block mt-1" />
+                          <p className="text-sm text-amber-100/50">${relatedAgent.rate}/min</p>
+                          <ArrowRight className="w-4 h-4 text-amber-100/25 group-hover:text-red-400 transition-colors inline-block mt-1" />
                         </div>
                       </button>
                     ))}
@@ -409,12 +409,12 @@ export function CallSummary({
             </>
           ) : (
             /* Transcript Tab */
-            <div className="bg-gray-900 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">
+            <div className="rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-6">
+              <h3 className="text-lg font-semibold text-amber-50 mb-4">
                 Conversation Transcript
               </h3>
               {transcripts.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">
+                <p className="text-amber-100/50 text-center py-8">
                   No transcript available for this call
                 </p>
               ) : (
@@ -427,8 +427,8 @@ export function CallSummary({
                       <div 
                         className={`max-w-[80%] px-4 py-2 rounded-2xl ${
                           msg.speaker === 'user'
-                            ? 'bg-cyan-500 text-white rounded-br-md'
-                            : 'bg-gray-800 text-gray-200 rounded-bl-md'
+                            ? 'bg-red-500/20 text-red-100 rounded-br-md'
+                            : 'bg-amber-100/10 text-amber-100/75 rounded-bl-md'
                         }`}
                       >
                         <p>{msg.text}</p>
@@ -491,12 +491,12 @@ function StatCard({
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl p-4 text-center">
+    <div className="rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-4 text-center">
       <div className={`w-10 h-10 mx-auto rounded-lg ${colorClasses[color]} flex items-center justify-center mb-2`}>
         {icon}
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-gray-400">{label}</p>
+      <p className="text-2xl font-bold text-amber-50">{value}</p>
+      <p className="text-xs text-amber-100/45">{label}</p>
     </div>
   );
 }
@@ -518,8 +518,8 @@ function ActionButton({
       className={`
         flex flex-col items-center gap-2 p-4 rounded-xl transition-colors
         ${active 
-          ? 'bg-cyan-500/20 text-cyan-400' 
-          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          ? 'bg-red-500/20 text-red-400' 
+          : 'bg-black/25 text-amber-100/50 hover:bg-amber-100/10'
         }
       `}
     >

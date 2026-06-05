@@ -50,7 +50,7 @@ const FUNNEL_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
 
 // ─── Derived Stats ──────────────────────────────────────────────────────────
 
-interface CoachmarkFunnel {
+interface OnboardingFunnel {
   started: number;
   step1: number;
   step2: number;
@@ -75,18 +75,20 @@ interface StepDropoff {
 }
 
 const STEP_TARGETS: Record<number, string> = {
-  1: 'The Dial',
-  2: 'Free-Call Badge',
-  3: 'The Switchboard',
+  1: 'Meet Vox',
+  2: 'Use-Case Picker',
+  3: 'How It Works',
+  4: 'Free Call',
+  5: 'Let\'s Go',
 };
 
-function computeCoachmarkFunnel(events: TrackEvent[]): CoachmarkFunnel {
-  const started = events.filter(e => e.event === 'coachmark_started').length;
-  const step1 = events.filter(e => e.event === 'coachmark_step_viewed' && e.data?.step === 1).length;
-  const step2 = events.filter(e => e.event === 'coachmark_step_viewed' && e.data?.step === 2).length;
-  const step3 = events.filter(e => e.event === 'coachmark_step_viewed' && e.data?.step === 3).length;
-  const completed = events.filter(e => e.event === 'coachmark_completed').length;
-  const skipped = events.filter(e => e.event === 'coachmark_skipped').length;
+function computeOnboardingFunnel(events: TrackEvent[]): OnboardingFunnel {
+  const started = events.filter(e => e.event === 'onboarding_step_viewed').length;
+  const step1 = events.filter(e => e.event === 'onboarding_step_viewed' && e.data?.stepIndex === 1).length;
+  const step2 = events.filter(e => e.event === 'onboarding_step_viewed' && e.data?.stepIndex === 2).length;
+  const step3 = events.filter(e => e.event === 'onboarding_step_viewed' && e.data?.stepIndex === 3).length;
+  const completed = events.filter(e => e.event === 'onboarding_completed').length;
+  const skipped = events.filter(e => e.event === 'onboarding_skipped').length;
   return { started, step1, step2, step3, completed, skipped };
 }
 
@@ -113,8 +115,8 @@ function computeUseCasePopularity(events: TrackEvent[]): UseCaseCount[] {
 
 function computeStepDropoff(events: TrackEvent[], started: number): StepDropoff[] {
   const dropoff: StepDropoff[] = [];
-  for (let step = 1; step <= 3; step++) {
-    const viewers = events.filter(e => e.event === 'coachmark_step_viewed' && e.data?.step === step).length;
+  for (let step = 1; step <= 5; step++) {
+    const viewers = events.filter(e => e.event === 'onboarding_step_viewed' && e.data?.stepIndex === step).length;
     dropoff.push({
       step,
       targetLabel: STEP_TARGETS[step] || `Step ${step}`,
@@ -127,9 +129,9 @@ function computeStepDropoff(events: TrackEvent[], started: number): StepDropoff[
 
 function computeUniqueVisitors(events: TrackEvent[]): number {
   const urls = new Set(events.filter(e => e.event === 'page_visited_first_time').map(e => `${e.timestamp}-${e.url}`));
-  // Fallback: count unique coachmark started events
+  // Fallback: count unique onboarding started events
   if (urls.size === 0) {
-    return events.filter(e => e.event === 'coachmark_started').length;
+    return events.filter(e => e.event === 'onboarding_step_viewed' && e.data?.stepIndex === 1).length;
   }
   return urls.size;
 }
@@ -159,12 +161,12 @@ function StatCard({ icon, label, value, sub, color }: {
   );
 }
 
-function FunnelChart({ funnel, total }: { funnel: CoachmarkFunnel; total: number }) {
+function FunnelChart({ funnel, total }: { funnel: OnboardingFunnel; total: number }) {
   const steps = [
     { label: 'Started', count: funnel.started },
-    { label: 'Step 1 — Dial', count: funnel.step1 },
-    { label: 'Step 2 — Badge', count: funnel.step2 },
-    { label: 'Step 3 — Board', count: funnel.step3 },
+    { label: 'Step 1 — Meet Vox', count: funnel.step1 },
+    { label: 'Step 2 — Use Case', count: funnel.step2 },
+    { label: 'Step 3 — How It Works', count: funnel.step3 },
     { label: 'Completed', count: funnel.completed },
   ];
 
@@ -174,7 +176,7 @@ function FunnelChart({ funnel, total }: { funnel: CoachmarkFunnel; total: number
     <div className="operator-panel rounded-2xl p-5">
       <h3 className="text-sm font-bold text-amber-50 mb-4 flex items-center gap-2">
         <TrendingUp className="w-4 h-4 text-red-400" />
-        Coachmark Funnel
+        Onboarding Funnel
       </h3>
       <div className="space-y-3">
         {steps.map((step, i) => {
@@ -219,7 +221,7 @@ function FunnelChart({ funnel, total }: { funnel: CoachmarkFunnel; total: number
   );
 }
 
-function CompletionRate({ funnel }: { funnel: CoachmarkFunnel }) {
+function CompletionRate({ funnel }: { funnel: OnboardingFunnel }) {
   const totalFinished = funnel.completed + funnel.skipped;
   const rate = totalFinished > 0 ? Math.round((funnel.completed / totalFinished) * 100) : 0;
   const skippedRate = totalFinished > 0 ? Math.round((funnel.skipped / totalFinished) * 100) : 0;
@@ -349,7 +351,7 @@ function StepDropoffChart({ dropoff, started }: { dropoff: StepDropoff[]; starte
           <Activity className="w-4 h-4 text-orange-400" />
           Step-by-Step Dropoff
         </h3>
-        <p className="text-center py-8 text-amber-100/40 text-sm">No coachmark data yet.</p>
+        <p className="text-center py-8 text-amber-100/40 text-sm">No onboarding data yet.</p>
       </div>
     );
   }
@@ -411,12 +413,10 @@ function RecentEvents({ events }: { events: TrackEvent[] }) {
 
   const recent = events.slice(0, 25);
   const eventStyles: Record<string, string> = {
-    coachmark_started: 'bg-blue-500/15 text-blue-300',
-    coachmark_step_viewed: 'bg-violet-500/15 text-violet-300',
-    coachmark_completed: 'bg-emerald-500/15 text-emerald-300',
-    coachmark_skipped: 'bg-red-500/15 text-red-300',
+    onboarding_step_viewed: 'bg-violet-500/15 text-violet-300',
+    onboarding_completed: 'bg-emerald-500/15 text-emerald-300',
+    onboarding_skipped: 'bg-red-500/15 text-red-300',
     use_case_selected: 'bg-amber-500/15 text-amber-300',
-    banner_dismissed: 'bg-yellow-500/15 text-yellow-300',
     page_visited_first_time: 'bg-cyan-500/15 text-cyan-300',
   };
 
@@ -489,13 +489,12 @@ export default function AnalyticsAdminPage() {
 
   const events = useMemo(() => data?.events || [], [data]);
 
-  const funnel = useMemo(() => computeCoachmarkFunnel(events), [events]);
+  const funnel = useMemo(() => computeOnboardingFunnel(events), [events]);
   const useCases = useMemo(() => computeUseCasePopularity(events), [events]);
   const dropoff = useMemo(() => computeStepDropoff(events, funnel.started), [events, funnel.started]);
   const uniqueVisitors = useMemo(() => computeUniqueVisitors(events), [events]);
 
   const totalEvents = data?.total || 0;
-  const bannerDismissed = events.filter(e => e.event === 'banner_dismissed').length;
 
   // ─── Auth Guards ────────────────────────────────────────────────────────
 
@@ -541,7 +540,7 @@ export default function AnalyticsAdminPage() {
               Onboarding Analytics
             </h1>
             <p className="text-amber-100/60 text-sm mt-1">
-              Coachmark funnel, use-case preferences, and event stream
+              Onboarding funnel, use-case preferences, and event stream
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -591,7 +590,7 @@ export default function AnalyticsAdminPage() {
             <BarChart3 className="w-12 h-12 text-amber-100/20 mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-amber-50 mb-2">No events yet</h2>
             <p className="text-amber-100/50 text-sm max-w-md mx-auto">
-              Events will appear here as users interact with the onboarding flow — coachmarks, use-case selection, banner interactions, and page visits.
+              Events will appear here as users interact with the onboarding flow — use-case selection, and page visits.
             </p>
           </div>
         ) : (
@@ -614,7 +613,7 @@ export default function AnalyticsAdminPage() {
               />
               <StatCard
                 icon={<Target className="w-5 h-5" />}
-                label="Coachmarks Started"
+                label="Onboarding Started"
                 value={funnel.started}
                 sub={`${funnel.completed} completed · ${funnel.skipped} skipped`}
                 color="bg-emerald-500/15 text-emerald-400"
@@ -675,17 +674,6 @@ export default function AnalyticsAdminPage() {
               </div>
               <RecentEvents events={events} />
             </div>
-
-            {/* Banner dismissed metric */}
-            {bannerDismissed > 0 && (
-              <div className="operator-panel rounded-2xl p-4 text-center">
-                <p className="text-xs text-amber-100/50">
-                  <span className="font-semibold text-amber-50">{bannerDismissed}</span> users dismissed the use-case banner without selecting a preference
-                  {' · '}
-                  <span className="font-semibold text-amber-50">{totalEvents > 0 ? Math.round((bannerDismissed / totalEvents) * 100) : 0}%</span> of all events
-                </p>
-              </div>
-            )}
           </>
         )}
       </div>

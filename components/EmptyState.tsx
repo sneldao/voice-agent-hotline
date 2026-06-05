@@ -61,22 +61,22 @@ export function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-gray-800/50 border border-gray-700/50 flex items-center justify-center mb-4">
-        <Icon className="w-8 h-8 text-gray-500" />
+      <div className="w-16 h-16 rounded-2xl bg-amber-100/5 border border-amber-100/15 flex items-center justify-center mb-4">
+        <Icon className="w-8 h-8 text-amber-100/40" />
       </div>
       
       <h3 className="text-lg font-semibold text-white mb-2">
         {title || defaultTitle}
       </h3>
       
-      <p className="text-sm text-gray-400 mb-6 max-w-xs">
+      <p className="text-sm text-amber-100/50 mb-6 max-w-xs">
         {description || defaultDesc}
       </p>
       
       {(actionLabel || defaultAction) && onAction && (
         <Button
           onClick={onAction}
-          className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-medium"
+          className="bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-medium"
         >
           {actionLabel || defaultAction}
         </Button>
