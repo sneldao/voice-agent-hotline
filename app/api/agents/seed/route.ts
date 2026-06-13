@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyApiKey } from '@/lib/api-auth';
+import { requireAdminAuth } from '@/lib/api-auth';
 import { seedAgents } from '@/lib/db-seed';
 
 export async function POST(req: NextRequest) {
   try {
-    if (!verifyApiKey(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = requireAdminAuth(req);
+    if (auth) return auth;
 
     await seedAgents();
     

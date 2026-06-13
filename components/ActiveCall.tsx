@@ -524,27 +524,9 @@ export function ActiveCall({
 
         <div className="mb-4 h-48 w-full max-w-md overflow-y-auto rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-4">
           {transcripts.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  {[0, 1, 2].map(i => (
-                    <div
-                      key={i}
-                      className="h-2 w-2 animate-bounce rounded-full bg-amber-200/60"
-                      style={{ animationDelay: `${i * 150}ms` }}
-                    />
-                  ))}
-                </div>
-                <p className="text-center text-sm text-amber-100/55">
-                  {call.isConnected
-                    ? isMuted
-                      ? '🔇 Microphone muted — unmute to speak'
-                      : 'Listening... speak naturally'
-                    : 'Connecting voice session...'}
-                </p>
-                <p className="text-center text-xs text-amber-100/35">
-                  Transcript appears after the call ends
-                </p>
-              </div>
+              <p className="text-sm text-muted-foreground italic">
+                Live transcript unavailable during this call. Check call history for the full transcript after the call ends.
+              </p>
             ) : (
               transcripts.map((t, i) => (
                 <div key={i} className={`mb-2 ${t.speaker === 'user' ? 'text-right' : 'text-left'}`}>

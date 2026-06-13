@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyApiKey } from '@/lib/api-auth';
+import { requireAdminAuth } from '@/lib/api-auth';
 import { redis } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
@@ -31,9 +31,8 @@ export async function PATCH(
 ) {
   const { id } = await params;
   try {
-    if (!verifyApiKey(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = requireAdminAuth(req);
+    if (auth) return auth;
 
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
@@ -121,9 +120,8 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    if (!verifyApiKey(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = requireAdminAuth(req);
+    if (auth) return auth;
 
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {

@@ -93,6 +93,17 @@ export function verifyApiKey(req: NextRequest): boolean {
 }
 
 /**
+ * Require admin auth — returns 401 NextResponse if unauthorized, null if authorized.
+ * Use as: const auth = requireAdminAuth(req); if (auth) return auth;
+ */
+export function requireAdminAuth(req: NextRequest): NextResponse | null {
+  if (!verifyApiKey(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  return null;
+}
+
+/**
  * Verify wallet signature for voice call token requests.
  * Signed message: "voice-call:{callId}:{agentId}:{timestamp}"
  */
