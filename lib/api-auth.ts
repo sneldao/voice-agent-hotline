@@ -4,7 +4,7 @@
 // EIP-191 signature verification for API routes
 // Prevents unauthorized callers from mutating state
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { verifyMessage, hashMessage, recoverAddress } from 'viem';
 
 /**

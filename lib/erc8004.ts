@@ -319,14 +319,16 @@ export class ERC8004Service {
       let tokenId: bigint | undefined;
       for (const log of receipt.logs) {
         try {
-          const decoded = decodeEventLog({
+          // Skip type check for viem - its eventName type is too strict
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const decoded: any = (decodeEventLog as any)({
             abi: ERC8004_IDENTITY_ABI,
             eventName: 'Transfer',
             data: log.data,
             topics: log.topics,
           });
-          if (decoded && decoded.args && 'tokenId' in decoded.args) {
-            tokenId = decoded.args.tokenId as bigint;
+          if (decoded?.args?.tokenId) {
+            tokenId = decoded.args.tokenId;
             break;
           }
         } catch {
@@ -425,13 +427,14 @@ export class ERC8004Service {
       let delegationId: Hash | undefined;
       for (const log of receipt.logs) {
         try {
-          const decoded = decodeEventLog({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const decoded: any = (decodeEventLog as any)({
             abi: ERC8004_DELEGATION_ABI,
             eventName: 'DelegationCreated',
             data: log.data,
             topics: log.topics,
           });
-          if (decoded && decoded.args && 'delegationId' in decoded.args) {
+          if (decoded?.args?.delegationId) {
             delegationId = decoded.args.delegationId as Hash;
             break;
           }
