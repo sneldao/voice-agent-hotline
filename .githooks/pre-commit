@@ -22,7 +22,6 @@ SKIP_PATTERNS=(
   ".githooks/"
   "contracts-deploy/"
   "tsconfig.tsbuildinfo"
-  "*.sol"
 )
 
 # ─────────────────────────────────────────────
@@ -54,6 +53,10 @@ PATTERNS=(
 
 should_skip_file() {
   local file="$1"
+  # Skip Solidity files (import paths trigger false positives)
+  if [[ "$file" == *.sol ]]; then
+    return 0
+  fi
   for pattern in "${SKIP_PATTERNS[@]}"; do
     if [[ "$file" == *"$pattern"* ]]; then
       return 0
