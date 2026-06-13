@@ -39,6 +39,8 @@ export interface CallSession {
   id: string;
   agentId: string;
   userAddress: Address;
+  /** Agent's wallet address for payment (80% share) */
+  agentWallet?: Address;
   ratePerMinute: number;        // human-readable cents per minute
   maxAuthorized: number;        // max cents authorized by user
   authorization: SignedAuthorization;
@@ -77,6 +79,7 @@ export class VoicePaymentService {
       id: session.id,
       agentId: session.agentId,
       userAddress: session.userAddress,
+      agentWallet: session.agentWallet || '',
       ratePerMinute: session.ratePerMinute.toString(),
       maxAuthorized: session.maxAuthorized.toString(),
       authorization: JSON.stringify(session.authorization),
@@ -94,6 +97,7 @@ export class VoicePaymentService {
       id: data.id,
       agentId: data.agentId,
       userAddress: data.userAddress as Address,
+      agentWallet: data.agentWallet as Address | undefined,
       ratePerMinute: parseFloat(data.ratePerMinute),
       maxAuthorized: parseFloat(data.maxAuthorized),
       authorization: JSON.parse(data.authorization) as SignedAuthorization,
@@ -113,13 +117,16 @@ export class VoicePaymentService {
    * Pre-register a call session.
    * The SignedAuthorization must already be signed by the user's wallet.
    * maxMinutes determines how long the authorization covers.
+   * 
+   * @param agentWallet - The agent's wallet address for 80% revenue share
    */
   async authorizeCall(
     agentId: string,
     userAddress: Address,
     ratePerMinute: number,        // cents/min
     maxMinutes: number,
-    authorization: SignedAuthorization
+    authorization: SignedAuthorization,
+    agentWallet?: Address
   ): Promise<PaymentAuthorization> {
     const maxAuthorized = ratePerMinute * maxMinutes;
 
@@ -127,6 +134,7 @@ export class VoicePaymentService {
       id: `call_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       agentId,
       userAddress,
+      agentWallet,
       ratePerMinute,
       maxAuthorized,
       authorization,
@@ -140,7 +148,7 @@ export class VoicePaymentService {
     await redis.hset(`payment-session:${session.id}`, this.serializeSession(session));
     // Add to index set for efficient listing
     await redis.sadd('payment_session_index', session.id);
-    console.log(`[x402] Call authorized: ${session.id} | max ${(maxAuthorized / 100).toFixed(2)}`);
+    console.log(`[x402] Call authorized: ${session.id} | max ${(maxAuthorized / 100).toFixed(2)} | agent: ${agentWallet || 'default'}`);
 
     return {
       sessionId: session.id,
@@ -218,6 +226,9 @@ export class VoicePaymentService {
   /**
    * End a call and settle the exact amount on-chain via EIP-3009.
    * Returns the completed CallSession.
+   * 
+   * If agentWallet is set, uses split payment (80% agent, 20% platform).
+   * Otherwise, uses the authorization's original recipient.
    */
   async endCall(sessionId: string): Promise<CallSession> {
     this._stopInterval(sessionId);
@@ -234,9 +245,23 @@ export class VoicePaymentService {
 
     // Pass the ORIGINAL authorization to preserve the EIP-3009 signature.
     // Modifying the value would invalidate the signature.
-    console.log(`[x402] Settling ${sessionId}: ${session.secondsBilled}s → $${(session.totalCost / 100).toFixed(4)}`);
+    console.log(`[x402] Settling ${sessionId}: ${session.secondsBilled}s → ${(session.totalCost / 100).toFixed(4)}`);
 
-    const result = await paymentSettlement.settlePayment(session.authorization, tokenAddress, sessionId);
+    let result: SettlementResult;
+
+    // Use split payment if agent wallet is provided
+    if (session.agentWallet) {
+      console.log(`[x402] Using split payment: 80% agent, 20% platform`);
+      result = await paymentSettlement.settleSplitPayment(
+        session.authorization,
+        session.agentWallet,
+        tokenAddress,
+        sessionId
+      );
+    } else {
+      // Standard single-recipient payment
+      result = await paymentSettlement.settlePayment(session.authorization, tokenAddress, sessionId);
+    }
 
     session.status = result.success ? 'settled' : 'failed';
     session.settlementResult = result;
@@ -250,7 +275,7 @@ export class VoicePaymentService {
       const platformFee = session.totalCost * (this.config.platformFeePercent / 100);
       const agentPayout = session.totalCost - platformFee;
       console.log(
-        `[x402] Settled ${sessionId} | tx: ${result.txHash} | agent: $${(agentPayout / 100).toFixed(4)}`
+        `[x402] Settled ${sessionId} | tx: ${result.txHash} | agent: ${(agentPayout / 100).toFixed(4)}`
       );
     } else {
       console.error(`[x402] Settlement failed for ${sessionId}:`, result.error);
