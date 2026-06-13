@@ -4,7 +4,7 @@
 // Defines skill types and execution framework for agentic applications
 // Following Arbitrum's guidance on "everyday utility" for agentic apps
 
-import { Hash, Address, parseEther } from 'viem';
+import { Hash, Address, parseUnits } from 'viem';
 import { erc8004Service, DelegationScope } from './erc8004';
 import { composioService } from './composio';
 import type { SkillType } from './types';
@@ -837,7 +837,7 @@ export class AgentSkillsFramework {
       canOrder: scope.canOrder || false,
       canSchedule: scope.canSchedule || false,
       canResearch: scope.canResearch || false,
-      maxSpend: scope.maxSpend || parseEther('100'), // Default 100 USDC max
+      maxSpend: scope.maxSpend || parseUnits('100', 6), // Default 100 USDC max
       expiresAt: BigInt(Math.floor(Date.now() / 1000) + (scope.expiresInDays || 30) * 24 * 60 * 60),
     };
 

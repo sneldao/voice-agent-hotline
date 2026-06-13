@@ -45,9 +45,18 @@ export async function POST(request: NextRequest) {
 
     activeCalls.set(callSession.id, callSession)
 
-    // Start billing
+    // Start billing (requires pre-authorized session from client)
     const paymentService = getVoicePaymentService()
-    await paymentService.startBilling(callSession.id)
+    try {
+      await paymentService.startBilling(callSession.id)
+    } catch (err: any) {
+      if (err.message?.includes('Session not found')) {
+        // Client did not pre-authorize; continue without billing
+        console.warn(`[Call] No pre-authorized session for ${callSession.id}; proceeding without billing`)
+      } else {
+        throw err
+      }
+    }
 
     callSession.status = 'active'
     activeCalls.set(callSession.id, callSession)

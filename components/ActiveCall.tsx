@@ -13,7 +13,7 @@ import { Mic, MicOff, Volume2, VolumeX, PhoneOff, AlertCircle, Radio } from 'luc
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 import { showError } from './ui';
-import { parseEther } from 'viem';
+import { parseUnits } from 'viem';
 import { postReceiptOrQueue } from '@/lib/callReceiptQueue';
 
 interface ActiveCallProps {
@@ -263,7 +263,7 @@ export function ActiveCall({
         updateCallReceipt(id, { txHash: stopTxHash, cost: totalCost });
       }
     } else if (totalCost > 0 && !payment.isProcessing && !payment.isSettled) {
-      const amount = parseEther(totalCost.toFixed(6));
+      const amount = parseUnits(totalCost.toFixed(6), 6);
       const settlement = await settlePayment({
         callId,
         agentAddress: payoutAddress as `0x${string}`,

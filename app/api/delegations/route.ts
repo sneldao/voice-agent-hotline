@@ -16,7 +16,7 @@ import {
   createDelegation,
   revokeDelegation,
 } from '@/lib/db';
-import { parseEther, encodeFunctionData } from 'viem';
+import { parseUnits, encodeFunctionData } from 'viem';
 
 // The VOISSS platform address that acts as delegate
 const PLATFORM_ADDRESS = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '0x54351049081A5A64Ea93c56b666830ED5076b960';
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     const maxSpend = maxSpendWei
       ? BigInt(maxSpendWei)
-      : parseEther(String(maxSpendUSD));
+      : parseUnits(String(maxSpendUSD), 6);
 
     const expiresAt = BigInt(Math.floor(Date.now() / 1000) + expiresInDays * 24 * 60 * 60);
 

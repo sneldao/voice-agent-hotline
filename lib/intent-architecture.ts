@@ -154,7 +154,7 @@ export class IntentParser {
 // Intent Validator (Check if intent is valid/safe)
 // ============================================
 export class IntentValidator {
-  private maxAmountPerIntent = parseEther('100'); // $100 max per intent
+  private maxAmountPerIntent = parseUnits('100', 6); // $100 max per intent
   private maxDurationPerCall = 3600; // 1 hour max
 
   async validate(intent: Intent): Promise<{
@@ -644,8 +644,8 @@ export class CloudAgentRegistry {
 // ============================================
 // Utilities
 // ============================================
-function parseEther(value: string): bigint {
-  return BigInt(Math.floor(parseFloat(value) * 1e18));
+function parseUnits(value: string, decimals: number): bigint {
+  return BigInt(Math.floor(parseFloat(value) * Math.pow(10, decimals)));
 }
 
 type Hash = `0x${string}`;

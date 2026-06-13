@@ -177,5 +177,5 @@ export interface DelegationScope {
   canOrder: boolean;
   canSchedule: boolean;
   canResearch: boolean;
-  maxSpend?: number;
+  maxSpend?: bigint;
 }

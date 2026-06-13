@@ -8,8 +8,7 @@ import {
   createPublicClient, 
   createWalletClient, 
   http, 
-  parseEther,
-  formatEther,
+  formatUnits,
   Address,
   Hash
 } from 'viem';
@@ -298,14 +297,14 @@ export class PaymentSettlement {
       if (balance < authorization.value) {
         return {
           success: false,
-          error: `Insufficient balance. Has: ${formatEther(balance)}, Needs: ${formatEther(authorization.value)}`,
+          error: `Insufficient balance. Has: ${formatUnits(balance, 6)}, Needs: ${formatUnits(authorization.value, 6)}`,
         };
       }
 
       console.log('[Settlement] Executing transferWithAuthorization...', {
         from: authorization.from,
         to: authorization.to,
-        value: formatEther(authorization.value),
+        value: formatUnits(authorization.value, 6),
         token,
       });
 
@@ -349,7 +348,7 @@ export class PaymentSettlement {
         callId: callId || `call_${Date.now()}`,
         payer: authorization.from,
         payee: authorization.to,
-        amount: formatEther(authorization.value),
+        amount: formatUnits(authorization.value, 6),
         token,
         txHash: hash,
         blockNumber: receipt.blockNumber,
@@ -372,7 +371,7 @@ export class PaymentSettlement {
         txHash: hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed,
-        actualAmount: formatEther(authorization.value),
+        actualAmount: formatUnits(authorization.value, 6),
       };
     } catch (error: any) {
       console.error('[Settlement] Error settling payment:', error);

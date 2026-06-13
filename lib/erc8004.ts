@@ -8,8 +8,8 @@ import {
   createPublicClient,
   createWalletClient,
   http,
-  parseEther,
-  formatEther,
+  parseUnits,
+  formatUnits,
   decodeEventLog,
   Address,
   Hash
@@ -638,14 +638,14 @@ export function createERC8004WalletClient(privateKey: Address) {
  * Convert dollars to wei (for rate calculations)
  */
 export function dollarsToWei(dollars: number): bigint {
-  return parseEther(dollars.toString());
+  return parseUnits(dollars.toString(), 6);
 }
 
 /**
  * Convert wei to dollars (for display)
  */
 export function weiToDollars(wei: bigint): string {
-  return formatEther(wei);
+  return formatUnits(wei, 6);
 }
 
 /**
