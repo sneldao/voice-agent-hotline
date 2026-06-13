@@ -73,6 +73,12 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     metrics: { latency: 0, audioLevel: 0 },
   });
 
+  /**
+   * Transcript array — populated exclusively by the ElevenLabs webhook
+   * (app/api/webhooks/elevenlabs/route.ts) after the call ends. The widget
+   * does NOT emit transcript events, so this array stays empty during the
+   * live call regardless of what the user says.
+   */
   const [transcripts, setTranscripts] = useState<TranscriptMessage[]>([]);
   const [isMuted, setIsMuted] = useState(false);
 
@@ -172,29 +178,31 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
       });
     });
 
-    // Transcript/message events
-    const messageEvents = ['message', 'transcript'];
-    messageEvents.forEach((evt) => {
-      listen(evt, ((event: Event) => {
-        const detail = (event as CustomEvent).detail;
-        if (!detail) return;
-
-        const text = detail.text || detail.message || '';
-        const speaker = detail.source === 'user' || detail.role === 'user' ? 'user' : 'agent';
-        const isFinal = detail.isFinal !== false;
-
-        if (text) {
-          const msg: TranscriptMessage = {
-            text,
-            speaker,
-            timestamp: Date.now(),
-            isFinal,
-          };
-          setTranscripts((prev) => [...prev, msg]);
-          onTranscript?.(text, speaker, isFinal);
-        }
-      }) as EventListener);
-    });
+    // NOTE: Transcript events are NOT emitted by the widget (probe 2026-05-13).
+    // The handler below is commented out to avoid wasted CPU cycles.
+    // Real-time transcripts are delivered by the ElevenLabs webhook instead.
+    // const messageEvents = ['message', 'transcript'];
+    // messageEvents.forEach((evt) => {
+    //   listen(evt, ((event: Event) => {
+    //     const detail = (event as CustomEvent).detail;
+    //     if (!detail) return;
+    //
+    //     const text = detail.text || detail.message || '';
+    //     const speaker = detail.source === 'user' || detail.role === 'user' ? 'user' : 'agent';
+    //     const isFinal = detail.isFinal !== false;
+    //
+    //     if (text) {
+    //       const msg: TranscriptMessage = {
+    //         text,
+    //         speaker,
+    //         timestamp: Date.now(),
+    //         isFinal,
+    //       };
+    //       setTranscripts((prev) => [...prev, msg]);
+    //       onTranscript?.(text, speaker, isFinal);
+    //     }
+    //   }) as EventListener);
+    // });
 
     // Mode change events
     listen('mode-change', ((event: Event) => {

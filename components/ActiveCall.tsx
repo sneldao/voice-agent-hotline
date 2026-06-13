@@ -523,6 +523,9 @@ export function ActiveCall({
         </div>
 
         <div className="mb-4 h-48 w-full max-w-md overflow-y-auto rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-4">
+          {/* TODO: Wire the ElevenLabs webhook (app/api/webhooks/elevenlabs/) to an SSE or
+              WebSocket endpoint so the frontend receives transcript chunks in real time during
+              the call, rather than only after it ends. */}
           {transcripts.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">
                 Live transcript unavailable during this call. Check call history for the full transcript after the call ends.

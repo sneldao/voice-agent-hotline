@@ -6,6 +6,14 @@ pragma solidity ^0.8.19;
 // ============================================
 // User-controlled wallet with session keys
 // No server private keys ever!
+//
+// NOTE: This contract is currently DEAD CODE. It is not imported, deployed,
+// or referenced by any application code. The string 'AgentSmartWallet' used
+// in app/api/intents/route.ts is only an EIP-712 domain name for signing,
+// not a reference to this Solidity contract.
+//
+// This file is retained for reference if ERC-4337 smart wallet integration
+// is needed in a future deployment.
 
 import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
