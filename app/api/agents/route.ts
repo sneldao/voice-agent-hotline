@@ -59,6 +59,9 @@ export async function GET(req: NextRequest) {
         color: a.color || 'from-cyan-500 to-blue-500',
       }));
 
+    // Only return active agents
+    agents = agents.filter((a: any) => a.status === 'active' || a.active === 'true');
+
     // Server-side filtering
     if (search) {
       agents = agents.filter((a: any) => {

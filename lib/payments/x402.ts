@@ -232,17 +232,11 @@ export class VoicePaymentService {
     const tokenAddress =
       this.config.settlementToken === 'USDT' ? ARB_TOKENS.USDT : ARB_TOKENS.USDC;
 
-    // Build a partial authorization for the actual amount billed
-    // (we don't modify the signature – just adjust the value before settlement).
-    const actualCostWei = calculateCallCost(session.secondsBilled, session.ratePerMinute);
-    const adjustedAuth: SignedAuthorization = {
-      ...session.authorization,
-      value: actualCostWei,
-    };
-
+    // Pass the ORIGINAL authorization to preserve the EIP-3009 signature.
+    // Modifying the value would invalidate the signature.
     console.log(`[x402] Settling ${sessionId}: ${session.secondsBilled}s → $${(session.totalCost / 100).toFixed(4)}`);
 
-    const result = await paymentSettlement.settlePayment(adjustedAuth, tokenAddress, sessionId);
+    const result = await paymentSettlement.settlePayment(session.authorization, tokenAddress, sessionId);
 
     session.status = result.success ? 'settled' : 'failed';
     session.settlementResult = result;

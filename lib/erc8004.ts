@@ -10,6 +10,7 @@ import {
   http,
   parseEther,
   formatEther,
+  decodeEventLog,
   Address,
   Hash
 } from 'viem';
@@ -314,8 +315,27 @@ export class ERC8004Service {
 
       const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
 
-      // Parse logs to get tokenId (simplified - in production use proper log parsing)
-      const tokenId = BigInt(receipt.logs.length); // Placeholder
+      // Parse Transfer event logs for the minted tokenId
+      let tokenId: bigint | undefined;
+      for (const log of receipt.logs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: ERC8004_IDENTITY_ABI,
+            eventName: 'Transfer',
+            data: log.data,
+            topics: log.topics,
+          });
+          if (decoded && decoded.args && 'tokenId' in decoded.args) {
+            tokenId = decoded.args.tokenId as bigint;
+            break;
+          }
+        } catch {
+          // Not a Transfer event we can decode
+        }
+      }
+      if (!tokenId) {
+        return { success: false, error: 'Could not extract tokenId from transaction logs' };
+      }
 
       return { success: true, tokenId };
     } catch (error) {
@@ -401,8 +421,27 @@ export class ERC8004Service {
 
       const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
 
-      // Generate deterministic delegation ID
-      const delegationId = receipt.transactionHash as Hash;
+      // Parse DelegationCreated event to get the real delegationId
+      let delegationId: Hash | undefined;
+      for (const log of receipt.logs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: ERC8004_DELEGATION_ABI,
+            eventName: 'DelegationCreated',
+            data: log.data,
+            topics: log.topics,
+          });
+          if (decoded && decoded.args && 'delegationId' in decoded.args) {
+            delegationId = decoded.args.delegationId as Hash;
+            break;
+          }
+        } catch {
+          // Not a DelegationCreated event
+        }
+      }
+      if (!delegationId) {
+        return { success: false, error: 'Could not extract delegationId from transaction logs' };
+      }
 
       return { success: true, delegationId };
     } catch (error) {

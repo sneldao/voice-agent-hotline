@@ -1,8 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyApiKey } from '@/lib/api-auth';
 import { seedAgents } from '@/lib/db-seed';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    if (!verifyApiKey(req)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await seedAgents();
     
     return NextResponse.json({

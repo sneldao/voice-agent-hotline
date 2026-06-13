@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyApiKey } from '@/lib/api-auth';
 import { redis } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,10 @@ export async function PATCH(
 ) {
   const { id } = await params;
   try {
+    if (!verifyApiKey(req)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
@@ -111,15 +116,22 @@ async function sendNotification(
 
 // DELETE /api/agents/[id]
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   try {
-    const deleted = await redis.del(`agent:${id}`);
-    if (!deleted) {
+    if (!verifyApiKey(req)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const agent = await redis.hgetall(`agent:${id}`);
+    if (!agent || Object.keys(agent).length === 0) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
+
+    await redis.srem('agent_index', id);
+    await redis.del(`agent:${id}`);
     return NextResponse.json({ message: 'Agent deleted', id });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

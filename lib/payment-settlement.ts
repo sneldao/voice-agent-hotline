@@ -403,14 +403,9 @@ export class PaymentSettlement {
       return this.settlePayment(authorization, token, callId);
     }
 
-    // Create new authorization with actual amount
-    // Note: In production, you'd use a more sophisticated partial settlement mechanism
-    const adjustedAuth: SignedAuthorization = {
-      ...authorization,
-      value: actualAmount,
-    };
-
-    return this.settlePayment(adjustedAuth, token, callId);
+    // Partial settlement requires re-signing by the user and is not yet implemented.
+    // For now, settle the full authorized amount.
+    return this.settlePayment(authorization, token, callId);
   }
 
   /**
