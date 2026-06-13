@@ -326,6 +326,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    // Handle transcript events — stream in real-time via SSE
+    if (body.type === 'transcript' || body.event === 'transcript') {
+      const { conversation_id, text, speaker, is_final } = body;
+
+      if (conversation_id && text) {
+        const transcriptData = {
+          text: String(text),
+          speaker: speaker || 'agent',
+          timestamp: Date.now(),
+          isFinal: is_final !== false,
+        };
+
+        // Store in Redis for persistence
+        const { redis } = await import('@/lib/redis');
+        const key = `transcript:${conversation_id}`;
+        await redis.lpush(key, JSON.stringify(transcriptData));
+        // Keep last 100 transcript segments per conversation
+        await redis.ltrim(key, 0, 99);
+
+        // Publish to Redis pub/sub for real-time SSE streaming
+        await redis.publish(`transcript:${conversation_id}`, JSON.stringify(transcriptData));
+
+        console.log(`[ElevenLabs Webhook] Transcript event for ${conversation_id}: "${String(text).slice(0, 50)}..."`);
+      }
+
+      return NextResponse.json({ received: true });
+    }
+
     // Handle tool calls (existing flow)
     const { tool_name, parameters, metadata = {} } = body;
 

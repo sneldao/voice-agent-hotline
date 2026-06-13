@@ -87,6 +87,8 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
   const intentionalEndRef = useRef(false);
   const eventCleanupRef = useRef<Array<() => void>>([]);
   const connectedRef = useRef(false);
+  const sseControllerRef = useRef<AbortController | null>(null);
+  const callIdRef = useRef<string>('');
 
   // agentId is our internal key (e.g. 'general_helper').
   // Resolution to an ElevenLabs agent ID happens server-side in /api/webrtc/signal
@@ -116,6 +118,11 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     }, 1000);
 
     onConnect?.();
+
+    // Connect to SSE endpoint for live transcripts
+    if (callIdRef.current) {
+      connectSSE(callIdRef.current);
+    }
   }, [ratePerMinute, onConnect]);
 
   const handleDisconnected = useCallback(() => {
@@ -140,7 +147,104 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
       onDisconnect?.();
     }
     intentionalEndRef.current = false;
+
+    // Disconnect from SSE endpoint
+    disconnectSSE();
   }, [onDisconnect]);
+
+  /**
+   * Connect to SSE endpoint for live transcript streaming
+   */
+  const connectSSE = useCallback((callId: string) => {
+    // Clean up any existing connection
+    disconnectSSE();
+
+    callIdRef.current = callId;
+    const sseUrl = `/api/transcripts?callId=${encodeURIComponent(callId)}`;
+
+    sseControllerRef.current = new AbortController();
+
+    fetch(sseUrl, {
+      signal: sseControllerRef.current.signal,
+    })
+      .then((response) => {
+        if (!response.ok || !response.body) {
+          throw new Error('SSE connection failed');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        function read() {
+          reader
+            .read()
+            .then(({ done, value }) => {
+              if (done) {
+                // Stream ended
+                return;
+              }
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                if (line.startsWith('event: ')) {
+                  const eventType = line.slice(7).trim();
+                  const dataLineIdx = line.indexOf('data: ');
+                  if (dataLineIdx === -1) continue;
+
+                  const dataStr = line.slice(dataLineIdx + 6).trim();
+                  if (!dataStr) continue;
+
+                  try {
+                    const data = JSON.parse(dataStr);
+
+                    if (eventType === 'transcript') {
+                      const msg: TranscriptMessage = {
+                        text: data.text,
+                        speaker: data.speaker === 'user' ? 'user' : 'agent',
+                        timestamp: data.timestamp,
+                        isFinal: data.isFinal,
+                      };
+                      setTranscripts((prev) => [...prev, msg]);
+                      onTranscript?.(msg.text, msg.speaker, msg.isFinal);
+                    } else if (eventType === 'connected') {
+                      console.log('[WidgetConversation] SSE connected for call:', callId);
+                    } else if (eventType === 'error') {
+                      console.error('[WidgetConversation] SSE error:', data.message);
+                    }
+                  } catch {
+                    // Skip malformed JSON
+                  }
+                }
+              }
+
+              read();
+            })
+            .catch(() => {
+              // Read error or aborted
+            });
+        }
+
+        read();
+      })
+      .catch(() => {
+        // Fetch error or aborted
+      });
+  }, [onTranscript]);
+
+  /**
+   * Disconnect from SSE endpoint
+   */
+  const disconnectSSE = useCallback(() => {
+    if (sseControllerRef.current) {
+      sseControllerRef.current.abort();
+      sseControllerRef.current = null;
+    }
+    callIdRef.current = '';
+  }, []);
 
   /**
    * Subscribe to widget events for state tracking.
@@ -277,10 +381,13 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     intentionalEndRef.current = false;
     setTranscripts([]);
 
+    // Store callId for SSE connection
+    const callId = `widget_${Date.now()}`;
+    callIdRef.current = callId;
+
     try {
       // If signed URL mode, fetch from our backend
       if (useSignedUrl) {
-        const callId = `widget_${Date.now()}`;
         const response = await fetch('/api/webrtc/signal', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -440,8 +547,9 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
       }
+      disconnectSSE();
     };
-  }, []);
+  }, [disconnectSSE]);
 
   return {
     state,
@@ -452,5 +560,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     toggleMute,
     setVolume,
     sendMessage,
+    // Expose callId for external SSE connections if needed
+    callId: callIdRef.current,
   };
 }
