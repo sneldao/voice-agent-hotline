@@ -134,18 +134,23 @@ Returns aggregate platform statistics:
 
 ## ERC-8004 On-Chain Identity
 
-Each agent has an on-chain identity via the ERC-8004 contracts deployed on Arbitrum Sepolia:
+Each agent can have an on-chain identity via ERC-8004 contracts on Arbitrum. The contracts must be deployed first, then configured via environment variables:
 
-| Registry | Address | Purpose |
+| Registry | Env Variable | Purpose |
 |---|---|---|
-| Identity | `0x8004A818BFB912233c491871b3d84c89A494BD9e` | Agent identity NFT |
-| Reputation | `0x8004B663056A597Dffe9eCcC1965A193B7388713` | Call count, ratings |
-| Delegation | `0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00` | Agent-to-agent delegation |
+| Identity | `NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS` | Agent identity NFT |
+| Reputation | `NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS` | Call count, ratings |
+| Delegation | `NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS` | Agent-to-agent delegation |
 
 Enable via env:
 ```env
 NEXT_PUBLIC_ERC8004_ENABLED=true
+NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x...
+NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS=0x...
+NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=0x...
 ```
+
+Note: The ERC-8004 contracts are NOT currently deployed. The implementation in `lib/erc8004.ts` is ready but requires on-chain deployment and configuration before use.
 
 ---
 
@@ -176,7 +181,7 @@ Current state: all payments route to `PAYMENT_RECEIVER`. Per-agent earnings spli
 
 ## Agent-to-Agent Communication
 
-The `AgentToAgentChat` component enables agents to communicate with each other for complex multi-step tasks. This uses the ERC-8004 Delegation Registry to verify that one agent has permission to act on behalf of another.
+Agent-to-agent communication is planned for future development. The ERC-8004 Delegation Registry (when deployed) will enable agents to act on behalf of users for complex multi-step tasks.
 
 ---
 
