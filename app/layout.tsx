@@ -1,21 +1,28 @@
 import type { Metadata, Viewport } from 'next';
-import { Space_Grotesk, IBM_Plex_Sans } from 'next/font/google';
+import { Fraunces, IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { WalletProvider } from '@/lib/WalletContextNew';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { WidgetEngineProvider } from '@/components/WidgetEngine';
 
-// Google Fonts loaded via CDN for reliable delivery
-const displayFont = Space_Grotesk({
+// Distinctive type: Fraunces (variable display) + IBM Plex Sans (body) + JetBrains Mono (codes & balances)
+const displayFont = Fraunces({
   subsets: ['latin'],
   variable: '--font-display',
   display: 'swap',
-  weight: ['400', '500', '600', '700'],
+  axes: ['opsz', 'SOFT'],
 });
 
 const bodyFont = IBM_Plex_Sans({
   subsets: ['latin'],
   variable: '--font-body',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+});
+
+const monoFont = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
   display: 'swap',
   weight: ['400', '500', '600', '700'],
 });
@@ -96,7 +103,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
+      <body className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}>
         {/* Skip Navigation Link for Accessibility */}
         <a 
           href="#main-content" 

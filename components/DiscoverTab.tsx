@@ -1,21 +1,22 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Search, PhoneCall, Loader2 } from 'lucide-react';
-import { AgentCardSkeleton } from './Skeletons';
-import { EmptyState } from './EmptyState';
-import { PullToRefresh, RefreshButton, showSuccess, showInfo } from '@/components/ui';
-import { AgentCard, getPersona } from '@/app/page-components';
+import { showInfo, PullToRefresh, showSuccess } from '@/components/ui';
+import { EmptyState } from '@/components/EmptyState';
+import { DirectoryRow } from '@/components/DirectoryRow';
+import { LiveActivity } from '@/components/LiveActivity';
+import { getPersona } from '@/app/page-components';
 import { playDialTone } from '@/lib/sounds';
 import type { Agent } from '@/lib/types';
 
-const CATEGORIES = [
-  { id: 'all', name: 'All', icon: '🌐' },
-  { id: 'healthcare', name: 'Health', icon: '⚕️' },
-  { id: 'research', name: 'Research', icon: '🔍' },
-  { id: 'tech', name: 'Tech', icon: '💻' },
-  { id: 'blockchain', name: 'Crypto', icon: '🪙' },
-  { id: 'general', name: 'General', icon: '🤖' },
+const CATEGORIES: Array<{ id: string; name: string; line: string; icon: string }> = [
+  { id: 'all', name: 'All lines', line: 'directory', icon: '◉' },
+  { id: 'general', name: 'General', line: 'life admin', icon: '☎' },
+  { id: 'tech', name: 'Tech', line: 'code, builds', icon: '⌬' },
+  { id: 'blockchain', name: 'Crypto', line: 'wallets, onchain', icon: '⌖' },
+  { id: 'research', name: 'Research', line: 'web, sources', icon: '◐' },
+  { id: 'healthcare', name: 'Health', line: 'symptoms, prep', icon: '✚' },
 ];
 
 interface DiscoverTabProps {
@@ -51,207 +52,164 @@ export function DiscoverTab({
   preferredConciergeId = 'general_helper',
 }: DiscoverTabProps) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [liveCallAgentIds, setLiveCallAgentIds] = useState<Set<string>>(new Set());
 
-  const handleRefresh = useCallback(async () => {
+  // Poll the live activity endpoint to mark rows as "someone is calling right now"
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLive = async () => {
+      try {
+        const res = await fetch('/api/activity/live', { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.activeAgentIds)) {
+          setLiveCallAgentIds(new Set(json.activeAgentIds));
+        }
+      } catch { /* handled silently */ }
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  const handleRefresh = async () => {
     try {
       await onRefresh();
-      showSuccess('Agents refreshed');
+      showSuccess('Directory refreshed');
     } catch { /* handled */ }
-  }, [onRefresh]);
+  };
 
   const concierge = agents.find(a => a.id === preferredConciergeId) || agents.find(a => a.id === 'general_helper') || agents[0];
 
-  const handleDialClick = useCallback(() => {
+  const handleDialClick = () => {
     if (!concierge || isConnecting) return;
-    // Sound + haptic feedback
     playDialTone();
     try { navigator.vibrate?.(50); } catch { /* unsupported */ }
     setIsConnecting(true);
     onVoiceCall(concierge);
     setTimeout(() => setIsConnecting(false), 2000);
-  }, [concierge, isConnecting, onVoiceCall]);
+  };
 
-  /** Voice preview — plays a short description of the agent's voice */
-  const handleVoicePreview = useCallback((agent: Agent) => {
-    // Show a toast with voice info since we can't actually play audio inline
+  /** Voice preview — pings a chip with the persona's voice name */
+  const handleVoicePreview = (agent: Agent) => {
     const persona = getPersona(agent);
     showInfo(`${persona.voiceId} voice — ${persona.tone.toLowerCase()}, ${persona.desk.toLowerCase()}`);
     try { navigator.vibrate?.(15); } catch { /* unsupported */ }
-  }, []);
+  };
 
-  /** Search suggestions based on partial input */
-  const searchSuggestions = useMemo(() => {
-    if (!searchQuery || searchQuery.trim().length < 2) return [];
-    const q = searchQuery.toLowerCase().trim();
-    return agents
-      .filter(a =>
-        a.name.toLowerCase().includes(q) ||
-        a.specialty.toLowerCase().includes(q) ||
-        (a.category || '').toLowerCase().includes(q)
-      )
-      .slice(0, 4)
-      .map(a => ({ id: a.id, label: a.name, subtitle: a.specialty }));
-  }, [agents, searchQuery]);
-
-  const hasNoResults = agents.length === 0 && !isLoading && searchQuery.trim().length === 0;
-  const hasNoSearchResults = agents.length === 0 && searchQuery.trim().length > 0 && !isLoading;
-
-  // Compute per-category agent counts for filter badges
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: agents.length };
-    for (const agent of agents) {
-      const cat = agent.category?.toLowerCase() ?? 'general';
-      counts[cat] = (counts[cat] || 0) + 1;
-    }
-    return counts;
-  }, [agents]);
+  const openCount = agents.filter(a => a.online).length;
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-4">
-        {[1, 2, 3, 4, 5].map((i) => <AgentCardSkeleton key={i} />)}
+      <div className="py-4">
+        <DirectoryHeader
+          openCount={0}
+          totalCount={0}
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          selectedCategory={selectedCategory}
+          onCategoryChange={onCategoryChange}
+          agents={[]}
+        />
+        <div className="mt-3 space-y-px">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <DirectoryRowSkeleton key={i} />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <EmptyState
-        type="agents"
-        title="Failed to load agents"
-        description={error}
-        actionLabel="Try Again"
-        onAction={handleRefresh}
-      />
+      <div className="py-4">
+        <EmptyState
+          type="agents"
+          title="Directory unavailable"
+          description={error}
+          actionLabel="Try Again"
+          onAction={handleRefresh}
+        />
+      </div>
     );
   }
 
-  if (hasNoResults) {
+  if (agents.length === 0 && searchQuery.trim().length === 0) {
     return (
-      <EmptyState
-        type="agents"
-        title="No agents available"
-        description="Check back later for new AI agents"
-      />
+      <div className="py-4">
+        <DirectoryHeader
+          openCount={0}
+          totalCount={0}
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          selectedCategory={selectedCategory}
+          onCategoryChange={onCategoryChange}
+          agents={[]}
+        />
+        <div className="mt-3">
+          <EmptyState
+            type="agents"
+            title="Directory is quiet"
+            description="No lines are connected right now. Check back soon."
+          />
+        </div>
+      </div>
     );
   }
+
+  const noSearchResults = agents.length === 0 && searchQuery.trim().length > 0;
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
       <div className="py-4">
-        {/* Search + filters */}
-        <div className="mb-6 space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#5b2b1d]" />
-              <input
-                type="text"
-                placeholder="Search agents..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="paper-input w-full rounded-xl border py-3 pl-10 pr-12 text-sm font-medium transition-all focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-bold text-[#5b2b1d] transition-colors hover:bg-red-900/10"
-                  aria-label="Clear search"
-                >
-                  Clear
-                </button>
-              )}
-              {/* Search suggestions dropdown */}
-              {searchSuggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-amber-100/15 bg-[#17100d]/95 shadow-2xl shadow-black/60 backdrop-blur-xl">
-                  {searchSuggestions.map(s => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => {
-                        onSearchChange(s.label);
-                        const agent = agents.find(a => a.id === s.id);
-                        if (agent) onSelect(agent);
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-amber-100/5"
-                    >
-                      <Search className="h-4 w-4 flex-shrink-0 text-amber-100/40" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-amber-100 truncate">{s.label}</p>
-                        <p className="text-xs text-amber-100/45 truncate">{s.subtitle}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <RefreshButton onRefresh={handleRefresh} />
-          </div>
+        <DirectoryHeader
+          openCount={openCount}
+          totalCount={agents.length}
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          selectedCategory={selectedCategory}
+          onCategoryChange={onCategoryChange}
+          agents={agents}
+        />
 
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(cat => {
-              const count = categoryCounts[cat.id] ?? 0;
-              const isAll = cat.id === 'all';
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => onCategoryChange(cat.id)}
-                  className={`
-                    rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200
-                    ${selectedCategory === cat.id
-                      ? 'border-red-400/50 bg-red-500/20 text-amber-50'
-                      : count === 0 && !isAll
-                        ? 'border-amber-100/5 bg-black/15 text-amber-100/25 cursor-default'
-                        : 'border-amber-100/10 bg-black/25 text-amber-100/50 hover:border-amber-100/25 hover:text-amber-50'
-                    }
-                  `}
-                  disabled={count === 0 && !isAll}
-                >
-                  <span className="mr-1.5">{cat.icon}</span>{cat.name}
-                  {!isAll && <span className="ml-1 opacity-60">({count})</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Agent grid */}
-        {hasNoSearchResults ? (
-          <div className="min-h-[200px] rounded-[1.5rem] border border-amber-100/15 bg-[#17100d]/85 p-8 text-center">
-            <p className="text-base font-semibold text-amber-50">No agents match that filter.</p>
-            <p className="mt-2 text-sm text-amber-100/55">Try a different search or clear the filter.</p>
+        {noSearchResults ? (
+          <div className="mt-3 rounded-xl border border-amber-100/10 bg-black/15 p-6 text-center">
+            <p className="font-display text-base font-semibold text-amber-50">No lines match that filter.</p>
+            <p className="mt-1 text-sm text-amber-100/55">Try a different search or clear the filter.</p>
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="mt-5 rounded-xl border border-amber-100/20 bg-amber-100/10 px-4 py-2 text-sm font-bold text-amber-100 transition-colors hover:bg-amber-100/15"
+              className="mt-4 rounded-lg border border-amber-100/20 bg-amber-100/10 px-3 py-1.5 text-xs font-bold text-amber-100 transition-colors hover:bg-amber-100/15"
             >
               Clear filter
             </button>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {agents.map(agent => (
-              <AgentCard
+          <ul className="directory-list mt-3" role="list">
+            {agents.map((agent, idx) => (
+              <DirectoryRow
                 key={agent.id}
                 agent={agent}
-                onClick={() => onSelect(agent)}
+                onSelect={onSelect}
                 onVoicePreview={handleVoicePreview}
+                revealDelay={Math.min(idx, 8) * 70}
+                isLiveCall={liveCallAgentIds.has(agent.id)}
               />
             ))}
-          </div>
+          </ul>
         )}
 
         {hasMore && (
           <button
             onClick={onLoadMore}
-            className="mt-4 w-full rounded-xl border border-amber-100/15 bg-[#17100d]/85 py-3 text-sm font-bold text-amber-100 transition-colors hover:bg-red-500/10"
+            className="mt-3 w-full rounded-lg border border-amber-100/15 bg-black/20 py-2.5 text-sm font-bold text-amber-100 transition-colors hover:bg-red-500/10"
           >
-            Load More
+            Load more lines
           </button>
         )}
       </div>
 
-      {/* FAB dial — floating action button for quick call */}
+      {/* FAB dial — direct line to concierge */}
       <button
         onClick={handleDialClick}
         disabled={!concierge || isConnecting}
@@ -265,5 +223,105 @@ export function DiscoverTab({
         )}
       </button>
     </PullToRefresh>
+  );
+}
+
+function DirectoryHeader({
+  openCount,
+  totalCount,
+  searchQuery,
+  onSearchChange,
+  selectedCategory,
+  onCategoryChange,
+  agents,
+}: {
+  openCount: number;
+  totalCount: number;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  selectedCategory: string;
+  onCategoryChange: (c: string) => void;
+  agents: Agent[];
+}) {
+  return (
+    <section className="directory-header atmospheric-grain">
+      <div className="atmospheric-hero pb-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-amber-100/55">
+          VOISSS · Operator switchboard
+        </p>
+        <h2 className="mt-2 font-display text-[2.25rem] font-bold leading-[0.95] text-amber-50">
+          Directory
+        </h2>
+        <p className="mt-1.5 text-sm text-amber-100/65 max-w-md">
+          Pick up the line. Say what you need. The right voice picks up.
+        </p>
+        <div className="hero-glow-line mt-4" />
+      </div>
+
+      <div className="mt-5 flex items-baseline justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-amber-100/55">
+        <span>
+          <span className="text-amber-100/85">{totalCount}</span> lines ·{' '}
+          <span className="text-amber-100/85">{openCount}</span> open
+        </span>
+        <LiveActivity />
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-100/45" />
+          <input
+            type="text"
+            placeholder="Search by name, line, or desk"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="directory-search w-full rounded-lg border border-amber-100/15 bg-black/35 py-2.5 pl-9 pr-10 text-sm text-amber-50 placeholder:text-amber-100/40 focus:border-amber-200/40 focus:outline-none focus:ring-1 focus:ring-amber-200/30"
+            aria-label="Search agents"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-100/55 transition-colors hover:bg-amber-100/10"
+              aria-label="Clear search"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 -mx-1 flex flex-wrap gap-1.5">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => onCategoryChange(cat.id)}
+            className={`
+              directory-line-tag
+              ${selectedCategory === cat.id
+                ? 'directory-line-tag--active'
+                : 'directory-line-tag--idle'}
+            `}
+            aria-pressed={selectedCategory === cat.id}
+          >
+            <span className="text-[12px] leading-none">{cat.icon}</span>
+            <span>{cat.name}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DirectoryRowSkeleton(): ReactNode {
+  return (
+    <li className="directory-row directory-row--skeleton">
+      <span className="directory-row__code skeleton-pulse" />
+      <span className="directory-row__avatar skeleton-pulse" />
+      <span className="directory-row__body">
+        <span className="h-3.5 w-32 rounded bg-amber-100/10 skeleton-pulse" />
+        <span className="mt-1.5 h-2.5 w-48 max-w-full rounded bg-amber-100/5 skeleton-pulse" />
+      </span>
+      <span className="directory-row__price skeleton-pulse" />
+    </li>
   );
 }

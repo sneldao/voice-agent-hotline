@@ -313,6 +313,11 @@ function HomeInner() {
             onSetUseCase={onboarding.setUseCase}
             stepIndex={onboarding.currentStepIndex}
             totalSteps={onboarding.totalSteps}
+            onStartFirstCall={() => {
+              const conciergeId = getPreferredConcierge(onboarding.selectedUseCase);
+              const target = agents.find(a => a.id === conciergeId) || agents[0];
+              if (target) startCallWithAgent(target);
+            }}
           />
         )}
         <Header

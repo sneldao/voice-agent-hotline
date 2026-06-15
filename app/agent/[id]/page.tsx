@@ -7,6 +7,9 @@ import { PhoneCall, ArrowLeft, Star, Clock, Wallet } from 'lucide-react';
 import type { Agent } from '@/lib/types';
 import { apiUrl } from '@/lib/api';
 import { Button } from '@/components/ui';
+import { CostPanel } from '@/components/CostPanel';
+
+const DEFAULT_CAP: number | null = 1;
 
 export default function AgentPage() {
   const params = useParams();
@@ -15,6 +18,7 @@ export default function AgentPage() {
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cap, setCap] = useState<number | null>(DEFAULT_CAP);
 
   useEffect(() => {
     async function fetchAgent() {
@@ -124,10 +128,22 @@ export default function AgentPage() {
             </div>
           </div>
 
+          {/* Cost panel — first-class */}
+          <div className="mt-6">
+            <CostPanel
+              pricePerMinute={Number(rate)}
+              cap={cap}
+              onCapChange={setCap}
+            />
+          </div>
+
           {/* Call CTA */}
           <div className="mt-6">
             <Button
-              onClick={() => router.push(`/?agent=${agentId}&autoStart=true`)}
+              onClick={() => {
+                const capParam = cap == null ? '' : `&cap=${cap}`;
+                router.push(`/?agent=${agentId}&autoStart=true${capParam}`);
+              }}
               className="w-full bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400"
               size="lg"
             >

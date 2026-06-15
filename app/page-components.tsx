@@ -17,7 +17,7 @@ function getStarClass(index: number, fullStars: number, hasHalfStar: boolean): s
   return STAR_COLORS[2];
 }
 
-const Stars = React.memo(function Stars({ rating }: { rating: number }) {
+export const Stars = React.memo(function Stars({ rating }: { rating: number }) {
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 >= 0.5;
   return (

@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PhoneCall, Mic, MessageSquare, Zap, X, ChevronRight } from 'lucide-react';
+import { Mic, PhoneCall, ShieldCheck, X, Radio } from 'lucide-react';
 import { Mascot } from './Mascot';
-import { playPop, playSuccess, playDialTone } from '@/lib/sounds';
+import { playPop, playSuccess, playDialTone, playClick } from '@/lib/sounds';
 import { track } from '@/lib/track';
 import { USE_CASES, type UseCase, type OnboardingStep } from '@/lib/useOnboarding';
 
@@ -18,20 +18,42 @@ interface OnboardingFlowProps {
   onSetUseCase: (useCase: UseCase) => void;
   stepIndex: number;
   totalSteps: number;
+  /** Called on the final step — starts a real call to the concierge. */
+  onStartFirstCall?: () => void;
 }
 
-const STEP_META: Record<string, { title: string; subtitle: string; mood: 'waving' | 'thinking' | 'talking' | 'happy' | 'celebrating' }> = {
-  'splash': { title: 'Hey, I\'m Vox!', subtitle: 'Your voice-first AI concierge. Let me show you around.', mood: 'waving' },
-  'use-case': { title: 'What brings you here?', subtitle: 'Pick a focus and I\'ll match you with the best voices.', mood: 'thinking' },
-  'how-it-works': { title: 'How it works', subtitle: 'Three steps. No typing, no forms.', mood: 'talking' },
-  'free-call': { title: 'Your first call is free', subtitle: 'No wallet, no sign-up — just tap and talk.', mood: 'happy' },
-  'complete': { title: 'You\'re all set!', subtitle: 'Tap the dial below to start your first call.', mood: 'celebrating' },
+const STEP_META: Record<OnboardingStep, { title: string; subtitle: string; mood: 'waving' | 'thinking' | 'talking' | 'happy' | 'celebrating' }> = {
+  'splash': {
+    title: 'This is a phone.',
+    subtitle: 'Pick it up. Talk. The right voice answers.',
+    mood: 'waving',
+  },
+  'use-case': {
+    title: 'Who do you want to reach?',
+    subtitle: 'Pick a focus. We\'ll match the line for you.',
+    mood: 'thinking',
+  },
+  'how-it-works': {
+    title: 'How the line works',
+    subtitle: 'Three things. Then you\'re talking.',
+    mood: 'talking',
+  },
+  'free-call': {
+    title: 'Your first call is free',
+    subtitle: 'Allow the mic. We\'ll dial for you.',
+    mood: 'happy',
+  },
+  'complete': {
+    title: 'You\'re live.',
+    subtitle: 'Connecting you to the concierge line.',
+    mood: 'celebrating',
+  },
 };
 
 const HOW_IT_WORKS_STEPS = [
-  { icon: PhoneCall, label: 'Tap the dial', desc: 'Pick an agent or let me choose for you' },
-  { icon: Mic, label: 'Speak naturally', desc: 'Your voice connects instantly' },
-  { icon: MessageSquare, label: 'Get answers', desc: 'Real-time conversation, no waiting' },
+  { icon: PhoneCall, label: 'Dial a line', desc: 'Pick from the directory' },
+  { icon: Mic, label: 'Speak', desc: 'Say what you need' },
+  { icon: Radio, label: 'Get answers', desc: 'Real-time, no typing' },
 ];
 
 const slideVariants = {
@@ -40,11 +62,7 @@ const slideVariants = {
     opacity: 0,
     scale: 0.96,
   }),
-  center: {
-    x: 0,
-    opacity: 1,
-    scale: 1,
-  },
+  center: { x: 0, opacity: 1, scale: 1 },
   exit: (direction: number) => ({
     x: direction > 0 ? -80 : 80,
     opacity: 0,
@@ -62,10 +80,15 @@ export function OnboardingFlow({
   onSetUseCase,
   stepIndex,
   totalSteps,
+  onStartFirstCall,
 }: OnboardingFlowProps) {
   const meta = STEP_META[currentStep];
   const isLast = currentStep === 'complete';
   const isFirst = currentStep === 'splash';
+  const isFreeCallStep = currentStep === 'free-call';
+
+  // Mic permission state (only used on the free-call step)
+  const [micState, setMicState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
 
   useEffect(() => {
     track('onboarding_step_viewed', { step: currentStep, stepIndex: stepIndex + 1 });
@@ -82,16 +105,36 @@ export function OnboardingFlow({
     if (isLast) {
       playSuccess();
       track('onboarding_completed', { useCase: selectedUseCase || 'none' });
+      // Mark the close; the app will start the call via onComplete or onStartFirstCall
       onComplete();
-    } else {
-      onNext();
+      // Defer the actual dial so the close transition can play first
+      setTimeout(() => {
+        onStartFirstCall?.();
+      }, 320);
+      return;
     }
-  }, [isLast, onNext, onComplete]);
+    onNext();
+  }, [isLast, onNext, onComplete, onStartFirstCall, selectedUseCase]);
 
   const handleSkip = useCallback(() => {
     track('onboarding_skipped', { step: currentStep });
     onSkip();
   }, [currentStep, onSkip]);
+
+  const handleRequestMic = useCallback(async () => {
+    setMicState('requesting');
+    playClick();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicState('granted');
+      // Hold the stream briefly so the user sees the live waveform, then release
+      setTimeout(() => {
+        stream.getTracks().forEach(t => t.stop());
+      }, 1500);
+    } catch {
+      setMicState('denied');
+    }
+  }, []);
 
   return (
     <motion.div
@@ -101,8 +144,8 @@ export function OnboardingFlow({
       transition={{ duration: 0.3 }}
       className="fixed inset-0 z-[80] flex items-center justify-center"
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-[#0b0806]/92 backdrop-blur-md" />
+      {/* Backdrop with grain */}
+      <div className="absolute inset-0 bg-[#0b0806]/94 backdrop-blur-md" />
 
       {/* Content */}
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-col items-center px-6">
@@ -118,7 +161,7 @@ export function OnboardingFlow({
           </button>
         )}
 
-        {/* Mascot */}
+        {/* Mascot / phone visual */}
         <motion.div
           key={`mascot-${currentStep}`}
           initial={{ scale: 0.8, y: 20 }}
@@ -126,7 +169,29 @@ export function OnboardingFlow({
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           className="mb-6"
         >
-          <Mascot mood={meta.mood} size={140} />
+          {currentStep === 'splash' ? (
+            <div className="rotary-dial h-40 w-40 rounded-full flex items-center justify-center relative">
+              <div className="absolute inset-6 rounded-full bg-gradient-to-br from-red-700 to-amber-700 flex items-center justify-center shadow-inner">
+                <span className="font-display text-3xl text-amber-50 tracking-tight">VO</span>
+              </div>
+              {/* 10 dial holes */}
+              {Array.from({ length: 10 }).map((_, i) => {
+                const angle = (i * 36 - 90) * (Math.PI / 180);
+                const r = 60;
+                const x = Math.cos(angle) * r;
+                const y = Math.sin(angle) * r;
+                return (
+                  <span
+                    key={i}
+                    className="absolute h-3 w-3 rounded-full bg-[#1a100c] border border-amber-200/30 shadow-inner"
+                    style={{ transform: `translate(${x}px, ${y}px)` }}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <Mascot mood={meta.mood} size={140} />
+          )}
         </motion.div>
 
         {/* Step content with slide animation */}
@@ -141,14 +206,20 @@ export function OnboardingFlow({
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="w-full text-center"
           >
-            <h2 className="text-2xl font-bold text-amber-50 sm:text-3xl">
+            <h2 className="font-display text-3xl font-bold text-amber-50 sm:text-4xl">
               {meta.title}
             </h2>
-            <p className="mt-2 text-sm text-amber-100/60">
+            <p className="mt-2 text-sm text-amber-100/65">
               {meta.subtitle}
             </p>
 
-            {/* Screen-specific content */}
+            {currentStep === 'splash' && (
+              <p className="mt-6 mx-auto max-w-xs text-xs font-mono uppercase tracking-[0.18em] text-amber-100/40">
+                No signup · No forms · No keyboard
+              </p>
+            )}
+
+            {/* Step 2: pick a focus */}
             {currentStep === 'use-case' && (
               <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {USE_CASES.map((uc, i) => {
@@ -167,7 +238,7 @@ export function OnboardingFlow({
                       whileTap={{ scale: 0.95 }}
                       className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-all ${
                         isSelected
-                          ? 'border-red-500/50 bg-red-500/15 shadow-sm shadow-red-500/10'
+                          ? 'border-amber-300/55 bg-amber-300/15 shadow-sm shadow-amber-300/15'
                           : 'border-amber-100/10 bg-amber-100/[0.03] hover:border-amber-100/25 hover:bg-amber-100/[0.06]'
                       }`}
                     >
@@ -182,43 +253,48 @@ export function OnboardingFlow({
               </div>
             )}
 
+            {/* Step 3: how it works, compact */}
             {currentStep === 'how-it-works' && (
-              <div className="mt-6 space-y-3">
+              <div className="mt-6 space-y-2">
                 {HOW_IT_WORKS_STEPS.map((step, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.15 + i * 0.12 }}
-                    className="flex items-center gap-4 rounded-xl border border-amber-100/10 bg-amber-100/[0.03] px-4 py-3 text-left"
+                    transition={{ delay: 0.15 + i * 0.1 }}
+                    className="flex items-center gap-3 rounded-xl border border-amber-100/10 bg-amber-100/[0.03] px-4 py-2.5 text-left"
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-red-500/20 to-amber-500/20">
-                      <step.icon className="h-5 w-5 text-amber-200" />
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-red-500/20 to-amber-500/20">
+                      <step.icon className="h-4 w-4 text-amber-200" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-amber-50">{step.label}</p>
-                      <p className="text-xs text-amber-100/50">{step.desc}</p>
+                      <p className="text-[11px] text-amber-100/55">{step.desc}</p>
                     </div>
+                    <span className="font-mono text-[10px] text-amber-100/30">
+                      0{i + 1}
+                    </span>
                   </motion.div>
                 ))}
               </div>
             )}
 
-            {currentStep === 'free-call' && (
+            {/* Step 4: mic permission */}
+            {isFreeCallStep && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.2 }}
-                className="mt-6 rounded-2xl border border-emerald-500/25 bg-emerald-500/8 p-5"
+                className="mt-6"
               >
-                <Zap className="mx-auto h-8 w-8 text-emerald-300" />
-                <p className="mt-3 text-lg font-bold text-emerald-100">First call is on us</p>
-                <p className="mt-1 text-sm text-emerald-200/60">
-                  No wallet needed. No credit card. Just pick up the line and see how it feels.
-                </p>
+                <MicPermissionCard
+                  state={micState}
+                  onRequest={handleRequestMic}
+                />
               </motion.div>
             )}
 
+            {/* Step 5: live */}
             {currentStep === 'complete' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -226,12 +302,21 @@ export function OnboardingFlow({
                 transition={{ delay: 0.2 }}
                 className="mt-6"
               >
-                <div className="inline-flex items-center gap-2 rounded-full border border-amber-100/15 bg-amber-100/5 px-4 py-2">
-                  <PhoneCall className="h-4 w-4 text-amber-300" />
-                  <span className="text-sm font-semibold text-amber-100/70">
-                    The dial is waiting for you below
-                  </span>
+                <div className="mx-auto flex items-center justify-center gap-1.5 h-12">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span
+                      key={i}
+                      className="block w-1 rounded-full bg-amber-300/85 waveform-bar"
+                      style={{
+                        height: `${20 + ((i * 7) % 24)}px`,
+                        animationDelay: `${i * 90}ms`,
+                      }}
+                    />
+                  ))}
                 </div>
+                <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.32em] text-amber-100/40">
+                  patching the line
+                </p>
               </motion.div>
             )}
           </motion.div>
@@ -239,7 +324,6 @@ export function OnboardingFlow({
 
         {/* Navigation */}
         <div className="mt-8 flex w-full items-center justify-between">
-          {/* Back button */}
           {!isFirst ? (
             <button
               type="button"
@@ -252,33 +336,109 @@ export function OnboardingFlow({
             <div />
           )}
 
-          {/* Progress dots */}
-          <div className="flex items-center gap-2">
-            {Array.from({ length: totalSteps }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  i === stepIndex
-                    ? 'w-6 bg-amber-400'
-                    : i < stepIndex
-                      ? 'w-2 bg-amber-400/40'
-                      : 'w-2 bg-amber-100/15'
-                }`}
-              />
-            ))}
-          </div>
+          {/* Rotary position indicator */}
+          <RotaryDial
+            stepIndex={stepIndex}
+            totalSteps={totalSteps}
+          />
 
           {/* Next / Complete button */}
           <button
             type="button"
             onClick={handleNext}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:from-red-500 hover:to-amber-400 active:scale-95"
+            disabled={isFreeCallStep && micState !== 'granted'}
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:from-red-500 hover:to-amber-400 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {isLast ? 'Let\'s go' : 'Next'}
-            <ChevronRight className="h-4 w-4" />
+            {isLast ? 'Going live' : isFreeCallStep && micState !== 'granted' ? 'Allow mic first' : 'Next'}
           </button>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function MicPermissionCard({
+  state,
+  onRequest,
+}: {
+  state: 'idle' | 'requesting' | 'granted' | 'denied';
+  onRequest: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-100/15 bg-black/40 p-5">
+      {state === 'granted' ? (
+        <>
+          <div className="mx-auto flex items-center justify-center gap-1.5 h-10">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <span
+                key={i}
+                className="block w-1 rounded-full bg-emerald-300/85 waveform-bar"
+                style={{
+                  height: `${14 + ((i * 5) % 22)}px`,
+                  animationDelay: `${i * 80}ms`,
+                }}
+              />
+            ))}
+          </div>
+          <p className="mt-3 text-base font-display font-bold text-emerald-100">Line is open</p>
+          <p className="mt-1 text-xs text-amber-100/55">We can hear you. Press the dial to start.</p>
+        </>
+      ) : state === 'denied' ? (
+        <>
+          <ShieldCheck className="mx-auto h-8 w-8 text-amber-300/70" />
+          <p className="mt-3 text-base font-display font-bold text-amber-50">Mic blocked</p>
+          <p className="mt-1 text-xs text-amber-100/55">Allow microphone in browser settings, then retry.</p>
+          <button
+            type="button"
+            onClick={onRequest}
+            className="mt-3 w-full rounded-lg border border-amber-100/20 bg-amber-100/10 py-2 text-xs font-bold text-amber-100"
+          >
+            Try again
+          </button>
+        </>
+      ) : state === 'requesting' ? (
+        <>
+          <div className="mx-auto h-8 w-8 rounded-full border-2 border-amber-300/40 border-t-amber-300 animate-spin" />
+          <p className="mt-3 text-sm font-display text-amber-50">Listening for your permission</p>
+        </>
+      ) : (
+        <>
+          <Mic className="mx-auto h-8 w-8 text-amber-300/80" />
+          <p className="mt-3 text-base font-display font-bold text-amber-50">First call is on us</p>
+          <p className="mt-1 text-xs text-amber-100/55">
+            No wallet. No signup. Just press the button and talk.
+          </p>
+          <button
+            type="button"
+            onClick={onRequest}
+            className="mt-4 w-full rounded-lg bg-gradient-to-r from-red-600 to-amber-500 py-2.5 text-sm font-bold text-white shadow-md shadow-red-500/20"
+          >
+            Allow microphone
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RotaryDial({ stepIndex, totalSteps }: { stepIndex: number; totalSteps: number }) {
+  // Each "step" gets one rotation notch. We rotate the dial by (stepIndex / totalSteps) * 270deg.
+  const angle = (stepIndex / Math.max(totalSteps - 1, 1)) * 270 - 135;
+  return (
+    <div className="relative h-8 w-8 flex items-center justify-center" aria-hidden="true">
+      <div className="absolute inset-0 rounded-full border border-amber-100/20 bg-black/30" />
+      <div
+        className="absolute h-3 w-0.5 rounded-full bg-gradient-to-b from-amber-300 to-red-500 origin-bottom"
+        style={{
+          transform: `translateY(-3px) rotate(${angle}deg)`,
+          transformOrigin: '50% 100%',
+          bottom: '50%',
+          transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}
+      />
+      <span className="font-mono text-[8px] text-amber-100/45">
+        {stepIndex + 1}/{totalSteps}
+      </span>
+    </div>
   );
 }

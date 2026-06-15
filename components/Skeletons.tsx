@@ -79,13 +79,21 @@ export function ProfileSkeleton() {
   );
 }
 
-// Fast initial skeleton for tab switching
+// Switchboard warming up — single choreographed placeholder for the directory tab
 export function TabLoading() {
   return (
-    <div className="flex items-center justify-center min-h-[200px]">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-gray-400">Loading...</span>
+    <div className="flex flex-col items-center justify-center min-h-[320px] gap-4">
+      <div className="relative flex items-center justify-center">
+        <span className="absolute inline-flex h-12 w-12 rounded-full bg-red-500/20 animate-ping" />
+        <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-200/40 bg-gradient-to-br from-red-600 to-amber-500">
+          <span className="text-amber-50 text-xs font-mono">VO</span>
+        </span>
+      </div>
+      <div className="text-center">
+        <p className="text-sm font-display text-amber-50/90">Switchboard warming up</p>
+        <p className="mt-1 text-[11px] font-mono uppercase tracking-[0.18em] text-amber-100/40">
+          patching the lines
+        </p>
       </div>
     </div>
   );
