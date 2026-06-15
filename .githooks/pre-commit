@@ -37,9 +37,16 @@ PATTERNS=(
   'ak_[a-zA-Z0-9]{20,}'
   # Tavily API keys
   'tvly-[a-zA-Z0-9-]{20,}'
-  # Upstash Redis tokens (base64-like, long)
-  'Aec0[A-Za-z0-9+/=]{40,}'
-  # Generic base64-like secrets (must contain + or / to distinguish from hex)
+  # Upstash Redis REST tokens — modern Upstash tokens use various
+  # 2-3 char prefixes (AX/AY/AZ/Aec and variants) and base64url chars
+  '(AX|AY|AZ|Aec)[A-Za-z0-9_-]{30,}'
+  # Generic base64url tokens (no + or / or =), 40+ chars. Catches
+  # prefixed tokens that aren't covered by the patterns above, e.g.
+  # the gQAAAAAAAd4GAAIgcDJiMTRjMDE5OWQ... leak from 2026-06.
+  # 40 chars is long enough to be rare in source code; if false
+  # positives appear, add the file to SKIP_PATTERNS below.
+  '[A-Za-z0-9_-]{40,}'
+  # Generic base64 secrets (must contain + or / to distinguish from hex)
   '[A-Za-z0-9+/]{20,}[/+][A-Za-z0-9+/]{19,}={0,2}'
   # Stripe keys
   'sk_live_[a-zA-Z0-9]{24,}'
