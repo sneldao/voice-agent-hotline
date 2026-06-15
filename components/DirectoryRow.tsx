@@ -2,8 +2,8 @@
 
 import { ChevronRight, ShieldCheck, Radio } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
-import { Stars } from '@/app/page-components';
-import { getPersona } from '@/app/page-components';
+import { Stars } from '@/components/directory/Stars';
+import { getPersona } from '@/lib/agent-personas';
 import { useCountUp } from '@/lib/useCountUp';
 import type { Agent } from '@/lib/types';
 

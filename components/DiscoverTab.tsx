@@ -6,7 +6,7 @@ import { showInfo, PullToRefresh, showSuccess } from '@/components/ui';
 import { EmptyState } from '@/components/EmptyState';
 import { DirectoryRow } from '@/components/DirectoryRow';
 import { LiveActivity } from '@/components/LiveActivity';
-import { getPersona } from '@/app/page-components';
+import { getPersona } from '@/lib/agent-personas';
 import { playDialTone } from '@/lib/sounds';
 import type { Agent } from '@/lib/types';
 

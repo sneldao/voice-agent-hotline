@@ -30,7 +30,10 @@ const nextConfig = {
     },
   },
 
-  // Headers for security and performance
+  // Headers for security and performance.
+  // CORS is enabled for /api/* because the Vercel-hosted frontend
+  // (voisss-agent-hotline.vercel.app) talks to the Hetzner-hosted
+  // API (api.sneldao.com) cross-origin in production.
   async headers() {
     return [
       {
@@ -39,6 +42,9 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
         ],
       },
     ];
