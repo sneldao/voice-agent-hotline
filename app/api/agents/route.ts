@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
+
     const agentId = searchParams.get('id');
 
     if (agentId) {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
       .map((a: any) => ({
         ...a,
         // Ensure UI-friendly booleans/numbers for frontend
-        online: a.online === 'true' || a.active === 'true' || a.status === 'active' || (!a.online && !a.active && !a.status),
+        online: String(a.online) === 'true' || String(a.active) === 'true' || a.status === 'active' || (!a.online && !a.active && !a.status),
         verified: a.status === 'active',
         specialty: a.specialty || a.category || 'AI Assistant',
         category: a.category === 'code' ? 'tech' : a.category,
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
       }));
 
     // Only return active agents
-    agents = agents.filter((a: any) => a.status === 'active' || a.active === 'true');
+    agents = agents.filter((a: any) => a.status === 'active' || String(a.active) === 'true' || a.online === true);
 
     // Server-side filtering
     if (search) {

@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
 
     const receipt = await redis.hgetall(`settlement:${callId}`);
 
-    if (receipt && receipt.settled === 'true') {
+    if (receipt && String(receipt.settled) === 'true') {
       const txHash = typeof receipt.txHash === 'string' ? receipt.txHash : undefined;
       return NextResponse.json({
         settled: true,

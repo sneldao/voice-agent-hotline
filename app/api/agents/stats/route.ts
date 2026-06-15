@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       rating: parseFloat(String(a?.rating ?? '0')) || 0,
       totalCalls: parseInt(String(a?.totalCalls ?? '0')) || 0,
       rate: parseFloat(String(a?.rate ?? '0')) || 0,
-      online: a?.online === 'true',
+      online: String(a?.online) === 'true',
     }));
 
     return withCors(NextResponse.json({

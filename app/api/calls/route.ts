@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     let call_url = null;
 
     const elevenLabsAgentId = agent.elevenlabs_agent_id as string;
-    if (elevenLabsAgentId && agent.conversational_enabled === 'true') {
+    if (elevenLabsAgentId && String(agent.conversational_enabled) === 'true') {
       try {
         const conversation = await elevenLabsService.startConversation({
           agent_id: elevenLabsAgentId,
