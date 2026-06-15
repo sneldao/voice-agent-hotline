@@ -5,7 +5,7 @@
 | Target | URL | Notes |
 |---|---|---|
 | Vercel | `voisss-agent-hotline.vercel.app` | Auto-deploys from `main`; serverless API routes |
-| VPS (Hetzner) | `voisss.celo.famile.xyz` | PM2 standalone server on port 3042; ~52 MB |
+| VPS (Hetzner) | `api.sneldao.com` | PM2 standalone server on port 3042; ~52 MB |
 
 Both targets share the same **Upstash Redis** instance (`game-corgi-122374.upstash.io`).
 
@@ -25,7 +25,7 @@ UPSTASH_REDIS_REST_URL=https://game-corgi-122374.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your_token
 
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
-NEXT_PUBLIC_API_URL=https://voisss.celo.famile.xyz
+NEXT_PUBLIC_API_URL=https://api.sneldao.com
 
 NEXT_PUBLIC_ERC8004_ENABLED=true
 NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x8004A818BFB912233c491871b3d84c89A494BD9e
@@ -63,7 +63,7 @@ make restart  # restart without rebuilding
 ```
 Browser
   └─► Vercel (HTML/JS/CSS)
-        └─► NEXT_PUBLIC_API_URL = https://voisss.celo.famile.xyz
+        └─► NEXT_PUBLIC_API_URL = https://api.sneldao.com
               └─► Hetzner Next.js standalone (port 3042)
                     └─► Upstash Redis (shared)
 ```

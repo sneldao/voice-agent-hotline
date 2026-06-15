@@ -1,230 +1,137 @@
-# Performance Optimizations
+# Performance Notes
 
-## Overview
+## Current hot spots
 
-This document outlines the performance optimizations implemented to prevent browser slowdown when the app tab is open.
+After the directory rewrite and live-activity ticker, the perf-sensitive
+surfaces are:
 
-## Issues Identified
+1. **Marketplace directory** (`components/DiscoverTab.tsx` + `components/DirectoryRow.tsx`)
+2. **Active call** (`components/ActiveCall.tsx` + the cost ticker)
+3. **Live activity polling** (`components/LiveActivity.tsx` + `/api/activity/live`)
 
-Users reported that simply having the app tab open in their browser caused slowdown. Investigation revealed several root causes:
-
-1. **Memory Leaks** - `setInterval` without cleanup
-2. **Excessive Re-renders** - Components re-rendering on every state change
-3. **Expensive Computations** - Filtering operations on every render
-4. **Rapid API Polling** - Balance checks without debouncing
-5. **No Effect Cleanup** - State updates on unmounted components
-
-## Fixes Implemented
-
-### 1. Memory Leak Fixes
-
-**File:** `components/StreamingPaymentModal.tsx`
-
-**Before:**
-```typescript
-const startTime = Date.now();
-setInterval(() => {
-  setDuration(Math.floor((Date.now() - startTime) / 1000));
-}, 1000);
-```
-
-**After:**
-```typescript
-useEffect(() => {
-  let timerId: NodeJS.Timeout | null = null;
-  
-  if (isStreaming) {
-    timerId = setInterval(() => {
-      setDuration(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
-  }
-  
-  return () => {
-    if (timerId) clearInterval(timerId);
-  };
-}, [isStreaming]);
-```
-
-**Impact:** Prevents unbounded memory growth from orphaned intervals.
+The patterns below are what the codebase actually relies on to keep
+these fast.
 
 ---
 
-### 2. React.memo for Agent Cards
+## 1. Marketplace directory
 
-**File:** `app/page.tsx`
+### Staggered reveal
 
-**Before:**
-```typescript
-function FeaturedCard({ agent, onClick, selected }) { ... }
-function AgentCard({ agent, onClick, selected }) { ... }
+`DirectoryRow` has a `revealDelay` prop. `DiscoverTab` passes
+`Math.min(idx, 8) * 70` so the first 9 rows animate in over ~600ms
+and rows past 9 are not staggered (capped to prevent long delays on
+large directories).
+
+```tsx
+// components/DiscoverTab.tsx
+{agents.map((agent, idx) => (
+  <DirectoryRow
+    key={agent.id}
+    agent={agent}
+    revealDelay={Math.min(idx, 8) * 70}
+    ...
+  />
+))}
 ```
 
-**After:**
-```typescript
-const FeaturedCard = React.memo(function FeaturedCard({ agent, onClick, selected }) { ... });
-const AgentCard = React.memo(function AgentCard({ agent, onClick, selected }) { ... });
-```
+The animation is a CSS keyframe (`@keyframes directory-row-reveal`)
+that runs once on mount — no JS per frame, no `requestAnimationFrame`
+loop, so a 50-row directory costs the same as a 9-row one.
 
-**Impact:** Prevents re-renders when parent state changes but props remain the same. Reduces render time from ~60fps potential to on-demand.
+### Dial code count-up
+
+Each row's dial code counts up from 000 to the agent's deterministic
+3-digit code on first mount, using `lib/useCountUp.ts`. The hook uses
+a single `requestAnimationFrame` per row, 720ms duration, easeOutCubic.
+For large directories this would be N concurrent RAFs — fine for the
+current ~5 agents, but if the directory grows past ~20, the count-up
+should be replaced with a CSS-only clip-path reveal.
+
+`useCountUp` respects `prefers-reduced-motion` and short-circuits to
+the final value if the user opts out.
+
+### Search debouncing
+
+`app/page.tsx` debounces search and category changes together with a
+300ms timer. Without the debounce, every keystroke triggers a SWR
+refetch against `/api/agents`. The debounce + `page` reset (back to 1)
+are co-located in one `useEffect` to avoid split-state.
 
 ---
 
-### 3. useMemo for Expensive Filtering
+## 2. Active call
 
-**File:** `app/page.tsx`
+### Live cost ticker
 
-**Before:**
-```typescript
-const filteredAgents = agents.filter(agent => {
-  const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) || ...;
-  const matchesCategory = selectedCategory === 'all' || ...;
-  return matchesSearch && matchesCategory;
-});
-```
+`components/CostPanel.tsx` animates a progress bar and a status
+message on every tick (typically once per second). The animation is
+CSS-driven (`transition: width 0.4s ease, background-position 0.4s ease`),
+and the status messages use `AnimatePresence mode="wait"` to crossfade
+when the threshold (low / critical / empty) changes — this avoids
+the FLIP-style layout shift you'd get from `v-if`-ing them in place.
 
-**After:**
-```typescript
-const filteredAgents = useMemo(() => {
-  return agents.filter(agent => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchQuery.toLowerCase()) || ...;
-    const matchesCategory = selectedCategory === 'all' || ...;
-    return matchesSearch && matchesCategory;
-  });
-}, [agents, searchQuery, selectedCategory]);
-```
+The ticker never causes a re-render of `ActiveCall` itself — it's a
+memoized child that receives `liveCost` as a prop.
 
-**Impact:** Filtering only runs when data changes, not on every render.
+### Transcript rendering
+
+Transcripts come from the ElevenLabs webhook (`app/api/webhooks/elevenlabs/route.ts`)
+and are streamed to the client via SWR. The `ActiveCall` component
+debounces the transcript fetch to 2s so a long call doesn't hammer
+the API on every transcript chunk.
 
 ---
 
-### 4. Debounced Balance Polling
+## 3. Live activity polling
 
-**File:** `app/page.tsx`
+`LiveActivity` and `DiscoverTab` both poll `/api/activity/live` every
+30 seconds. The endpoint is a single Redis pipeline fetch of
+`call_index:all` followed by `hgetall` for each session — no
+aggregation work, no sorted-set updates, no per-call write amplification.
 
-**Before:**
-```typescript
-useEffect(() => {
-  if (connected && address) {
-    fetch(`/api/users/${address}`)...
-  }
-}, [connected, address]);
-```
+The 30s interval is a tradeoff: shorter feels more "live" but
+generates more API traffic and Redis reads. 30s is the right default
+for the directory ticker; if the product grows a chatty "5 people
+are calling right now" feature, the interval should drop to 10s
+and the endpoint should cache for 5s at the edge.
 
-**After:**
-```typescript
-useEffect(() => {
-  let isMounted = true;
-  let timeoutId: NodeJS.Timeout | null = null;
-  
-  if (connected && address) {
-    setIsLoadingBalance(true);
-    
-    timeoutId = setTimeout(() => {
-      fetch(`/api/users/${address}`)
-        .then(res => res.json())
-        .then(data => {
-          if (isMounted) setUserBalance(data.balance || 0);
-        })
-        .catch(() => {
-          if (isMounted) setUserBalance(0);
-        })
-        .finally(() => {
-          if (isMounted) setIsLoadingBalance(false);
-        });
-    }, 300); // 300ms debounce
-  }
-  
-  return () => {
-    isMounted = false;
-    if (timeoutId) clearTimeout(timeoutId);
-  };
-}, [connected, address]);
-```
-
-**Impact:** 
-- 300ms debounce prevents rapid-fire API calls on mount
-- `isMounted` guard prevents state updates on unmounted components
-- Cleanup function prevents memory leaks
+The component **fails soft**: if the fetch errors, the ticker just
+stays hidden. We never block the marketplace on the activity
+endpoint.
 
 ---
 
-## Performance Impact Summary
+## Patterns we use to keep things fast
 
-| Issue | Before | After | Improvement |
-|-------|--------|-------|-------------|
-| Memory leaks | ⚠️ Growing indefinitely | ✅ Properly cleaned up | 100% fix |
-| Card re-renders | ⚠️ Every parent state change | ✅ Only when props change | ~90% reduction |
-| Agent filtering | ⚠️ Every render (~60fps) | ✅ Only when data changes | ~95% reduction |
-| API calls | ⚠️ Rapid fire on mount | ✅ Debounced 300ms | 1 call vs many |
-| Unmounted updates | ⚠️ Possible crashes | ✅ Guarded with isMounted | 100% fix |
-
----
-
-## Monitoring & Profiling
-
-### Recommended Tools
-
-1. **React DevTools Profiler** - Identify remaining hot spots
-   ```bash
-   # Install React DevTools extension
-   # Open Profiler tab, record session, analyze commits
-   ```
-
-2. **Chrome DevTools Performance Tab** - Monitor memory and CPU
-   ```bash
-   # Open DevTools > Performance tab
-   # Record while interacting with app
-   # Look for long tasks, memory spikes
-   ```
-
-3. **web-vitals** - Real-user performance metrics
-   ```bash
-   npm install web-vitals
-   ```
-
-### Key Metrics to Watch
-
-- **First Contentful Paint (FCP)** - Target: < 1.5s
-- **Time to Interactive (TTI)** - Target: < 3.5s
-- **Total Blocking Time (TBT)** - Target: < 200ms
-- **Memory Usage** - Target: Stable, no growth over time
+| Pattern | Where | Why |
+|---|---|---|
+| `React.memo` on list items | `DirectoryRow`, `Stars`, `AgentCardSkeleton` (when used) | Prevents re-renders when a sibling row's state changes |
+| `useMemo` for derived data | Directory counts, persona lookups in `lib/agent-personas.ts` | Avoids recomputing on every render |
+| `useCallback` on event handlers | `onSelect`, `onVoicePreview`, `onLoadMore` | Stable references so memoized children don't re-render |
+| Single-poll, multi-consumer | `LiveActivity` and `DiscoverTab` both read the same endpoint on independent intervals | Simpler than a shared SWR cache; refresh is cheap |
+| `AnimatePresence mode="wait"` | Cost panel status messages, onboarding steps | Crossfade without layout shift |
+| `transition` not `animation` | Directory row hover, cost bar, header wallet chip | GPU-accelerated, easier to interrupt |
 
 ---
 
-## Future Optimizations
+## Patterns we explicitly avoid
 
-### 1. Virtual Scrolling
-If call history grows large (>100 items), implement virtualization:
-```bash
-npm install @tanstack/react-virtual
-```
-
-### 2. Service Worker
-Cache static assets and API responses for offline support:
-```bash
-npm install next-pwa
-```
-
-### 3. Code Splitting
-Lazy-load heavy components:
-```typescript
-const ActiveCall = dynamic(() => import('@/components/ActiveCall'), {
-  ssr: false,
-  loading: () => <LoadingSpinner />
-});
-```
-
-### 4. Image Optimization
-Use Next.js Image component for automatic optimization:
-```typescript
-import Image from 'next/image';
-<Image src="/agent.png" width={100} height={100} alt="Agent" />
-```
+- **Skeleton-card grids** — replaced with a single "switchboard warming up" placeholder (`components/Skeletons.tsx`). One moment is more memorable than five.
+- **Per-frame JS animations** — count-up and stagger are CSS-driven or RAF-throttled. The only `requestAnimationFrame` in the codebase is in `useCountUp`, and it's debounced to the row's mount.
+- **Real-time revalidation on tab focus** — would re-trigger the directory's 300ms-debounced search fetch every time the user tabs back. Disabled in `app/page.tsx`.
+- **Long polling / WebSocket for activity** — overkill for a 30s ticker; the poll is two HTTP requests per minute per tab.
 
 ---
 
-## References
+## Monitoring
 
-- [React Performance Best Practices](https://react.dev/learn/render-and-commit)
-- [Next.js Performance](https://nextjs.org/docs/advanced-features/measuring-performance)
-- [Web Vitals](https://web.dev/vitals/)
+The repo doesn't ship a perf-monitoring integration. Recommended
+additions when scale demands them:
+
+- **Vercel Analytics** for web vitals on the Vercel deployment
+- **A lightweight `/api/health` probe** that returns p50/p95 latency
+  for the Upstash read path (would need to be added to the API
+  surface, currently absent)
+- **React DevTools Profiler** to find re-render hot spots during
+  development

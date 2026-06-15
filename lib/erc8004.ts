@@ -660,9 +660,9 @@ export function ratePerMinuteToWei(rateCentsPerMinute: number): bigint {
 }
 
 /**
- * Check if Arbitrum network is available
+ * Check if the configured Arbitrum RPC is reachable.
  */
-export async function checkCeloConnection(): Promise<boolean> {
+export async function checkArbitrumConnection(): Promise<boolean> {
   const client = getPublicClient();
   try {
     await client.getBlockNumber();

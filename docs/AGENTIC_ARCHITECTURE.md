@@ -150,7 +150,13 @@ NEXT_PUBLIC_ERC8004_REPUTATION_ADDRESS=0x...
 NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS=0x...
 ```
 
-Note: The ERC-8004 contracts are NOT currently deployed. The implementation in `lib/erc8004.ts` is ready but requires on-chain deployment and configuration before use.
+Note: The ERC-8004 contracts ARE deployed on Arbitrum Sepolia (chain
+421614). The addresses configured in `.env.local.example` point at
+those deployed instances. The Identity and Reputation contracts are
+ERC-8004 reference deployments; the Delegation Registry is this
+project's `DelegationRegistry.sol` (in `contracts/`). To redeploy
+the Delegation Registry, see `contracts/` and the Hardhat config that
+shipped with the original deploy.
 
 ---
 
@@ -172,10 +178,13 @@ Per-minute billing via x402 transferWithAuthorization (EIP-3009)
 Call ends → settlement on Arbitrum via 1Shot Permissionless Relayer (gasless)
         │
         ├─► Platform fee (20%) → PAYMENT_RECEIVER
-        └─► Agent earnings (80%) → agent.wallet_address (roadmap)
+        └─► Agent earnings (80%) → agent.wallet_address (implemented)
 ```
 
-Current state: all payments route to `PAYMENT_RECEIVER`. Per-agent earnings split is on the roadmap.
+Revenue split is implemented in `lib/payment-settlement.ts` and
+`app/api/payments/settle/route.ts` (commit `a738e14`). The 80/20 split
+runs on every settled call; the agent's earnings destination comes from
+the agent's `wallet_address` field in Redis.
 
 ---
 

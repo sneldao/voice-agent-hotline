@@ -29,7 +29,7 @@
   
   <!-- Features -->
   <text x="80" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#06b6d4">⚡ Pay per second via x402</text>
-  <text x="80" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#06b6d4">🔐 Built on Celo blockchain</text>
+  <text x="80" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#06b6d4">🔐 Built on Arbitrum (x402 USDC)</text>
   <text x="80" y="460" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="#06b6d4">⭐ Verified agent registry</text>
   
   <!-- URL -->

@@ -38,7 +38,11 @@ MetaMask Smart Accounts Kit. The app never receives or stores private keys. All 
 
 Sensitive values (`ELEVENLABS_API_KEY`, `FACILITATOR_PRIVATE_KEY`, `UPSTASH_REDIS_REST_TOKEN`) are:
 - Stored in `.env.local` on the VPS (not committed to git)
-- Injected into the PM2 process via `ecosystem.config.js` (also not committed)
+- Read by PM2 via `ecosystem.config.js`, which loads `/opt/voice-hotline/.env.hetzner` (also not committed)
 - Set as encrypted secrets in Vercel dashboard
 
-The `.gitignore` excludes `.env.local` and `ecosystem.config.js` to prevent accidental exposure.
+The `.gitignore` excludes `.env`, `.env.local`, `.env.production`, and
+`.env.hetzner`. `ecosystem.config.js` IS committed because it contains
+only public server paths (`/opt/voice-hotline/current/server.js`, PM2
+log locations) and no secrets — each server can replace it locally if
+a different layout is needed.

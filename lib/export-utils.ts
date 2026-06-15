@@ -405,7 +405,7 @@ function exportAsPDF(call: CallRecord, timestamp: string): { filename: string; c
         ${call.txHash ? `
         <div class="meta-item">
           <span class="meta-label">Transaction</span>
-          <a class="meta-value highlight" href="${getExplorerTxUrl(call.txHash)}" target="_blank">View on CeloScan →</a>
+          <a class="meta-value highlight" href="${getExplorerTxUrl(call.txHash)}" target="_blank">View on Arbiscan →</a>
         </div>
         ` : ''}
       </div>

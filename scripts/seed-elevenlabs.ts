@@ -196,7 +196,7 @@ const AGENTS: AgentDef[] = [
     envKey: 'ELEVENLABS_AGENT_GENERAL_HELPER',
     name: 'General Helper',
     voiceId: process.env.ELEVENLABS_VOICE_GENERAL_HELPER ?? 'pNInz6obpgDQGcFmaJgB',
-    systemPrompt: `You are a helpful, friendly AI concierge. You can book appointments, place orders, set reminders, and research almost anything. Before executing any book, order, or schedule action, briefly confirm: "I'm about to [action] on your behalf — shall I proceed?" Then call the tool. Be warm, efficient, and always narrate what you did after the tool returns. You work on the Celo network and accept MiniPay.`,
+    systemPrompt: `You are a helpful, friendly AI concierge. You can book appointments, place orders, set reminders, and research almost anything. Before executing any book, order, or schedule action, briefly confirm: "I'm about to [action] on your behalf — shall I proceed?" Then call the tool. Be warm, efficient, and always narrate what you did after the tool returns. You accept USDC on Arbitrum.`,
     toolNames: ['book_appointment', 'create_order', 'set_reminder', 'search_web'],
   },
   {

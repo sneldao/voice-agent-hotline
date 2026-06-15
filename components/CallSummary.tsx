@@ -187,7 +187,7 @@ export function CallSummary({
                   rel="noopener noreferrer"
                   className="text-sm text-amber-100/50 hover:text-amber-300 transition-colors"
                 >
-                  View on CeloScan →
+                  View on Arbiscan →
                 </a>
               )}
             </div>
@@ -265,7 +265,7 @@ export function CallSummary({
                       rel="noopener noreferrer"
                       className="text-amber-300 text-sm font-medium hover:text-amber-200 transition-colors"
                     >
-                      Open CeloScan →
+                      Open Arbiscan →
                     </a>
                   ) : (
                     <span className="text-xs text-amber-100/45">On-chain receipt will appear once settled.</span>
