@@ -21,6 +21,7 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
+.qoder/
 *.swp
 *.swo
 
