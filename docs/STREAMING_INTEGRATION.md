@@ -1,35 +1,58 @@
 # Streaming Payment Integrations
 
-> **Status:** Inactive. The streaming infrastructure (Superfluid + WDK)
+> **Status:** Removed. The streaming infrastructure (Superfluid + WDK)
 > shipped before the project migrated to x402 on Arbitrum. The code
-> remains in the repo for reference but is not wired into the active
-> payment path.
+> was deleted once the x402 path was proven out — see commit history
+> for the `chore: remove Superfluid + WDK dead code` series.
 
-## Why
+## Current Payment Model
 
-The current payment model is **x402 USDC on Arbitrum** with gasless
+The active payment model is **x402 USDC on Arbitrum** with gasless
 settlement via the 1Shot Permissionless Relayer — see
 `lib/payment-settlement.ts` and `app/api/payments/`. This is the
 documented model in `docs/AGENTIC_ARCHITECTURE.md#payment-flow` and
-is what every call actually settles through.
+is what every call settles through.
 
-Superfluid and the WDK (Tether Wallet Development Kit) were the
-earlier Celo-era experiments. They are no longer on the active path:
+## Why the Streaming Path Was Removed
 
-- `lib/superfluid-streaming.ts` — CFAv1Forwarder helpers, Celo-only
-- `lib/useSuperfluidStreaming.ts` — React hook wrapping the helpers
-- `components/StreamingPaymentModal.tsx` — UI for starting/stopping a
-  Superfluid stream
+Superfluid (CFAv1Forwarder / USDCx) and the WDK (Tether Wallet
+Development Kit) were the earlier Celo-era experiments. They were
+deleted because:
 
-The WDK packages are still listed in `package-lock.json` for legacy
-reasons but are not imported anywhere. A future cleanup pass can
-remove them.
+1. **No callers** — `useSuperfluidStreaming`, `StreamingPaymentModal`,
+   and `SuperfluidStreamingService` were never reached in the active
+   call flow once x402 took over.
+2. **Wrong chain** — the contracts are Celo-only and the project
+   settled on Arbitrum.
+3. **Wrong model** — per-second streaming required pre-funding and
+   facet control; per-call x402 settlement is simpler and
+   non-custodial.
+4. **Dead dependencies** — `@tetherto/wdk` + `@tetherto/wdk-wallet-evm`
+   + `@tetherto/wdk-failover-provider` and their native `sodium-native`
+   / `require-addon` chain were adding build warnings for code that
+   nothing imported.
+
+Removed in this cleanup:
+
+- `lib/superfluid-streaming.ts`
+- `lib/useSuperfluidStreaming.ts`
+- `components/StreamingPaymentModal.tsx`
+- `CFA_V1_FORWARDER` and `SUPERFLUID_USDCX` exports from
+  `lib/arbitrum-chain.ts`
+- The WDK / sodium-native / require-addon `ignoreWarnings` blocks in
+  `next.config.js`
+- `NEXT_PUBLIC_FACILITATOR_ADDRESS` and the WDK env-var block in
+  `.env.local.example`
+- WDK packages from `pnpm-lock.yaml`
+- The `superfluid_stream` mode from `useRealPayment.ts`
+  (`PaymentState.mode` is now `'user_settled'` only)
+- The `paymentMode === 'streaming'` / `streamingPreflight` branches
+  in `ActiveCall.tsx`
 
 ## If You Want Streaming Back
 
 If the product needs subscription or continuous-stream use cases
-later, the right move is not to revive this code. The x402 model
-already supports per-call micro-billing; adding a session-key /
-delegated-streaming layer on top of x402 is the cleaner path. The
-`StreamingPaymentModal` component can be re-tasked at that point
-without depending on Superfluid or the Celo contract set.
+later, the right move is not to revive the deleted code. The x402
+model already supports per-call micro-billing; adding a session-key /
+delegated-streaming layer on top of x402 (or pulling in a 2025+
+protocol like Superfluid's SuperVNet) is the cleaner path.

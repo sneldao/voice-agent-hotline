@@ -83,18 +83,6 @@ export const ARB_USDC_EIP712_DOMAIN_SEPOLIA = {
 };
 
 // ============================================
-// Superfluid on Arbitrum
-// ============================================
-
-/** CFAv1Forwarder — same address on every Superfluid-enabled chain */
-export const CFA_V1_FORWARDER: Address = '0xcfA132E353cB4E398080B9700609bb008eceB125';
-
-/** Superfluid-wrapped USDC on Arbitrum One (USDCx) */
-export const SUPERFLUID_USDCX: Address =
-  process.env.NEXT_PUBLIC_SUPERFLUID_TOKEN as Address ||
-  '0xe20FE5f8cD2c1CBa97C2fFDE5B28779cFdC256c2';
-
-// ============================================
 // x402 / ERC-7710
 // ============================================
 

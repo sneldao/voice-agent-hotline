@@ -21,7 +21,7 @@ import { ShareModal } from './ShareModal';
 import { PostCallPrompt } from './PostCallPrompt';
 import type { PaymentState } from '@/lib/useRealPayment';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
-import { SUPERFLUID_TOKEN_SYMBOL, getExplorerTxUrl } from '@/lib/superfluid-streaming';
+import { getExplorerTxUrl } from '@/lib/arbitrum-chain';
 
 interface CallSummaryProps {
   isOpen: boolean;
@@ -91,7 +91,6 @@ export function CallSummary({
   if (!isOpen) return null;
 
   const explorerUrl = payment?.explorerUrl || (txHash ? getExplorerTxUrl(txHash) : undefined);
-  const tokenLabel = payment?.mode === 'superfluid_stream' ? SUPERFLUID_TOKEN_SYMBOL : 'USDC';
   const status: 'settled' | 'processing' | 'pending' | 'error' | 'simulated' = payment?.isProcessing
     ? 'processing'
     : payment?.error
@@ -250,7 +249,7 @@ export function CallSummary({
                   </div>
                   <div className="bg-black/25 rounded-lg p-3">
                     <p className="text-xs text-amber-100/45">Token</p>
-                    <p className="text-lg font-semibold text-amber-50">{tokenLabel}</p>
+                    <p className="text-lg font-semibold text-amber-50">USDC</p>
                   </div>
                   <div className="bg-black/25 rounded-lg p-3">
                     <p className="text-xs text-amber-100/45">Call ID</p>

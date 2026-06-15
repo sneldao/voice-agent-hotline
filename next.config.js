@@ -69,21 +69,9 @@ const nextConfig = {
       };
     }
 
-    // Ignore native module warnings from sodium-native/WDK
+    // Ignore native module warnings from third-party deps
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
-      {
-        module: /node_modules\/@tetherto\/wdk/,
-        message: /Can't resolve 'sodium-native'/,
-      },
-      {
-        module: /node_modules\/sodium-native/,
-        message: /Critical dependency/,
-      },
-      {
-        module: /node_modules\/require-addon/,
-        message: /Critical dependency/,
-      },
       {
         module: /node_modules\/@walletconnect/,
         message: /Module not found: Can't resolve 'pino-pretty'/,

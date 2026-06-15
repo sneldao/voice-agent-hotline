@@ -1,5 +1,5 @@
 import { CallRecord } from './useCallHistory';
-import { getExplorerTxUrl } from './superfluid-streaming';
+import { getExplorerTxUrl } from './arbitrum-chain';
 
 export interface ExportOptions {
   format: 'txt' | 'json' | 'pdf' | 'csv';

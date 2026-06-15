@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
-import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
+import { getExplorerTxUrl } from '@/lib/arbitrum-chain';
 
 export const dynamic = 'force-dynamic';
 

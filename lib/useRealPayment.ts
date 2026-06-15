@@ -5,7 +5,7 @@ import { apiUrl } from './api';
 import { useWallet, signMessage } from './WalletContextNew';
 import { ARB_TOKENS } from './payment-settlement';
 import { validateAddress } from './address';
-import { getExplorerTxUrl } from './superfluid-streaming';
+import { getExplorerTxUrl } from './arbitrum-chain';
 import type { Address } from 'viem';
 
 // EIP-3009 transferWithAuthorization ABI (subset for user-settled calls)
@@ -33,7 +33,7 @@ export interface PaymentState {
   isProcessing: boolean;
   isSettled: boolean;
   isSimulated: boolean;
-  mode: 'user_settled' | 'superfluid_stream';
+  mode: 'user_settled';
   txHash?: string;
   error: string | null;
   explorerUrl?: string;

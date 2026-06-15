@@ -4,12 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWidgetConversation } from '@/lib/useWidgetConversation';
 import { useWebRTCSupport } from '@/lib/useWebRTCSupport';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
-import { useRealPayment, type PaymentState } from '@/lib/useRealPayment';
-import { useSuperfluidStreaming } from '@/lib/useSuperfluidStreaming';
+import { useRealPayment } from '@/lib/useRealPayment';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
 import type { Agent } from '@/lib/types';
-import { getExplorerTxUrl } from '@/lib/superfluid-streaming';
-import { Mic, MicOff, Volume2, VolumeX, PhoneOff, AlertCircle, Radio } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, PhoneOff, AlertCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CallSummary } from './CallSummary';
 import { showError } from './ui';
@@ -20,14 +18,6 @@ interface ActiveCallProps {
   agent: Agent;
   callId: string;
   userId: string;
-  paymentMode?: 'x402' | 'streaming';
-  streamingPreflight?: {
-    chainName: string;
-    tokenSymbol: string;
-    payoutAddress: string;
-    availableBalance?: number;
-    requiredBalance?: number;
-  };
   relatedAgents?: AgentRecommendation[];
   onEnd: () => void;
   onSelectRelatedAgent?: (agentId: string) => void;
@@ -45,8 +35,6 @@ export function ActiveCall({
   agent,
   callId,
   userId,
-  paymentMode = 'x402',
-  streamingPreflight,
   relatedAgents = [],
   onEnd,
   onSelectRelatedAgent,
@@ -73,14 +61,7 @@ export function ActiveCall({
   const startCall = startConversation;
   const endCall = endConversation;
   const { payment, settlePayment, resetPayment } = useRealPayment();
-  const {
-    status: streamingStatus,
-    txHash: streamingTxHash,
-    error: streamingError,
-    startStream,
-    stopStream,
-  } = useSuperfluidStreaming();
-  
+
   const { isSupported, permissions } = useWebRTCSupport();
   const { saveCall, rateCall, toggleSaveCall, exportTranscript, updateCallReceipt } = useLocalCallHistory();
   const [hasStarted, setHasStarted] = useState(false);
@@ -93,22 +74,8 @@ export function ActiveCall({
   // #20: Keep a ref to transcripts so handleEnd always reads the latest
   const transcriptsRef = useRef(transcripts);
   transcriptsRef.current = transcripts;
-  const streamingStartedRef = useRef(false);
   const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const agentPayoutAddress = agent.wallet_address || agent.wallet || '';
-  const platformAddress = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
-  // Fall back to platform address if agent has no wallet (no split in that case)
-  const payoutAddress = agentPayoutAddress || platformAddress;
-  const monthlyStreamingRate = agent.rate * 60 * 24 * 30;
-
-  // #22: Reset streaming ref when agent changes (e.g. related-agent switch)
-  const prevAgentIdRef = useRef(agent.id);
-  useEffect(() => {
-    if (prevAgentIdRef.current !== agent.id) {
-      streamingStartedRef.current = false;
-      prevAgentIdRef.current = agent.id;
-    }
-  }, [agent.id]);
+  const payoutAddress = (agent.wallet_address || agent.wallet || '') || process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '';
 
   // #27: Prevent accidental navigation during an active call
   useEffect(() => {
@@ -175,40 +142,6 @@ export function ActiveCall({
     };
   }, [hasStarted, isSupported, resetPayment]);
 
-  useEffect(() => {
-    if (paymentMode !== 'streaming' || !call.isConnected || streamingStartedRef.current) {
-      return;
-    }
-
-    if (!payoutAddress) {
-      showError('Streaming payment requires an agent payout address.');
-      endCall();
-      onEnd();
-      return;
-    }
-
-    streamingStartedRef.current = true;
-
-    void startStream(payoutAddress, monthlyStreamingRate, agentPayoutAddress ? platformAddress : undefined).then((txHash) => {
-      if (!txHash) {
-        streamingStartedRef.current = false;
-        showError('Failed to start streaming payment. Ending call.');
-        endCall();
-        onEnd();
-      }
-    });
-  }, [
-    agentPayoutAddress,
-    call.isConnected,
-    endCall,
-    monthlyStreamingRate,
-    onEnd,
-    paymentMode,
-    payoutAddress,
-    platformAddress,
-    startStream,
-  ]);
-
   // Haptic feedback helper — safe no-op when browser doesn't support it
   const vibrate = (pattern: number | number[]) => {
     try { navigator.vibrate?.(pattern); } catch { /* unsupported */ }
@@ -253,16 +186,7 @@ export function ActiveCall({
       transcripts: finalTranscripts,
     });
 
-    if (paymentMode === 'streaming' && payoutAddress) {
-      const stopTxHash = await stopStream(
-        payoutAddress,
-        agentPayoutAddress ? platformAddress : undefined,
-        { callId: id, estimatedCost: totalCost },
-      );
-      if (stopTxHash) {
-        updateCallReceipt(id, { txHash: stopTxHash, cost: totalCost });
-      }
-    } else if (totalCost > 0 && !payment.isProcessing && !payment.isSettled) {
+    if (totalCost > 0 && !payment.isProcessing && !payment.isSettled) {
       const amount = parseUnits(totalCost.toFixed(6), 6);
       const settlement = await settlePayment({
         callId,
@@ -280,20 +204,16 @@ export function ActiveCall({
     setIsFinalizing(false);
   }, [
     agent,
-    agentPayoutAddress,
     call.cost,
     call.duration,
     callId,
     endCall,
     isFinalizing,
-    paymentMode,
     payment.isProcessing,
     payment.isSettled,
     payoutAddress,
-    platformAddress,
     saveCall,
     settlePayment,
-    stopStream,
     updateCallReceipt,
     userId,
   ]);
@@ -366,37 +286,13 @@ export function ActiveCall({
   };
 
   const quality = getQualityIndicator();
-  const shortAddress = (value: string) => {
-    if (!value || value.length < 12) return value || 'Not set';
-    return `${value.slice(0, 6)}...${value.slice(-4)}`;
-  };
-  const streamingPayment: PaymentState = {
-    isProcessing: isFinalizing || streamingStatus === 'pending',
-    isSettled: streamingStatus === 'stopped',
-    isSimulated: false,
-    mode: 'superfluid_stream',
-    txHash: streamingTxHash,
-    explorerUrl: streamingTxHash ? getExplorerTxUrl(streamingTxHash) : undefined,
-    error: streamingError || null,
-  };
-  const activePayment = paymentMode === 'streaming' ? streamingPayment : payment;
-  const paymentBadge = paymentMode === 'streaming'
-    ? (isFinalizing || streamingStatus === 'pending'
-        ? { label: 'Settling', className: 'bg-amber-500/15 text-amber-300 border-amber-500/40' }
-        : streamingError
-          ? { label: 'Payment Error', className: 'bg-red-500/15 text-red-300 border-red-500/40' }
-          : streamingStatus === 'stopped'
-            ? { label: 'On-Chain', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' }
-            : streamingStatus === 'streaming'
-              ? { label: 'Streaming Live', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' }
-              : { label: 'Streaming Ready', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' })
-    : (isFinalizing || payment.isProcessing
-        ? { label: 'Settling', className: 'bg-amber-500/15 text-amber-300 border-amber-500/40' }
-        : payment.error
-          ? { label: 'Payment Error', className: 'bg-red-500/15 text-red-300 border-red-500/40' }
-          : payment.isSettled
-            ? { label: payment.isSimulated ? 'Simulated' : 'On-Chain', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' }
-            : { label: 'x402 Ready', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' });
+  const paymentBadge = isFinalizing || payment.isProcessing
+    ? { label: 'Settling', className: 'bg-amber-500/15 text-amber-300 border-amber-500/40' }
+    : payment.error
+      ? { label: 'Payment Error', className: 'bg-red-500/15 text-red-300 border-red-500/40' }
+      : payment.isSettled
+        ? { label: payment.isSimulated ? 'Simulated' : 'On-Chain', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' }
+        : { label: 'x402 Ready', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' };
 
   if (!isSupported) {
     return (
@@ -477,22 +373,6 @@ export function ActiveCall({
             </div>
           </div>
         </div>
-        {paymentMode === 'streaming' && streamingPreflight && (
-          <details className="border-t border-amber-100/10 px-4 py-2">
-            <summary className="cursor-pointer text-xs text-amber-100/45 hover:text-amber-100/65">Payment info</summary>
-            <div className="mt-2 flex items-center gap-2 text-xs">
-              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${paymentBadge.className}`}>
-                <Radio className="h-3 w-3" />
-                {paymentBadge.label}
-              </span>
-              <span className="payment-badge border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                Streaming {streamingPreflight.tokenSymbol}
-              </span>
-              <span className="text-amber-100/40">to {shortAddress(streamingPreflight.payoutAddress)}</span>
-            </div>
-          </details>
-        )}
       </div>
 
       {call.isReconnecting && (
@@ -664,8 +544,8 @@ export function ActiveCall({
         duration={call.duration}
         cost={call.cost}
         transcripts={transcripts}
-        txHash={activePayment.txHash}
-        payment={activePayment}
+        txHash={payment.txHash}
+        payment={payment}
         onClose={handleCloseSummary}
         onRate={handleRate}
         onSave={handleSave}
