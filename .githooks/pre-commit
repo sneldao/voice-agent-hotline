@@ -43,8 +43,10 @@ PATTERNS=(
   # Generic base64url tokens (no + or / or =), 40+ chars. Catches
   # prefixed tokens that aren't covered by the patterns above, e.g.
   # the gQAAAAAAAd4GAAIgcDJiMTRjMDE5OWQ... leak from 2026-06.
-  # 40 chars is long enough to be rare in source code; if false
-  # positives appear, add the file to SKIP_PATTERNS below.
+  # Public Ethereum contract addresses (0x + 40 hex) are stripped
+  # from the content before this pattern runs, so they don't fire
+  # here. 40 chars is long enough to be rare in source code; if
+  # false positives appear, add the file to SKIP_PATTERNS below.
   '[A-Za-z0-9_-]{40,}'
   # Generic base64 secrets (must contain + or / to distinguish from hex)
   '[A-Za-z0-9+/]{20,}[/+][A-Za-z0-9+/]{19,}={0,2}'
@@ -99,6 +101,13 @@ for file in $STAGED_FILES; do
   if [ -z "$CONTENT" ]; then
     continue
   fi
+
+  # Strip 0x-prefixed 40-hex Ethereum addresses (public, not secrets)
+  # so the generic base64url backstop doesn't flag them. The 64-hex
+  # private-key pattern still catches real private keys because the
+  # 40-hex address pattern requires a non-hex char (or EOL) after the
+  # 40 chars, which excludes the inner prefix of a 64-hex key.
+  CONTENT=$(echo "$CONTENT" | sed -E 's/0x[0-9a-fA-F]{40}([^0-9a-fA-F]|$)/\1/g')
 
   for pattern in "${PATTERNS[@]}"; do
     MATCHES=$(echo "$CONTENT" | grep -nE "$pattern" 2>/dev/null || true)
