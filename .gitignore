@@ -21,9 +21,20 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
-.qoder/
 *.swp
 *.swo
+
+# AI coding tools (per-machine state, not project documentation)
+.agents/
+.aider*
+.blackboxcli/
+.claude/
+.commandcode/
+.cursor/
+.junie
+.kilocode
+.kimchi/
+.qoder/
 
 # Logs
 npm-debug.log*
