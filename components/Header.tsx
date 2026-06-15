@@ -65,16 +65,6 @@ export function Header({
                 </p>
               </div>
             </div>
-            <a
-              href="https://arbitrum.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-3 hidden items-center gap-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/8 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-cyan-300 transition-colors hover:bg-cyan-500/15 sm:inline-flex"
-              aria-label="Powered by Celo"
-            >
-              <span className="text-xs">⬡</span>
-              Celo
-            </a>
 
         {/* Wallet */}
         <div className="flex items-center gap-2" role="group" aria-label="User wallet">
@@ -101,6 +91,13 @@ export function Header({
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-amber-100/70 transition-colors hover:bg-amber-100/10"
                   >
                     📊 Dashboard
+                  </Link>
+                  <Link
+                    href="/list-your-agent"
+                    onClick={() => setShowMenu(false)}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-amber-100/70 transition-colors hover:bg-amber-100/10"
+                  >
+                    🎙️ List Agent
                   </Link>
                   <button
                     onClick={() => {

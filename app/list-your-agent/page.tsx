@@ -1,10 +1,24 @@
 'use client';
 
 import { AgentRegistrationForm } from '@/components/ui/AgentCreation';
+import { Header } from '@/components/Header';
+import { useWallet } from '@/lib/WalletContextNew';
+import { useUserBalance } from '@/lib/useSWR';
 
 export default function ListYourAgentPage() {
+  const { connected, address, isConnecting, connect, disconnect, formatAddress } = useWallet();
+  const { balance: userBalance } = useUserBalance(address);
+
   return (
     <main className="min-h-screen bg-[#0b0806] text-amber-50">
+      <Header
+        connected={connected}
+        userBalance={userBalance || 0}
+        isConnecting={isConnecting}
+        formatAddress={formatAddress}
+        onConnect={connect}
+        onDisconnect={disconnect}
+      />
       {/* Hero */}
       <div className="border-b border-amber-100/15 bg-[#17100d]/85">
         <div className="max-w-2xl mx-auto px-4 py-12 text-center">

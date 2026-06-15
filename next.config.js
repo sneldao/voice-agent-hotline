@@ -20,6 +20,9 @@ const nextConfig = {
     return 'build-' + Date.now()
   },
 
+  // Empty turbopack config - webpack config above handles customizations
+  turbopack: {},
+
   // Server actions configuration
   experimental: {
     serverActions: {

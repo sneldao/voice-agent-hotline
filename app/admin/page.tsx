@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/WalletContextNew';
+import { useUserBalance } from '@/lib/useSWR';
 import { apiUrl } from '@/lib/api';
+import { Header } from '@/components/Header';
 
 interface Agent {
   id: string;
@@ -33,7 +36,9 @@ function isAdmin(address: string | null): boolean {
 }
 
 export default function AdminPage() {
-  const { address, connected, connect } = useWallet();
+  const router = useRouter();
+  const { address, connected, connect, disconnect, isConnecting, formatAddress } = useWallet();
+  const { balance: userBalance } = useUserBalance(address);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -146,6 +151,16 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#0b0806] text-amber-50">
+      <Header
+        connected={connected}
+        userBalance={userBalance}
+        isConnecting={isConnecting}
+        formatAddress={formatAddress}
+        onConnect={connect}
+        onDisconnect={disconnect}
+        onNavigateToProfile={() => router.push('/')}
+      />
+
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg transition-all ${
           toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
