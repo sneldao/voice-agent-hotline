@@ -1,11 +1,11 @@
 {
   "name": "VOISSS — A phonebook for AI you can talk to",
   "short_name": "VOISSS",
-  "description": "Say what you need. VOISSS connects the right voice. No keyboard required.",
+  "description": "Say what you need. Get connected to the right voice agent. Hands-free AI calls, billed per minute in USDC on Arbitrum.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#1c1917",
+  "theme_color": "#1c1917",
   "orientation": "portrait-primary",
   "icons": [
     {

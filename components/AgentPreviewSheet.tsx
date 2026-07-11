@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, Phone, Radio, Shield, Sparkles, Wallet, X } from 'lucide-react';
+import { CheckCircle, ExternalLink, Phone, Radio, Shield, Sparkles, Wallet, X } from 'lucide-react';
 import type { Agent } from '@/lib/types';
 import { Button } from './ui/Button';
 
@@ -70,8 +70,8 @@ export function AgentPreviewSheet({
   const persona = getPreviewPersona(agent);
 
   return (
-    <div className="fixed inset-0 z-[60] flex h-dvh items-end justify-center overflow-y-auto bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4 lg:items-center lg:justify-end lg:pb-8 lg:pr-8">
-      <div className="operator-panel mx-auto w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl shadow-black/60 lg:mx-0 lg:max-w-md">
+    <div className="fixed inset-0 z-[60] flex h-dvh items-end justify-center overflow-y-auto bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="operator-panel mx-auto w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl shadow-black/60 sm:max-w-md">
         <div className="flex items-start gap-4 border-b border-amber-100/15 p-4">
           <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${agent.color || 'from-amber-500 to-orange-600'} text-2xl`}>
             {agent.avatar || agent.name.charAt(0)}
@@ -179,8 +179,23 @@ export function AgentPreviewSheet({
               </p>
             </div>
           ) : !hasEnoughBalance ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-              Balance may be too low for the suggested call cap.
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+              <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+                <Wallet className="h-4 w-4" />
+                Balance: ${userBalance.toFixed(2)} USDC
+              </p>
+              <p className="mt-1 text-xs leading-5 text-amber-100/70">
+                Your balance may be too low for the suggested cap of ${maxBudget.toFixed(2)}. You can still start the call — you&apos;ll approve the exact amount when it ends.
+              </p>
+              <a
+                href="https://bridge.arbitrum.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-300 underline decoration-amber-400/40 underline-offset-2 hover:text-amber-200"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Bridge USDC to Arbitrum
+              </a>
             </div>
           ) : (
             <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">

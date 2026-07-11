@@ -8,17 +8,28 @@ export async function GET(
 ) {
   try {
     const { address } = await params;
-    
-    // Normalize address
+
+    // Normalize and validate address
     const normalizedAddress = address.toLowerCase();
-    
-    let user = await getUserByAddress(normalizedAddress);
-    
-    if (!user) {
-      // Return 404 instead of auto-creating to prevent phantom users from bots/prefetchers
-      return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }), request);
+    if (!/^0x[a-f0-9]{40}$/.test(normalizedAddress)) {
+      return withCors(NextResponse.json({ error: 'Invalid address' }, { status: 400 }), request);
     }
-    
+
+    let user = await getUserByAddress(normalizedAddress);
+
+    if (!user) {
+      // Auto-create user on first fetch — prevents 404 console noise
+      // and ensures balance tracking works from first wallet connection
+      const now = Date.now();
+      user = await createUser({
+        id: `user_${normalizedAddress}`,
+        address: normalizedAddress,
+        balance: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
     return withCors(
       NextResponse.json({
         id: user.id,

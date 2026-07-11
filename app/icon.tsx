@@ -13,15 +13,17 @@ export default function Icon() {
     (
       <div
         style={{
-          fontSize: 24,
-          background: 'linear-gradient(to bottom right, #8b5cf6, #3b82f6)',
+          fontSize: 22,
+          fontWeight: 700,
+          background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'white',
+          color: '#0f172a',
           borderRadius: '50%',
+          letterSpacing: '-0.02em',
         }}
       >
         V

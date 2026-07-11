@@ -31,7 +31,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
-  themeColor: '#0f172a',
+  themeColor: '#1c1917',
 };
 
 export const metadata: Metadata = {
@@ -40,9 +40,9 @@ export const metadata: Metadata = {
     default: 'VOISSS — A phonebook for AI you can talk to',
     template: '%s | VOISSS',
   },
-  description: 'Say what you need. VOISSS connects the right voice. Hands-free AI agents powered by ElevenLabs — no keyboard required. Built with Cursor.',
-  keywords: ['AI agents', 'voice AI', 'ElevenLabs', 'hands-free', 'no keyboard', 'voice calls', 'conversational AI', 'speech-to-text', 'text-to-speech', 'Cursor'],
-  authors: [{ name: 'VOISSS Team' }],
+  description: 'Say what you need. VOISSS connects you to the right voice agent — hands-free AI calls powered by ElevenLabs, billed per minute in USDC on Arbitrum.',
+  keywords: ['AI agents', 'voice AI', 'ElevenLabs', 'hands-free', 'voice calls', 'conversational AI', 'USDC', 'Arbitrum', 'x402', 'AI hotline'],
+  authors: [{ name: 'VOISSS' }],
   creator: 'VOISSS',
   publisher: 'VOISSS',
   robots: {
@@ -55,13 +55,13 @@ export const metadata: Metadata = {
     url: 'https://voisss-agent-hotline.vercel.app',
     siteName: 'VOISSS',
     title: 'VOISSS — A phonebook for AI you can talk to',
-    description: 'Say what you need. VOISSS connects the right voice. No keyboard, no forms — just speak and get things done.',
+    description: 'Say what you need. Get connected to the right voice agent. Hands-free AI calls, billed per minute in USDC on Arbitrum.',
     images: [
       {
         url: '/og-image.svg',
         width: 1200,
         height: 630,
-        alt: 'VOISSS - Voice Agent Hotline - No Keyboard Required',
+        alt: 'VOISSS — Voice Agent Hotline. AI agents you can talk to, billed in USDC on Arbitrum.',
         type: 'image/svg+xml',
       },
     ],
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     site: '@voisss',
     creator: '@voisss',
     title: 'VOISSS — A phonebook for AI you can talk to',
-    description: 'Say what you need. Get connected to the right voice. No keyboard required. Built with Cursor + ElevenLabs.',
+    description: 'Say what you need. Get connected to the right voice agent. Hands-free AI calls, billed per minute in USDC on Arbitrum.',
     images: ['/og-image.svg'],
   },
   icons: {
