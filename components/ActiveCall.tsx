@@ -29,6 +29,8 @@ interface ActiveCallProps {
   isFirstCall?: boolean;
   /** Callback to connect wallet (for post-call prompt) */
   onConnectWallet?: () => void;
+  /** Whether this is a trial call (2-min cap, no payment) */
+  isTrialCall?: boolean;
 }
 
 export function ActiveCall({
@@ -42,20 +44,23 @@ export function ActiveCall({
   streakCount = 0,
   isFirstCall = false,
   onConnectWallet,
+  isTrialCall = false,
 }: ActiveCallProps) {
-  const { 
-    state: call, 
-    startConversation, 
-    endConversation, 
-    isMuted, 
-    toggleMute, 
+  const {
+    state: call,
+    startConversation,
+    endConversation,
+    isMuted,
+    toggleMute,
     transcripts,
     setVolume,
   } = useWidgetConversation({
     agentId: agent.id,
     userId,
     ratePerMinute: agent.rate,
-    capUsd: agent.rate * 5, // 5-minute suggested cap — bill min(elapsed*rate, cap)
+    // Trial calls: 2-min time cap at $0 (no payment). Paid calls: 5-min dollar cap.
+    capUsd: isTrialCall ? 0 : agent.rate * 5,
+    maxDurationSeconds: isTrialCall ? 120 : undefined,
   });
   
   // Aliases for compatibility

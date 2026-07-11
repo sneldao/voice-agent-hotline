@@ -68,9 +68,33 @@ export default function AdminPage() {
   const handleAction = async (id: string, action: 'approve' | 'reject', reason?: string) => {
     setActionLoading(id + action);
     try {
+      // Sign auth message for admin wallet auth
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const msg = `VOISSS auth: ${address!.toLowerCase()} at ${ts}`;
+      const eth = (window as any).ethereum;
+      let signature = '';
+      if (eth) {
+        try {
+          signature = await eth.request({
+            method: 'personal_sign',
+            params: [msg, address],
+          }) as string;
+        } catch {
+          showToast('Wallet signature required', 'error');
+          return;
+        }
+      }
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (signature) {
+        headers['X-Wallet-Address'] = address as string;
+        headers['X-Signature'] = signature;
+        headers['X-Timestamp'] = ts;
+      }
+
       const res = await fetch(apiUrl(`/api/agents/${id}`), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
       });
       const data = await res.json();
@@ -92,7 +116,34 @@ export default function AdminPage() {
     if (!confirm('Delete this agent permanently?')) return;
     setActionLoading(id + 'delete');
     try {
-      const res = await fetch(apiUrl(`/api/agents/${id}`), { method: 'DELETE' });
+      // Sign auth message for admin wallet auth
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const msg = `VOISSS auth: ${address!.toLowerCase()} at ${ts}`;
+      const eth = (window as any).ethereum;
+      let signature = '';
+      if (eth) {
+        try {
+          signature = await eth.request({
+            method: 'personal_sign',
+            params: [msg, address],
+          }) as string;
+        } catch {
+          showToast('Wallet signature required', 'error');
+          return;
+        }
+      }
+
+      const headers: Record<string, string> = {};
+      if (signature) {
+        headers['X-Wallet-Address'] = address as string;
+        headers['X-Signature'] = signature;
+        headers['X-Timestamp'] = ts;
+      }
+
+      const res = await fetch(apiUrl(`/api/agents/${id}`), {
+        method: 'DELETE',
+        headers,
+      });
       if (!res.ok) throw new Error('Delete failed');
       showToast('Agent deleted');
       fetchAgents();

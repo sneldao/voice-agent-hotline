@@ -42,6 +42,8 @@ interface WidgetConversationOptions {
   ratePerMinute?: number;
   /** Maximum charge in USD. When elapsed*rate exceeds cap, cost is clamped and the call auto-ends. */
   capUsd?: number;
+  /** Maximum call duration in seconds. When exceeded, the call auto-ends. Used for trial calls. */
+  maxDurationSeconds?: number;
   useSignedUrl?: boolean;
   onTranscript?: (text: string, speaker: 'user' | 'agent', isFinal: boolean) => void;
   onError?: (error: string) => void;
@@ -55,6 +57,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     userId,
     ratePerMinute = 0.1,
     capUsd,
+    maxDurationSeconds,
     useSignedUrl = true, // Default to signed URLs — probe confirmed they work
     onTranscript,
     onError,
@@ -134,9 +137,16 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
         : rawCost;
       setState((prev) => ({ ...prev, duration, cost }));
 
-      // Auto-end call when the cap is hit
-      if (capUsd != null && Number.isFinite(capUsd) && capUsd > 0 && rawCost >= capUsd) {
-        console.log('[WidgetConversation] Cap reached ($' + capUsd.toFixed(4) + '), ending call');
+      // Auto-end call when the dollar cap is hit
+      const capReached = capUsd != null && Number.isFinite(capUsd) && capUsd > 0 && rawCost >= capUsd;
+      // Auto-end call when the time cap is hit (trial calls)
+      const timeCapReached = maxDurationSeconds != null && duration >= maxDurationSeconds;
+
+      if (capReached || timeCapReached) {
+        const reason = timeCapReached
+          ? 'Time cap reached (' + maxDurationSeconds + 's)'
+          : 'Cost cap reached ($' + capUsd?.toFixed(4) + ')';
+        console.log('[WidgetConversation] ' + reason + ', ending call');
         intentionalEndRef.current = true;
         engine.endConversation();
         if (durationIntervalRef.current) {
@@ -162,7 +172,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     if (callIdRef.current) {
       connectSSE(callIdRef.current);
     }
-  }, [ratePerMinute, capUsd, engine, onConnect, disconnectSSE]);
+  }, [ratePerMinute, capUsd, maxDurationSeconds, engine, onConnect, disconnectSSE]);
 
   const handleDisconnected = useCallback(() => {
     if (!connectedRef.current) return; // Deduplicate

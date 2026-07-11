@@ -61,6 +61,55 @@ export async function verifyWalletAuth(req: NextRequest): Promise<{
 }
 
 /**
+ * Verify that the caller is an admin wallet.
+ * Uses the same EIP-191 signature as verifyWalletAuth, but also checks
+ * that the wallet is in NEXT_PUBLIC_ADMIN_WALLETS.
+ *
+ * Expects headers:
+ *   X-Wallet-Address: 0x...
+ *   X-Signature: 0x... (EIP-191 signature of the challenge)
+ *   X-Timestamp: unix timestamp
+ */
+export async function verifyAdminWalletAuth(req: NextRequest): Promise<{
+  authenticated: boolean;
+  address?: string;
+  error?: string;
+}> {
+  const auth = await verifyWalletAuth(req);
+  if (!auth.authenticated) return auth;
+
+  const adminWallets = (process.env.NEXT_PUBLIC_ADMIN_WALLETS || '')
+    .toLowerCase()
+    .split(',')
+    .filter(Boolean);
+
+  if (adminWallets.length === 0) {
+    return { authenticated: false, error: 'Admin wallets not configured' };
+  }
+
+  if (!adminWallets.includes(auth.address!)) {
+    return { authenticated: false, error: 'Wallet not authorized as admin' };
+  }
+
+  return auth;
+}
+
+/**
+ * Require admin wallet auth — returns 401 NextResponse if unauthorized, null if authorized.
+ * Use as: const auth = await requireAdminWalletAuth(req); if (auth) return auth;
+ */
+export async function requireAdminWalletAuth(req: NextRequest): Promise<NextResponse | null> {
+  const auth = await verifyAdminWalletAuth(req);
+  if (!auth.authenticated) {
+    return NextResponse.json(
+      { error: auth.error || 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+  return null;
+}
+
+/**
  * Verify the request is from ElevenLabs (webhook secret).
  * Expects header: X-ElevenLabs-Secret
  *

@@ -170,11 +170,11 @@ export function AgentPreviewSheet({
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-amber-200">
                 <Wallet className="h-4 w-4" />
-                {hasFreeCall ? 'First call is on us' : 'Account needed for paid calls'}
+                {hasFreeCall ? 'Trial call available' : 'Account needed for paid calls'}
               </p>
               <p className="mt-1 text-xs leading-5 text-amber-100/80">
                 {hasFreeCall
-                  ? 'No wallet needed — try a free call and see how it feels.'
+                  ? 'Try a 2-minute call without a wallet. The agent is not paid for trial calls — connect a wallet for paid calls that settle on Arbitrum.'
                   : 'Sign in before starting so the hotline can settle against a real address.'}
               </p>
             </div>
@@ -213,7 +213,7 @@ export function AgentPreviewSheet({
               className="bg-gradient-to-r from-emerald-500 to-amber-500"
             >
               <Phone className="h-4 w-4" />
-              Try free call
+              Try trial call
             </Button>
           ) : (
             <Button type="button" onClick={onConnect} isLoading={isConnectingWallet}>

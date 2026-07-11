@@ -212,9 +212,9 @@ function HomeInner() {
 
   const endCall = useCallback(() => {
     clearLaunchState();
-    // If this was a free call, mark it as used
-    if (freeCall.isFreeCallActive) {
-      freeCall.completeFreeCall();
+    // If this was a trial call, mark it as used (server-side claim)
+    if (freeCall.isFreeCallActive && selectedAgent) {
+      freeCall.completeFreeCall(selectedAgent.id);
     }
     // Record the call for streak tracking
     if (selectedAgent) {
@@ -354,6 +354,7 @@ function HomeInner() {
               streakCount={streak.currentStreak}
               isFirstCall={streak.totalCalls <= 1}
               onConnectWallet={connect}
+              isTrialCall={freeCall.isFreeCallActive}
             />
           ) : (
             <>

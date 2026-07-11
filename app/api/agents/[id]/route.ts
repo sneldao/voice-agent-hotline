@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminAuth } from '@/lib/api-auth';
+import { requireAdminWalletAuth, requireAdminAuth } from '@/lib/api-auth';
 import { redis } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
@@ -31,8 +31,12 @@ export async function PATCH(
 ) {
   const { id } = await params;
   try {
-    const auth = requireAdminAuth(req);
-    if (auth) return auth;
+    // Accept either wallet-based admin auth (browser) or API key auth (SDK/CLI)
+    const walletAuth = await requireAdminWalletAuth(req);
+    if (walletAuth) {
+      const apiKeyAuth = requireAdminAuth(req);
+      if (apiKeyAuth) return walletAuth;
+    }
 
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
@@ -120,8 +124,12 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const auth = requireAdminAuth(req);
-    if (auth) return auth;
+    // Accept either wallet-based admin auth (browser) or API key auth (SDK/CLI)
+    const walletAuth = await requireAdminWalletAuth(req);
+    if (walletAuth) {
+      const apiKeyAuth = requireAdminAuth(req);
+      if (apiKeyAuth) return walletAuth;
+    }
 
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
