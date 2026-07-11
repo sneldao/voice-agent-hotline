@@ -125,12 +125,14 @@ See `.env.local.example` for the full list with defaults.
 
 ## Docs
 
+- [`ROADMAP.md`](ROADMAP.md) — project status, completed phases, beta plan, and opportunities under evaluation (Circle Agent Stack, Robinhood Chain)
 - [`docs/AGENTIC_ARCHITECTURE.md`](docs/AGENTIC_ARCHITECTURE.md) — agent lifecycle, on-chain identity, payment flow
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Vercel + Hetzner dual deploy
 - [`docs/HETZNER_DEPLOYMENT.md`](docs/HETZNER_DEPLOYMENT.md) — `make deploy` walkthrough
 - [`docs/SECURITY_ARCHITECTURE_COMPARISON.md`](docs/SECURITY_ARCHITECTURE_COMPARISON.md) — payment security model
 - [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — current perf hot spots
 - [`docs/WIDGET_ARCHITECTURE.md`](docs/WIDGET_ARCHITECTURE.md) — voice widget control layer
+- [`docs/REDIS_KEYS.md`](docs/REDIS_KEYS.md) — Redis key naming conventions and data structures
 - [`docs/STREAMING_INTEGRATION.md`](docs/STREAMING_INTEGRATION.md) — historical note on Superfluid / WDK (inactive)
 
 ---

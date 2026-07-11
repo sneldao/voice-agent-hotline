@@ -189,6 +189,14 @@ on-chain dual transfer. Atomic on-chain 80/20 split requires a
 PaymentRouter contract (planned, Phase B). The agent's earnings
 destination comes from the agent's `wallet_address` field in Redis.
 
+Per-call earnings breakdown is available via `/api/agents/earnings`,
+which reads the `split-payment:{callId}` ledger entries and enriches
+them with settlement tx hashes. The developer dashboard surfaces this
+as an expandable per-call list with trial/ledgered/settled status.
+
+See [`ROADMAP.md`](../ROADMAP.md) for the full phase status and
+opportunities under evaluation (Circle Agent Stack, Robinhood Chain).
+
 ---
 
 ## Agent-to-Agent Communication
