@@ -14,7 +14,7 @@ interface RateLimitEntry {
   resetTime: number;
 }
 
-class RedisRateLimiter {
+export class RedisRateLimiter {
   private config: RateLimitConfig;
   private keyPrefix: string;
 

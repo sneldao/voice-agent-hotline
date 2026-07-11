@@ -1,98 +1,11 @@
 /**
  * Security Utilities
- * 
- * Rate limiting, input validation, sanitization
+ *
+ * Input validation, sanitization.
+ * Rate limiting is handled by lib/rate-limit.ts (Redis-backed).
  */
 
-import { NextRequest, NextResponse } from 'next/server'
 import { validateAddress } from './address'
-
-// Rate limiter using in-memory store (use Redis in production)
-const rateLimits = new Map<string, { count: number; resetTime: number }>()
-
-export interface RateLimitConfig {
-  windowMs: number    // Time window in milliseconds
-  maxRequests: number // Max requests per window
-}
-
-const DEFAULT_CONFIG: RateLimitConfig = {
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 100     // 100 requests per minute
-}
-
-/**
- * Rate limiting middleware
- */
-export function rateLimit(
-  key: string,
-  config: RateLimitConfig = DEFAULT_CONFIG
-): { allowed: boolean; remaining: number; resetIn: number } {
-  const now = Date.now()
-  const record = rateLimits.get(key)
-
-  if (!record || now > record.resetTime) {
-    // New window
-    rateLimits.set(key, {
-      count: 1,
-      resetTime: now + config.windowMs
-    })
-    return {
-      allowed: true,
-      remaining: config.maxRequests - 1,
-      resetIn: config.windowMs
-    }
-  }
-
-  if (record.count >= config.maxRequests) {
-    // Rate limited
-    return {
-      allowed: false,
-      remaining: 0,
-      resetIn: record.resetTime - now
-    }
-  }
-
-  // Increment
-  record.count++
-  rateLimits.set(key, record)
-
-  return {
-    allowed: true,
-    remaining: config.maxRequests - record.count,
-    resetIn: record.resetTime - now
-  }
-}
-
-/**
- * Apply rate limit to API route
- */
-export function withRateLimit(
-  request: NextRequest,
-  config: RateLimitConfig = DEFAULT_CONFIG
-): NextResponse | null {
-  // Use IP + path as key
-  const ip = request.headers.get('x-forwarded-for') || 'unknown'
-  const path = request.nextUrl.pathname
-  const key = `${ip}:${path}`
-
-  const { allowed, remaining, resetIn } = rateLimit(key, config)
-
-  if (!allowed) {
-    return NextResponse.json(
-      { error: 'Too many requests', retryAfter: Math.ceil(resetIn / 1000) },
-      { 
-        status: 429,
-        headers: {
-          'X-RateLimit-Remaining': '0',
-          'Retry-After': Math.ceil(resetIn / 1000).toString()
-        }
-      }
-    )
-  }
-
-  // Return response with rate limit headers
-  return null // Null means continue (response handled elsewhere)
-}
 
 /**
  * Input validation

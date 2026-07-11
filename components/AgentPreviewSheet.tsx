@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckCircle, Phone, Radio, Shield, Sparkles, Wallet, X, Volume2 } from 'lucide-react';
+import { CheckCircle, Phone, Radio, Shield, Sparkles, Wallet, X } from 'lucide-react';
 import type { Agent } from '@/lib/types';
 import { Button } from './ui/Button';
-import { useAudioPreview } from '@/lib/useAudioPreview';
 
 interface AgentPreviewSheetProps {
   agent: Agent | null;
@@ -63,8 +61,6 @@ export function AgentPreviewSheet({
   onConnect,
   onCallNow,
 }: AgentPreviewSheetProps) {
-  const audioPreview = useAudioPreview();
-
   if (!agent) return null;
 
   const rate = Number(agent.rate) || 0;
@@ -75,36 +71,22 @@ export function AgentPreviewSheet({
 
   return (
     <div className="fixed inset-0 z-[60] flex h-dvh items-end justify-center overflow-y-auto bg-black/60 px-3 pb-3 backdrop-blur-sm sm:items-center sm:p-4 lg:items-center lg:justify-end lg:pb-8 lg:pr-8">
-      <div className="mx-auto w-full max-w-lg overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 shadow-2xl shadow-black/60 lg:mx-0 lg:max-w-md">
-        <div className="flex items-start gap-4 border-b border-gray-800 p-4">
-          <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${agent.color || 'from-cyan-500 to-blue-500'} text-2xl`}>
+      <div className="operator-panel mx-auto w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl shadow-black/60 lg:mx-0 lg:max-w-md">
+        <div className="flex items-start gap-4 border-b border-amber-100/15 p-4">
+          <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${agent.color || 'from-amber-500 to-orange-600'} text-2xl`}>
             {agent.avatar || agent.name.charAt(0)}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="truncate text-lg font-bold text-white">{agent.name}</h2>
-                <p className="text-sm text-gray-400">{agent.specialty}</p>
+                <h2 className="truncate text-lg font-bold text-amber-50">{agent.name}</h2>
+                <p className="text-sm text-amber-100/60">{agent.specialty}</p>
               </div>
               <div className="flex items-center gap-2">
-                {audioPreview.hasPreview(agent.id) && (
-                  <button
-                    type="button"
-                    onClick={() => audioPreview.toggle(agent.id)}
-                    className={`rounded-full p-2 transition-colors ${
-                      audioPreview.isPlaying && audioPreview.playingAgentId === agent.id
-                        ? 'bg-red-500/20 text-red-300'
-                        : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-                    }`}
-                    aria-label={audioPreview.isPlaying && audioPreview.playingAgentId === agent.id ? 'Stop preview' : 'Play voice preview'}
-                  >
-                    <Volume2 className={`h-4 w-4 ${audioPreview.isPlaying && audioPreview.playingAgentId === agent.id ? 'animate-pulse' : ''}`} />
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-800 hover:text-white"
+                  className="rounded-full p-2 text-amber-100/40 transition-colors hover:bg-amber-100/10 hover:text-amber-50"
                   aria-label="Close agent preview"
                 >
                   <X className="h-4 w-4" />
@@ -115,55 +97,71 @@ export function AgentPreviewSheet({
         </div>
 
         <div className="space-y-4 p-4">
-          <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-3">
+          <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-3">
             <div className="mb-2 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
                 <Radio className="h-3.5 w-3.5" />
                 {persona.desk}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-200">
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-200">
                 <Sparkles className="h-3.5 w-3.5" />
                 {persona.voice}
               </span>
             </div>
-            <p className="text-sm leading-6 text-gray-300">{persona.promise}</p>
+            <p className="text-sm leading-6 text-amber-100/75">{persona.promise}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-3">
-              <p className="text-xs text-gray-500">Rate</p>
-              <p className="mt-1 text-lg font-bold text-cyan-300">${rate.toFixed(2)}/min</p>
+            <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-3">
+              <p className="text-xs text-amber-100/45">Rate</p>
+              <p className="mt-1 text-lg font-bold text-amber-200">${rate.toFixed(2)}/min</p>
             </div>
-            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-3">
-              <p className="text-xs text-gray-500">Suggested cap</p>
-              <p className="mt-1 text-lg font-bold text-white">${maxBudget.toFixed(2)}</p>
+            <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-3">
+              <p className="text-xs text-amber-100/45">Suggested cap</p>
+              <p className="mt-1 text-lg font-bold text-amber-50">${maxBudget.toFixed(2)}</p>
             </div>
           </div>
 
-          {/* Social proof stats */}
+          {/* Billing explainer — honest flow: cap → talk → approve exact USDC */}
+          <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-3">
+            <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-100/50">
+              How billing works
+            </p>
+            <ol className="space-y-1.5 text-xs leading-5 text-amber-100/70">
+              <li><span className="text-amber-300">1.</span> Set a cap — the most you&apos;ll pay for this call.</li>
+              <li><span className="text-amber-300">2.</span> Talk as long as you want. The line auto-ends at the cap.</li>
+              <li><span className="text-amber-300">3.</span> When the call ends, approve the exact USDC amount in your wallet.</li>
+              <li><span className="text-amber-300">4.</span> Settlement is on Arbitrum. You see the tx hash before it&apos;s final.</li>
+            </ol>
+            <p className="mt-2 text-[10px] text-amber-100/40">
+              You only pay for minutes used. No charge until you sign.
+            </p>
+          </div>
+
+          {/* Social proof stats — only real data from Redis */}
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-2.5 text-center">
-              <p className="text-sm font-bold text-white">{agent.calls || 0}</p>
-              <p className="text-[10px] text-gray-500">calls</p>
+            <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-2.5 text-center">
+              <p className="text-sm font-bold text-amber-50">{agent.calls || 0}</p>
+              <p className="text-[10px] text-amber-100/45">calls</p>
             </div>
-            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-2.5 text-center">
-              <p className="text-sm font-bold text-amber-300">⭐ {(agent.rating || 4.5).toFixed(1)}</p>
-              <p className="text-[10px] text-gray-500">rating</p>
+            <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-2.5 text-center">
+              <p className="text-sm font-bold text-amber-300">⭐ {(agent.rating || 0).toFixed(1)}</p>
+              <p className="text-[10px] text-amber-100/45">rating</p>
             </div>
-            <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-2.5 text-center">
-              <p className="text-sm font-bold text-white">~3 min</p>
-              <p className="text-[10px] text-gray-500">avg call</p>
+            <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-2.5 text-center">
+              <p className="text-sm font-bold text-amber-50">~3 min</p>
+              <p className="text-[10px] text-amber-100/45">avg call</p>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-800 bg-gray-900/70 p-3">
-            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-              <CheckCircle className="h-4 w-4 text-cyan-400" />
+          <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-3">
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-50">
+              <CheckCircle className="h-4 w-4 text-emerald-400" />
               What this agent can do
             </p>
             <div className="space-y-2">
               {examples.map((example) => (
-                <p key={example} className="text-sm text-gray-400">{example}</p>
+                <p key={example} className="text-sm text-amber-100/70">{example}</p>
               ))}
             </div>
           </div>
@@ -192,7 +190,7 @@ export function AgentPreviewSheet({
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 border-t border-gray-800 p-4">
+        <div className="grid grid-cols-2 gap-3 border-t border-amber-100/15 p-4">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
@@ -212,7 +210,7 @@ export function AgentPreviewSheet({
               onClick={() => onCallNow(agent)}
               isLoading={isStartingCall}
               disabled={isStartingCall}
-              className="bg-gradient-to-r from-emerald-500 to-cyan-500"
+              className="bg-gradient-to-r from-emerald-500 to-amber-500"
             >
               <Phone className="h-4 w-4" />
               Try free call

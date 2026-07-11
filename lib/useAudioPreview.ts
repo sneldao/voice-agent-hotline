@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
  * Agent voice preview audio files.
- * In production, generate these with ElevenLabs TTS and store in /public/audio/.
- * For now, we define the mapping and the hook handles playback gracefully
- * even when files don't exist yet (fails silently).
+ * Files must exist in /public/audio/ for previews to play.
+ * hasPreview() checks whether a file has been verified to load,
+ * not just whether a mapping entry exists — so the UI never shows
+ * a play button for a non-existent file.
+ *
+ * To generate previews: run `npx tsx scripts/generate-voice-previews.ts`
+ * (requires ELEVENLABS_API_KEY) which creates the MP3s via TTS.
  */
 const AGENT_AUDIO_PREVIEWS: Record<string, string> = {
   general_helper: '/audio/preview-general-helper.mp3',
@@ -28,19 +32,39 @@ interface UseAudioPreviewReturn {
   stop: () => void;
   /** Toggle play/stop for an agent */
   toggle: (agentId: string) => void;
-  /** Whether a preview file exists for this agent */
+  /** Whether a verified preview file exists for this agent */
   hasPreview: (agentId: string) => boolean;
 }
 
 /**
- * Hook for playing agent voice preview audio clips.
- * Handles loading, playback, and cleanup.
- * Fails gracefully if audio files don't exist.
+ * Track which audio files have been verified to exist via HEAD request.
+ * Cached for the session — once verified, doesn't re-check.
  */
+const verifiedFiles = new Set<string>();
+const checkingFiles = new Set<string>();
+
 export function useAudioPreview(): UseAudioPreviewReturn {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingAgentId, setPlayingAgentId] = useState<string | null>(null);
+  const [, forceUpdate] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Probe all preview files on mount to populate verifiedFiles
+  useEffect(() => {
+    for (const [agentId, src] of Object.entries(AGENT_AUDIO_PREVIEWS)) {
+      if (verifiedFiles.has(src) || checkingFiles.has(src)) continue;
+      checkingFiles.add(src);
+      fetch(src, { method: 'HEAD' })
+        .then(res => {
+          if (res.ok) verifiedFiles.add(src);
+        })
+        .catch(() => {})
+        .finally(() => {
+          checkingFiles.delete(src);
+          forceUpdate(n => n + 1);
+        });
+    }
+  }, []);
 
   const stop = useCallback(() => {
     if (audioRef.current) {
@@ -53,17 +77,13 @@ export function useAudioPreview(): UseAudioPreviewReturn {
   }, []);
 
   const play = useCallback((agentId: string) => {
-    // Stop any current playback
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
 
     const src = AGENT_AUDIO_PREVIEWS[agentId];
-    if (!src) {
-      // No preview available — fail silently
-      return;
-    }
+    if (!src || !verifiedFiles.has(src)) return;
 
     const audio = new Audio(src);
     audioRef.current = audio;
@@ -77,14 +97,13 @@ export function useAudioPreview(): UseAudioPreviewReturn {
     });
 
     audio.addEventListener('error', () => {
-      // File doesn't exist or can't load — fail silently
+      verifiedFiles.delete(src);
       setIsPlaying(false);
       setPlayingAgentId(null);
       audioRef.current = null;
     });
 
     audio.play().catch(() => {
-      // Autoplay blocked or file missing
       setIsPlaying(false);
       setPlayingAgentId(null);
       audioRef.current = null;
@@ -100,7 +119,8 @@ export function useAudioPreview(): UseAudioPreviewReturn {
   }, [isPlaying, playingAgentId, play, stop]);
 
   const hasPreview = useCallback((agentId: string) => {
-    return agentId in AGENT_AUDIO_PREVIEWS;
+    const src = AGENT_AUDIO_PREVIEWS[agentId];
+    return !!src && verifiedFiles.has(src);
   }, []);
 
   return {

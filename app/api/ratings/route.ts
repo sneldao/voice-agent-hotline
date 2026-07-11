@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { rateLimit, validateRatingInput } from '@/lib/security'
+import { validateRatingInput } from '@/lib/security'
 import { getRatingsService } from '@/lib/ratings'
+import { RedisRateLimiter } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic';
+
+// Redis-backed rate limiters (replaces in-memory rateLimit from security.ts)
+const readLimiter = new RedisRateLimiter(
+  { windowMs: 60_000, maxRequests: 60 },
+  'ratelimit:ratings:read'
+);
+const writeLimiter = new RedisRateLimiter(
+  { windowMs: 60_000, maxRequests: 10 },
+  'ratelimit:ratings:write'
+);
+
 // GET /api/ratings?agentId=xxx - Get agent ratings
 export async function GET(request: NextRequest) {
-  // Rate limit: 60 req/min
-  const ip = request.headers.get('x-forwarded-for') || 'ip'
-  const { allowed } = rateLimit(`ratings:${ip}`, { windowMs: 60000, maxRequests: 60 })
-  if (!allowed) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const limited = await readLimiter.isRateLimited(ip)
+  if (limited) {
     return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
   }
 
@@ -27,10 +38,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/ratings - Submit a rating
 export async function POST(request: NextRequest) {
-  // Rate limit: 10 ratings/min
-  const ip = request.headers.get('x-forwarded-for') || 'ip'
-  const { allowed } = rateLimit(`rate:${ip}`, { windowMs: 60000, maxRequests: 10 })
-  if (!allowed) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const limited = await writeLimiter.isRateLimited(ip)
+  if (limited) {
     return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
   }
 
