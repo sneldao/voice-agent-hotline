@@ -55,6 +55,7 @@ export function ActiveCall({
     agentId: agent.id,
     userId,
     ratePerMinute: agent.rate,
+    capUsd: agent.rate * 5, // 5-minute suggested cap — bill min(elapsed*rate, cap)
   });
   
   // Aliases for compatibility
@@ -193,6 +194,7 @@ export function ActiveCall({
         agentAddress: payoutAddress as `0x${string}`,
         amount,
         token: 'USDC',
+        agentId: agent.id,
       });
 
       if (settlement.txHash) {
@@ -291,7 +293,7 @@ export function ActiveCall({
     : payment.error
       ? { label: 'Payment Error', className: 'bg-red-500/15 text-red-300 border-red-500/40' }
       : payment.isSettled
-        ? { label: payment.isSimulated ? 'Simulated' : 'On-Chain', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' }
+        ? { label: payment.txHash ? 'On-Chain' : 'Settled', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' }
         : { label: 'x402 Ready', className: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40' };
 
   if (!isSupported) {

@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode,
 import { apiUrl } from './api';
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react';
 import { BrowserProvider, formatEther, Contract, ethers } from 'ethers';
+import { arbitrumOneWallet, arbitrumSepoliaWallet, ACTIVE_CHAIN_ID } from './arbitrum-chain';
 
 // Type for injected Ethereum provider
 type EthereumProvider = {
@@ -12,22 +13,9 @@ type EthereumProvider = {
   removeListener: (event: string, handler: (...args: any[]) => void) => void;
 };
 
-// Arbitrum chain configuration
-const arbitrumOne = {
-  chainId: 42161,
-  name: 'Arbitrum One',
-  currency: 'ETH',
-  explorerUrl: 'https://arbiscan.io',
-  rpcUrl: 'https://arb1.arbitrum.io/rpc',
-};
-
-const arbitrumSepolia = {
-  chainId: 421614,
-  name: 'Arbitrum Sepolia',
-  currency: 'ETH',
-  explorerUrl: 'https://sepolia.arbiscan.io',
-  rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
-};
+// Arbitrum chain configuration — imported from arbitrum-chain.ts (SSOT)
+const arbitrumOne = arbitrumOneWallet;
+const arbitrumSepolia = arbitrumSepoliaWallet;
 
 // Initialize Web3Modal
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';

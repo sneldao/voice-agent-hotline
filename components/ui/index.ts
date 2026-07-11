@@ -76,9 +76,6 @@ export { WalletConnect, WalletSelector, BalanceDisplay } from './WalletConnect';
 // Agent Creation
 export { AgentCreationModal } from './AgentCreation';
 
-// Payment Flow (x402)
-export { PaymentFlow, DelegationPayment } from './PaymentFlow';
-
 // Call UI - consolidated into ActiveCall component
 // export { CallUI } from './CallUI';
 

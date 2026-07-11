@@ -411,15 +411,23 @@ export async function POST(req: NextRequest) {
       }
       console.log(`[Webhook] ✅ Delegation verified for '${skillType}'`);
     } else if (['book', 'order', 'schedule'].includes(skillType)) {
-      // Delegation is required for action skills (not just research)
-      const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-      if (!demoMode) {
+      // Action skills require a real integration — never simulate success
+      if (!COMPOSIO_TOOLS[tool_name] && !process.env.COMPOSIO_API_KEY) {
         return NextResponse.json(
-          { result: `To ${skillType} on your behalf, I need a delegation. Please grant VOISSS permission in your profile settings first.` },
+          {
+            result: `I can't ${skillType} for real yet — that integration isn't connected. I can help you plan the steps instead.`,
+          },
           { status: 200 }
         );
       }
-      console.log('[Webhook] Demo mode: skipping delegation check for action skill');
+      if (!delegationId) {
+        return NextResponse.json(
+          {
+            result: `To ${skillType} on your behalf, I need a delegation. Please grant VOISSS permission in your profile settings first.`,
+          },
+          { status: 200 }
+        );
+      }
     }
 
     // ── 6. Execute tool ──────────────────────────────────────────────────────
@@ -469,28 +477,21 @@ export async function POST(req: NextRequest) {
     } else if (tool_name === 'search_web' && process.env.FIRECRAWL_API_KEY) {
       // Prefer Firecrawl for search_web when configured
       console.log(`[Webhook] search_web → Firecrawl (native)`);
-      const executionWallet = {
-        account: {
-          address: (userAddress || process.env.AGENT_WALLET || '0x0000000000000000000000000000000000000000') as Address,
-        },
-        writeContract: async () => '0xmockhash' as Hash,
-      };
-      const framework = createSkillsFramework(executionWallet);
+      const framework = createSkillsFramework(null);
       const skillResult = await framework.executeSkill(skillType, parameters, delegationId);
       result = { success: skillResult.success, data: skillResult.data, error: skillResult.error };
     } else if (COMPOSIO_TOOLS[tool_name]) {
       const slug = COMPOSIO_TOOLS[tool_name];
       console.log(`[Webhook] Composio → ${slug}`);
       result = await composioService.executeTool({ tool_slug: slug, arguments: parameters });
+    } else if (['book', 'order', 'schedule'].includes(skillType)) {
+      result = {
+        success: false,
+        error: `Real ${skillType} is not available — no connected integration for this tool.`,
+      };
     } else {
       console.log(`[Webhook] Native skill → ${skillType}`);
-      const executionWallet = {
-        account: {
-          address: (userAddress || process.env.AGENT_WALLET || '0x0000000000000000000000000000000000000000') as Address,
-        },
-        writeContract: async () => '0xmockhash' as Hash,
-      };
-      const framework = createSkillsFramework(executionWallet);
+      const framework = createSkillsFramework(null);
       const skillResult = await framework.executeSkill(skillType, parameters, delegationId);
       result = { success: skillResult.success, data: skillResult.data, error: skillResult.error };
     }
@@ -515,16 +516,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 8. Return narration string for ElevenLabs to speak ───────────────────
-    let narration = formatNarration(tool_name, result.data);
+    const narration = formatNarration(tool_name, result.data);
 
-    // Label simulated results for action skills so users know no real action was taken
-    const isActionSkill = ['book', 'order', 'schedule'].includes(skillType);
-    const isSimulated = isActionSkill && !COMPOSIO_TOOLS[tool_name] && !(result.data as Record<string, unknown>)?.txHash;
-    if (isSimulated) {
-      narration = `[Simulated] ${narration} Note: this is a demo — no real ${skillType} was placed.`;
-    }
-
-    console.log(`[Webhook] ${tool_name} → narrating: "${narration.slice(0, 80)}…"${isSimulated ? ' (simulated)' : ''}`);
+    console.log(`[Webhook] ${tool_name} → narrating: "${narration.slice(0, 80)}…"`);
 
     return NextResponse.json({ result: narration });
 

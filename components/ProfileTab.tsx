@@ -19,7 +19,7 @@ interface ProfileTabProps {
   selectedUseCase?: UseCase | null;
   /** Callback to change the use-case preference */
   onSetUseCase?: (useCase: UseCase) => void;
-  /** Total USDC spent across all calls (on-chain + simulated) */
+  /** Total USDC spent across calls with real receipts where available */
   totalSpent?: number;
 }
 

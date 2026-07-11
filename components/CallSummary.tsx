@@ -90,15 +90,17 @@ export function CallSummary({
 
   if (!isOpen) return null;
 
-  const explorerUrl = payment?.explorerUrl || (txHash ? getExplorerTxUrl(txHash) : undefined);
-  const status: 'settled' | 'processing' | 'pending' | 'error' | 'simulated' = payment?.isProcessing
+  const resolvedTx = payment?.txHash || txHash;
+  const explorerUrl = payment?.explorerUrl || (resolvedTx ? getExplorerTxUrl(resolvedTx) : undefined);
+  // Settled only with a real tx hash — never invent success
+  const status: 'settled' | 'processing' | 'pending' | 'error' | 'free' = payment?.isProcessing
     ? 'processing'
     : payment?.error
       ? 'error'
-      : payment?.isSimulated
-        ? 'simulated'
-        : payment?.isSettled || !!txHash
-          ? 'settled'
+      : resolvedTx
+        ? 'settled'
+        : payment?.isSettled && (payment?.amountUsdc === 0 || cost === 0)
+          ? 'free'
           : 'pending';
 
   const statusConfig = {
@@ -113,17 +115,17 @@ export function CallSummary({
       icon: <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />,
     },
     pending: {
-      label: 'Payment pending confirmation',
+      label: 'Payment not settled yet',
       className: 'bg-slate-500/10 border-slate-500/30 text-slate-300',
       icon: <Clock className="w-6 h-6 text-slate-400" />,
     },
     error: {
-      label: 'Payment failed',
+      label: payment?.error || 'Payment failed',
       className: 'bg-red-500/10 border-red-500/30 text-red-400',
       icon: <AlertCircle className="w-6 h-6 text-red-400" />,
     },
-    simulated: {
-      label: 'Payment simulated (sandbox mode)',
+    free: {
+      label: 'No charge for this call',
       className: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
       icon: <CheckCircle className="w-6 h-6 text-amber-400" />,
     },
@@ -235,7 +237,7 @@ export function CallSummary({
                     <p className="text-white font-semibold">Call settlement</p>
                   </div>
                   <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusConfig.className}`}>
-                    {status === 'settled' ? 'On-chain' : status === 'simulated' ? 'Simulated' : status === 'processing' ? 'Settling' : status === 'error' ? 'Failed' : 'Pending'}
+                    {status === 'settled' ? 'On-chain' : status === 'free' ? 'Free' : status === 'processing' ? 'Settling' : status === 'error' ? 'Failed' : 'Pending'}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -256,6 +258,13 @@ export function CallSummary({
                     <p className="text-sm text-amber-100/70 font-mono truncate">{callId || '—'}</p>
                   </div>
                 </div>
+                {(payment?.agentShareUsdc != null || payment?.platformShareUsdc != null) && status === 'settled' && (
+                  <div className="mt-3 rounded-lg border border-amber-100/10 bg-black/20 p-3 text-xs text-amber-100/70">
+                    <p className="font-medium text-amber-100/90 mb-1">Marketplace ledger (not a second on-chain transfer)</p>
+                    <p>Agent share: ${(payment.agentShareUsdc ?? 0).toFixed(4)} · Platform: ${(payment.platformShareUsdc ?? 0).toFixed(4)}</p>
+                    <p className="mt-1 text-amber-100/45">Atomic 80/20 on-chain split ships with PaymentRouter.</p>
+                  </div>
+                )}
                 <div className="mt-4 flex items-center justify-between">
                   {explorerUrl ? (
                     <a
@@ -267,7 +276,11 @@ export function CallSummary({
                       Open Arbiscan →
                     </a>
                   ) : (
-                    <span className="text-xs text-amber-100/45">On-chain receipt will appear once settled.</span>
+                    <span className="text-xs text-amber-100/45">
+                      {status === 'free'
+                        ? 'No on-chain transfer for zero-cost calls.'
+                        : 'Approve the exact USDC amount in your wallet to settle.'}
+                    </span>
                   )}
                   {payment?.error && (
                     <span className="text-xs text-red-400">{payment.error}</span>

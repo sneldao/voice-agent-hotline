@@ -177,14 +177,17 @@ Per-minute billing via x402 transferWithAuthorization (EIP-3009)
         ▼
 Call ends → settlement on Arbitrum via 1Shot Permissionless Relayer (gasless)
         │
-        ├─► Platform fee (20%) → PAYMENT_RECEIVER
-        └─► Agent earnings (80%) → agent.wallet_address (implemented)
+        ├─► Single on-chain USDC transfer to platform wallet (Phase A)
+        └─► 80/20 split ledgered in Redis for agent payout accounting
 ```
 
-Revenue split is implemented in `lib/payment-settlement.ts` and
-`app/api/payments/settle/route.ts` (commit `a738e14`). The 80/20 split
-runs on every settled call; the agent's earnings destination comes from
-the agent's `wallet_address` field in Redis.
+Revenue split is tracked in `lib/payment-settlement.ts` and
+`app/api/payments/settle/route.ts`. In Phase A (current), a single
+on-chain USDC transfer goes to the platform wallet; the 80/20 split is
+ledgered in Redis for agent payout accounting — it is NOT an atomic
+on-chain dual transfer. Atomic on-chain 80/20 split requires a
+PaymentRouter contract (planned, Phase B). The agent's earnings
+destination comes from the agent's `wallet_address` field in Redis.
 
 ---
 

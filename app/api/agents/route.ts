@@ -44,24 +44,35 @@ export async function GET(req: NextRequest) {
     let agents = (results || [])
       .map((r: any) => Array.isArray(r) ? r[1] : r)
       .filter((a: any) => a && Object.keys(a).length > 0)
-      .map((a: any) => ({
-        ...a,
-        // Ensure UI-friendly booleans/numbers for frontend
-        online: String(a.online) === 'true' || String(a.active) === 'true' || a.status === 'active' || (!a.online && !a.active && !a.status),
-        verified: a.status === 'active',
-        specialty: a.specialty || a.category || 'AI Assistant',
-        category: a.category === 'code' ? 'tech' : a.category,
-        bio: a.bio || a.description || a.specialty || '',
-        rate: parseFloat(a.price_per_minute || a.rate || '0.1'),
-        rating: parseFloat(a.rating || '0'),
-        totalRatings: parseInt(a.total_ratings || '0', 10),
-        totalCalls: parseInt(a.total_calls || '0', 10),
-        avatar: a.avatar || a.emoji || '🤖',
-        color: a.color || 'from-cyan-500 to-blue-500',
-      }));
+      .map((a: any) => {
+        const status = String(a.status || '').toLowerCase();
+        const isActive =
+          status === 'active' ||
+          (String(a.active) === 'true' && status !== 'pending' && status !== 'rejected');
+        return {
+          ...a,
+          status: status || (isActive ? 'active' : 'pending'),
+          // online only when listing is active — never invent availability
+          online: isActive && (String(a.online) === 'true' || status === 'active' || String(a.active) === 'true'),
+          verified: status === 'active',
+          specialty: a.specialty || a.category || 'AI Assistant',
+          category: a.category === 'code' ? 'tech' : a.category,
+          bio: a.bio || a.description || a.specialty || '',
+          rate: parseFloat(a.price_per_minute || a.rate || '0.1'),
+          rating: parseFloat(a.rating || '0'),
+          totalRatings: parseInt(a.total_ratings || '0', 10),
+          totalCalls: parseInt(a.total_calls || '0', 10),
+          avatar: a.avatar || a.emoji || '🤖',
+          color: a.color || 'from-cyan-500 to-blue-500',
+        };
+      });
 
-    // Only return active agents
-    agents = agents.filter((a: any) => a.status === 'active' || String(a.active) === 'true' || a.online === true);
+    // Public directory: active listings only (pending/rejected never surface)
+    agents = agents.filter((a: any) => {
+      const status = String(a.status || '').toLowerCase();
+      if (status === 'pending' || status === 'rejected') return false;
+      return status === 'active' || String(a.active) === 'true';
+    });
 
     // Server-side filtering
     if (search) {

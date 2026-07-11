@@ -31,9 +31,9 @@ pnpm tsx scripts/seed-elevenlabs.ts
 |---|---|
 | Frontend | Next.js 16, React 19, Tailwind CSS, Fraunces (display) + JetBrains Mono (codes) + IBM Plex Sans (body) |
 | Voice | ElevenLabs Conversational AI via controlled `<elevenlabs-convai>` widget (`components/WidgetEngine.tsx`) |
-| Payments | x402 / USDC on Arbitrum via MetaMask Smart Accounts — 80/20 platform/agent split |
+| Payments | x402 / USDC on Arbitrum via MetaMask Smart Accounts — 80/20 platform/agent split (ledgered until PaymentRouter) |
 | Settlement | 1Shot Permissionless Relayer — gasless on-chain settlement |
-| Identity | ERC-8004 delegation registry (Arbitrum Sepolia) |
+| Identity | ERC-8004 delegation registry (Arbitrum Sepolia, testnet) |
 | LLM | Venice AI (privacy-first research) |
 | Tools | Firecrawl (web), Composio (GitHub, Solana) |
 | Storage | Upstash Redis |
@@ -66,7 +66,7 @@ Voice Layer (ElevenLabs ConvAI widget) → Webhook Handler (tool routing)
 
 - **WidgetEngine** mounts a single offscreen `<elevenlabs-convai>` element via `WidgetEngineProvider` and controls it programmatically
 - **ActiveCall** is the switchboard-style operator console during a conversation
-- **Directory** (`components/DiscoverTab.tsx` + `DirectoryRow`) is the phonebook — mono dial codes, live caller counts, per-minute price, no card grid
+- **Directory** (`components/DiscoverTab.tsx` + `DirectoryRow`) is the phonebook — mono dial codes, live activity, per-minute price, no card grid
 - **CostPanel** is the first-class cost surface: per-minute rate, optional cap ($0.50 / $1 / $2 / $5 / Open), live ticker with soft "30s left on the line" warnings
 - **LiveActivity** ticker shows "3 on the line · 17 in the last hour" from `/api/activity/live` — fails soft and hides if there's no activity
 - **Webhook** routes tool calls per-agent and handles x402 payment negotiation

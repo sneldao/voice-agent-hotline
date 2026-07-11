@@ -15,12 +15,15 @@ import {
 import { erc20Abi } from './abis/erc20';
 import { arbitrum, arbitrumSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
-import { 
+import {
   ACTIVE_CHAIN,
   ACTIVE_CHAIN_ID,
   ACTIVE_USDC,
   EXPLORER_URL,
+  ARB_USDC_EIP712_DOMAIN,
+  ARB_USDC_EIP712_DOMAIN_SEPOLIA,
 } from './arbitrum-chain';
+import { AGENT_SHARE_BPS, FEE_BPS_DENOMINATOR } from './fees';
 import { getRedis } from './redis';
 
 // ============================================
@@ -121,12 +124,11 @@ export interface PaymentReceipt {
 // ============================================
 const PAYMENT_RPC_URL = process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
 
-/** Platform wallet for revenue split (20% platform fee) */
-const PLATFORM_WALLET = process.env.PLATFORM_WALLET as Address | undefined;
+/** Platform wallet for revenue ledger destination (20% share). */
+const PLATFORM_WALLET = (process.env.PLATFORM_WALLET || process.env.PAYMENT_RECEIVER) as Address | undefined;
 
-/** Revenue split percentages */
-const AGENT_SHARE_PERCENT = 80;
-const PLATFORM_SHARE_PERCENT = 20;
+// Fee percentages live in lib/fees.ts — re-export for callers that imported from here.
+export { AGENT_SHARE_PERCENT, PLATFORM_SHARE_PERCENT } from './fees';
 
 // ============================================
 // Payment Settlement Service
@@ -390,157 +392,66 @@ export class PaymentSettlement {
   }
 
   /**
-   * Settle a partial payment (for per-second billing)
-   * Calculates actual amount based on duration and refunds the rest
+   * Partial settlement of a pre-authorized max amount is not supported by
+   * mutating the signed value. Callers must re-prompt the user to sign the
+   * exact amount, then call settlePayment with that authorization.
    */
   async settlePartialPayment(
-    authorization: SignedAuthorization,
-    actualDurationSeconds: number,
-    ratePerMinuteCents: number,
-    token: Address = ARB_TOKENS.USDC,
-    callId?: string
+    _authorization: SignedAuthorization,
+    _actualDurationSeconds: number,
+    _ratePerMinuteCents: number,
+    _token: Address = ARB_TOKENS.USDC,
+    _callId?: string
   ): Promise<SettlementResult> {
-    // Calculate actual cost
-    const ratePerSecond = (ratePerMinuteCents * 100) / 60; // Convert to wei-like units
-    const actualAmount = BigInt(Math.floor(actualDurationSeconds * ratePerSecond));
-
-    // Ensure we don't exceed authorized amount
-    if (actualAmount > authorization.value) {
-      return this.settlePayment(authorization, token, callId);
-    }
-
-    // Partial settlement requires re-signing by the user and is not yet implemented.
-    // For now, settle the full authorized amount.
-    return this.settlePayment(authorization, token, callId);
+    return {
+      success: false,
+      error:
+        'Partial settlement requires a new user signature for the exact amount. Do not mutate EIP-3009 authorization fields.',
+    };
   }
 
   /**
-   * Settle payment with revenue split (80% agent, 20% platform).
-   * 
-   * This executes TWO on-chain transfers:
-   * 1. 80% of the authorized amount to the agent's wallet
-   * 2. 20% of the authorized amount to the platform wallet
-   * 
-   * The original authorization is used for the agent payment.
-   * A new authorization must be created for the platform payment.
+   * Settle a single on-chain transfer using the original signed authorization,
+   * then ledger the 80/20 marketplace split for agent payout accounting.
+   *
+   * Atomic on-chain 80/20 requires a PaymentRouter contract (not yet deployed).
+   * This method never mutates signed authorization fields.
    */
-  async settleSplitPayment(
+  async settleWithLedgerSplit(
     authorization: SignedAuthorization,
-    agentWallet: Address,
+    agentWallet: Address | undefined,
     token: Address = ARB_TOKENS.USDC,
     callId?: string
   ): Promise<SettlementResult> {
-    if (!this.facilitatorWallet) {
-      return {
-        success: false,
-        error: 'Facilitator wallet not configured. Set FACILITATOR_PRIVATE_KEY env var.',
-      };
-    }
+    const result = await this.settlePayment(authorization, token, callId);
+    if (!result.success || !result.txHash) return result;
 
-    if (!PLATFORM_WALLET) {
-      // No platform wallet configured - settle full amount to agent
-      console.log('[Settlement] No PLATFORM_WALLET configured, settling full amount to agent');
-      return this.settlePayment(authorization, token, callId);
-    }
+    const total = authorization.value;
+    const agentAmount = (total * BigInt(AGENT_SHARE_BPS)) / BigInt(FEE_BPS_DENOMINATOR);
+    const platformAmount = total - agentAmount;
 
-    try {
-      // Calculate split amounts
-      const totalAmount = authorization.value;
-      const agentAmount = (totalAmount * BigInt(AGENT_SHARE_PERCENT)) / 100n;
-      const platformAmount = (totalAmount * BigInt(PLATFORM_SHARE_PERCENT)) / 100n;
+    const redis = getRedis();
+    const id = callId || `call_${Date.now()}`;
+    await redis.hset(`split-payment:${id}`, {
+      callId: id,
+      payer: authorization.from,
+      payee: authorization.to,
+      agentWallet: agentWallet || '',
+      platformWallet: PLATFORM_WALLET || '',
+      totalAmount: total.toString(),
+      agentAmount: agentAmount.toString(),
+      platformAmount: platformAmount.toString(),
+      txHash: result.txHash,
+      timestamp: Date.now().toString(),
+      status: 'ledgered',
+      splitMode: 'ledger',
+      note: 'Single on-chain transfer; 80/20 is ledger-only until PaymentRouter',
+    });
 
-      console.log('[Settlement] Split payment:', {
-        total: formatUnits(totalAmount, 6),
-        agent: formatUnits(agentAmount, 6),
-        platform: formatUnits(platformAmount, 6),
-        agentWallet,
-        platformWallet: PLATFORM_WALLET,
-      });
-
-      // Step 1: Transfer 80% to agent
-      // Use the original authorization (signed by user) for the agent payment
-      const agentAuth: SignedAuthorization = {
-        ...authorization,
-        to: agentWallet,
-        value: agentAmount,
-      };
-
-      const agentResult = await this.settlePayment(agentAuth, token, callId);
-      
-      if (!agentResult.success) {
-        return {
-          success: false,
-          error: `Agent payment failed: ${agentResult.error}`,
-        };
-      }
-
-      // Step 2: Transfer 20% to platform
-      // Create a new authorization for the platform payment
-      // The platform payment uses the same nonce but different amount/recipient
-      const platformNonce = `0x${Buffer.from(
-        `${authorization.nonce.slice(2)}platform`
-      ).toString('hex')}` as `0x${string}`;
-
-      const platformAuth: SignedAuthorization = {
-        from: authorization.from,
-        to: PLATFORM_WALLET,
-        value: platformAmount,
-        validAfter: authorization.validAfter,
-        validBefore: authorization.validBefore,
-        nonce: platformNonce,
-        signature: authorization.signature, // Re-use the same signature structure
-      };
-
-      // For platform payment, we need to re-sign since the recipient/amount differs
-      // In practice, the facilitator would need a separate signing key or the user
-      // would need to sign a separate authorization for the platform portion.
-      // For now, we'll log this and note that in production, this requires 
-      // either:
-      // 1. The user signs two authorizations (one for agent, one for platform)
-      // 2. The facilitator has a signing key to create the platform transfer
-      console.log('[Settlement] Platform payment requires separate authorization');
-      console.log('[Settlement] In production, the platform payment would be:');
-      console.log(`[Settlement]   - From: ${authorization.from}`);
-      console.log(`[Settlement]   - To: ${PLATFORM_WALLET}`);
-      console.log(`[Settlement]   - Value: ${formatUnits(platformAmount, 6)}`);
-
-      // Store the split payment record
-      const redis = getRedis();
-      await redis.hset(`split-payment:${callId || `call_${Date.now()}`}`, {
-        callId: callId || `call_${Date.now()}`,
-        payer: authorization.from,
-        agentWallet,
-        platformWallet: PLATFORM_WALLET,
-        totalAmount: totalAmount.toString(),
-        agentAmount: agentAmount.toString(),
-        platformAmount: platformAmount.toString(),
-        agentTxHash: agentResult.txHash || '',
-        platformTxHash: '',
-        timestamp: Date.now().toString(),
-        status: 'partial', // Platform payment pending
-      });
-
-      console.log('[Settlement] ✅ Split payment settled!', {
-        agentTxHash: agentResult.txHash,
-        agentAmount: formatUnits(agentAmount, 6),
-        platformAmount: formatUnits(platformAmount, 6),
-        platformWallet: PLATFORM_WALLET,
-      });
-
-      return {
-        success: true,
-        txHash: agentResult.txHash,
-        blockNumber: agentResult.blockNumber,
-        gasUsed: agentResult.gasUsed,
-        actualAmount: formatUnits(agentAmount, 6),
-      };
-    } catch (error: any) {
-      console.error('[Settlement] Error settling split payment:', error);
-      return {
-        success: false,
-        error: error.message || 'Unknown split settlement error',
-      };
-    }
+    return {
+      ...result,
+      actualAmount: formatUnits(total, 6),
+    };
   }
 
   /**
@@ -624,12 +535,11 @@ export class PaymentSettlement {
 // ============================================
 // EIP-712 Domain and Types for Signing
 // ============================================
-export const EIP712_DOMAIN = {
-  name: 'USD Coin',
-  version: '2',
-  chainId: ACTIVE_CHAIN_ID,
-  verifyingContract: ACTIVE_USDC,
-};
+// Domain is re-exported from arbitrum-chain.ts (SSOT) for callers that
+// imported EIP712_DOMAIN from this module.
+export const EIP712_DOMAIN = ACTIVE_CHAIN_ID === ARB_USDC_EIP712_DOMAIN.chainId
+  ? ARB_USDC_EIP712_DOMAIN
+  : ARB_USDC_EIP712_DOMAIN_SEPOLIA;
 
 export const EIP712_TYPES = {
   TransferWithAuthorization: [
@@ -647,24 +557,24 @@ export const EIP712_TYPES = {
 // ============================================
 
 /**
- * Convert cents to token units (wei)
+ * Convert cents (USD * 100) to USDC token units (default 6 decimals).
  */
-export function centsToTokenUnits(cents: number, decimals: number = 18): bigint {
+export function centsToTokenUnits(cents: number, decimals: number = 6): bigint {
   // cents * 10^(decimals - 2) since cents is 10^-2
   const factor = BigInt(10 ** (decimals - 2));
-  return BigInt(cents) * factor;
+  return BigInt(Math.ceil(cents)) * factor;
 }
 
 /**
- * Convert token units to cents
+ * Convert token units to cents (USDC 6 decimals by default).
  */
-export function tokenUnitsToCents(units: bigint, decimals: number = 18): number {
+export function tokenUnitsToCents(units: bigint, decimals: number = 6): number {
   const factor = BigInt(10 ** (decimals - 2));
   return Number(units / factor);
 }
 
 /**
- * Calculate call cost
+ * Calculate call cost in USDC token units (6 decimals).
  */
 export function calculateCallCost(
   durationSeconds: number,
@@ -672,7 +582,7 @@ export function calculateCallCost(
 ): bigint {
   const durationMinutes = durationSeconds / 60;
   const totalCents = durationMinutes * ratePerMinuteCents;
-  return centsToTokenUnits(Math.ceil(totalCents));
+  return centsToTokenUnits(Math.ceil(totalCents), 6);
 }
 
 // ============================================

@@ -17,27 +17,13 @@ function dialCodeFor(id: string): string {
   return String(100 + (h % 900));
 }
 
-/** Simulated live caller count per agent — replaces the getActivityCount helper
- *  that used to live in page-components for the old card grid. */
-function callersFor(agent: Agent): number {
-  if (agent.id === 'general_helper') return 12;
-  if (agent.id === 'medical_advisor') return 7;
-  if (agent.id === 'code_reviewer') return 5;
-  if (agent.id === 'web_researcher') return 4;
-  if (agent.id === 'solana_sage') return 3;
-  if (agent.id === 'tour_master') return 2;
-  let s = 0;
-  for (let i = 0; i < agent.id.length; i++) s += agent.id.charCodeAt(i);
-  return (s % 8) + 1;
-}
-
 interface DirectoryRowProps {
   agent: Agent;
   onSelect: (a: Agent) => void;
   onVoicePreview?: (a: Agent) => void;
   /** Stagger delay in ms so the row animates in as part of a sequenced reveal. */
   revealDelay?: number;
-  /** Whether this agent is currently on a call (someone is talking to them right now). */
+  /** Whether this agent is currently on a call (from /api/activity/live only). */
   isLiveCall?: boolean;
 }
 
@@ -48,7 +34,6 @@ export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0,
   const persona = getPersona(agent);
   const rating = Number(agent.rating) || 0;
   const rate = Number(agent.rate) || 0;
-  const callers = agent.online ? callersFor(agent) : 0;
 
   return (
     <li className="directory-row-reveal" style={{ animationDelay: `${revealDelay}ms` }}>
@@ -117,11 +102,11 @@ export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0,
                 {persona.voiceId}
               </span>
             )}
-            {callers > 0 && (
+            {isLiveCall && (
               <>
                 <span className="text-amber-100/25">·</span>
                 <span className="agent-card-activity pulse-dot">
-                  {callers} on the line
+                  live now
                 </span>
               </>
             )}

@@ -12,7 +12,7 @@
 // ============================================
 
 import type { Address, Hex, Hash } from 'viem';
-import { ACTIVE_CHAIN_ID } from './arbitrum-chain';
+import { ACTIVE_CHAIN_ID, EXPLORER_URL } from './arbitrum-chain';
 
 // ============================================
 // Configuration
@@ -257,8 +257,13 @@ export class OneShotRelayer {
 
   /**
    * Build the explorer URL for a transaction.
+   * Uses EXPLORER_URL from arbitrum-chain.ts (SSOT) for the active chain.
+   * Falls back to a lookup for non-active chains.
    */
   private getExplorerUrl(txHash: Hash, chainId: number): string {
+    if (chainId === ACTIVE_CHAIN_ID) {
+      return `${EXPLORER_URL}/tx/${txHash}`;
+    }
     const explorers: Record<number, string> = {
       42161: 'https://arbiscan.io',
       421614: 'https://sepolia.arbiscan.io',
@@ -268,7 +273,7 @@ export class OneShotRelayer {
       10: 'https://optimistic.etherscan.io',
       137: 'https://polygonscan.com',
     };
-    const base = explorers[chainId] || 'https://arbiscan.io';
+    const base = explorers[chainId] || EXPLORER_URL;
     return `${base}/tx/${txHash}`;
   }
 }

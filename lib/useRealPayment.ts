@@ -2,153 +2,193 @@
 
 import { useState, useCallback } from 'react';
 import { apiUrl } from './api';
-import { useWallet, signMessage } from './WalletContextNew';
-import { ARB_TOKENS } from './payment-settlement';
+import { useWallet } from './WalletContextNew';
+import { ARB_TOKENS, EIP712_TYPES } from './payment-settlement';
 import { validateAddress } from './address';
-import { getExplorerTxUrl } from './arbitrum-chain';
+import {
+  ACTIVE_CHAIN_ID,
+  ACTIVE_USDC,
+  getExplorerTxUrl,
+  ARB_USDC_EIP712_DOMAIN,
+  ARB_USDC_EIP712_DOMAIN_SEPOLIA,
+} from './arbitrum-chain';
+import { splitRevenueWei, AGENT_SHARE_PERCENT, PLATFORM_SHARE_PERCENT } from './fees';
 import type { Address } from 'viem';
-
-// EIP-3009 transferWithAuthorization ABI (subset for user-settled calls)
-const EIP3009_ABI = [
-  {
-    name: 'transferWithAuthorization',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'from', type: 'address' },
-      { name: 'to', type: 'address' },
-      { name: 'value', type: 'uint256' },
-      { name: 'validAfter', type: 'uint256' },
-      { name: 'validBefore', type: 'uint256' },
-      { name: 'nonce', type: 'bytes32' },
-      { name: 'v', type: 'uint8' },
-      { name: 'r', type: 'bytes32' },
-      { name: 's', type: 'bytes32' },
-    ],
-    outputs: [],
-  },
-] as const;
 
 export interface PaymentState {
   isProcessing: boolean;
   isSettled: boolean;
-  isSimulated: boolean;
   mode: 'user_settled';
   txHash?: string;
   error: string | null;
   explorerUrl?: string;
+  /** Gross amount settled on-chain (USDC human units) */
+  amountUsdc?: number;
+  /** Ledger-only agent share (not separate on-chain leg until PaymentRouter) */
+  agentShareUsdc?: number;
+  platformShareUsdc?: number;
+  /** Single on-chain payee for this settlement */
+  payee?: string;
 }
 
 export interface SettlementAttempt {
   success: boolean;
   txHash?: string;
   explorerUrl?: string;
-  isSimulated?: boolean;
   error?: string;
+  amountUsdc?: number;
+  agentShareUsdc?: number;
+  platformShareUsdc?: number;
 }
 
 interface UseRealPaymentReturn {
   payment: PaymentState;
   settlePayment: (params: {
     callId: string;
+    /** Preferred agent payout wallet (ledger target). On-chain payee may be platform. */
     agentAddress: Address;
     amount: bigint;
     token?: 'USDC' | 'USDT';
+    agentId?: string;
   }) => Promise<SettlementAttempt>;
   resetPayment: () => void;
+}
+
+function eip712DomainForActiveChain() {
+  return ACTIVE_CHAIN_ID === ARB_USDC_EIP712_DOMAIN.chainId
+    ? ARB_USDC_EIP712_DOMAIN
+    : ARB_USDC_EIP712_DOMAIN_SEPOLIA;
+}
+
+/**
+ * Resolve the single on-chain recipient for Phase A settlement.
+ * Prefer platform wallet so marketplace can ledger agent payouts;
+ * fall back to agent, then env PAYMENT_RECEIVER.
+ */
+function resolveOnChainPayee(agentAddress: Address): Address | null {
+  const platform =
+    (process.env.NEXT_PUBLIC_PLATFORM_ADDRESS as Address | undefined) ||
+    (process.env.NEXT_PUBLIC_PAYMENT_RECEIVER as Address | undefined);
+  if (platform && validateAddress(platform)) return platform;
+  if (validateAddress(agentAddress)) return agentAddress;
+  return null;
 }
 
 export function useRealPayment(): UseRealPaymentReturn {
   const [payment, setPayment] = useState<PaymentState>({
     isProcessing: false,
     isSettled: false,
-    isSimulated: false,
     mode: 'user_settled',
     error: null,
   });
 
   const { address } = useWallet();
-  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   const settlePayment = useCallback(async ({
     callId,
     agentAddress,
     amount,
     token = 'USDC',
+    agentId,
   }: {
     callId: string;
     agentAddress: Address;
     amount: bigint;
     token?: 'USDC' | 'USDT';
+    agentId?: string;
   }): Promise<SettlementAttempt> => {
     if (!address) {
-      setPayment({ isProcessing: false, isSettled: false, isSimulated: false, mode: 'user_settled', error: 'Wallet not connected' });
-      return { success: false, error: 'Wallet not connected' };
+      const error = 'Wallet not connected';
+      setPayment({ isProcessing: false, isSettled: false, mode: 'user_settled', error });
+      return { success: false, error };
     }
 
-    if (!validateAddress(agentAddress)) {
-      setPayment({ isProcessing: false, isSettled: false, isSimulated: false, mode: 'user_settled', error: 'Agent payout address is not configured' });
-      return { success: false, error: 'Agent payout address is not configured' };
+    // Free / zero-cost calls: nothing to settle on-chain
+    if (amount <= 0n) {
+      setPayment({
+        isProcessing: false,
+        isSettled: true,
+        mode: 'user_settled',
+        error: null,
+        amountUsdc: 0,
+        agentShareUsdc: 0,
+        platformShareUsdc: 0,
+      });
+      return { success: true, amountUsdc: 0, agentShareUsdc: 0, platformShareUsdc: 0 };
     }
 
-    setPayment({ isProcessing: true, isSettled: false, isSimulated: false, mode: 'user_settled', error: null });
+    const payee = resolveOnChainPayee(agentAddress);
+    if (!payee) {
+      const error = 'No settlement payee configured (set NEXT_PUBLIC_PLATFORM_ADDRESS or agent wallet)';
+      setPayment({ isProcessing: false, isSettled: false, mode: 'user_settled', error });
+      return { success: false, error };
+    }
+
+    setPayment({ isProcessing: true, isSettled: false, mode: 'user_settled', error: null });
 
     try {
-      if (isDemoMode) {
-        console.warn('[Payment] Demo mode: simulating settlement');
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        setPayment({ isProcessing: false, isSettled: true, isSimulated: true, mode: 'user_settled', error: null });
-        return { success: true, isSimulated: true };
-      }
-
-      const tokenAddress = token === 'USDC' ? ARB_TOKENS.USDC : ARB_TOKENS.USDC;
+      const tokenAddress = token === 'USDC' ? ACTIVE_USDC : ARB_TOKENS.USDC;
       const validBefore = BigInt(Math.floor(Date.now() / 1000) + 3600);
       const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
         .map(b => b.toString(16).padStart(2, '0')).join('')}` as `0x${string}`;
 
-      // Step 1: Sign EIP-712 transferWithAuthorization
+      // Sign exact amount only — never mutate value/to after signing
       const domain = {
-        name: 'USD Coin',
-        version: '2',
-        chainId: 42161,
+        ...eip712DomainForActiveChain(),
         verifyingContract: tokenAddress,
-      };
-
-      const types = {
-        TransferWithAuthorization: [
-          { name: 'from', type: 'address' },
-          { name: 'to', type: 'address' },
-          { name: 'value', type: 'uint256' },
-          { name: 'validAfter', type: 'uint256' },
-          { name: 'validBefore', type: 'uint256' },
-          { name: 'nonce', type: 'bytes32' },
-        ],
+        chainId: ACTIVE_CHAIN_ID,
       };
 
       const message = {
         from: address as `0x${string}`,
-        to: agentAddress as `0x${string}`,
-        value: amount,
-        validAfter: 0n,
-        validBefore,
+        to: payee,
+        value: amount.toString(),
+        validAfter: '0',
+        validBefore: validBefore.toString(),
         nonce,
       };
 
-      const eth = window.ethereum as unknown as { request: (args: { method: string; params?: any[] }) => Promise<any> };
+      const eth = window.ethereum as unknown as {
+        request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      };
+      if (!eth?.request) {
+        throw new Error('No wallet provider found. Connect a wallet that supports eth_signTypedData_v4.');
+      }
+
       const signature = await eth.request({
         method: 'eth_signTypedData_v4',
-        params: [address, JSON.stringify({ domain, types, primaryType: 'TransferWithAuthorization', message })],
+        params: [
+          address,
+          JSON.stringify({
+            domain: {
+              name: domain.name,
+              version: domain.version,
+              chainId: domain.chainId,
+              verifyingContract: domain.verifyingContract,
+            },
+            types: {
+              EIP712Domain: [
+                { name: 'name', type: 'string' },
+                { name: 'version', type: 'string' },
+                { name: 'chainId', type: 'uint256' },
+                { name: 'verifyingContract', type: 'address' },
+              ],
+              TransferWithAuthorization: EIP712_TYPES.TransferWithAuthorization,
+            },
+            primaryType: 'TransferWithAuthorization',
+            message,
+          }),
+        ],
       });
 
-      const sig = (signature as string).slice(2);
+      const sig = String(signature).slice(2);
       const r = `0x${sig.slice(0, 64)}` as `0x${string}`;
       const s = `0x${sig.slice(64, 128)}` as `0x${string}`;
       const v = parseInt(sig.slice(128, 130), 16);
 
-      // Step 2: User submits transferWithAuthorization directly on-chain via their wallet
       const txData = encodeTransferWithAuthorization({
         from: address as `0x${string}`,
-        to: agentAddress as `0x${string}`,
+        to: payee,
         value: amount,
         validAfter: 0n,
         validBefore,
@@ -166,47 +206,96 @@ export function useRealPayment(): UseRealPaymentReturn {
           data: txData,
           value: '0x0',
         }],
-      });
+      }) as string;
 
-      // Step 3: Notify server of settlement (for tracking only)
+      if (!txHash || !String(txHash).startsWith('0x')) {
+        throw new Error('Wallet did not return a transaction hash');
+      }
+
+      const { agentShare, platformShare } = splitRevenueWei(amount);
+      const amountUsdc = Number(amount) / 1e6;
+      const agentShareUsdc = Number(agentShare) / 1e6;
+      const platformShareUsdc = Number(platformShare) / 1e6;
+
+      // Mirror only — not proof of settlement. Chain tx is source of truth.
+      // Sign auth message for the tracking endpoint
+      const authTimestamp = Math.floor(Date.now() / 1000).toString();
+      const authMessage = `VOISSS auth: ${address.toLowerCase()} at ${authTimestamp}`;
+      let authSignature = '';
+      try {
+        authSignature = await eth.request({
+          method: 'personal_sign',
+          params: [authMessage, address],
+        }) as string;
+      } catch {
+        // If auth signing fails, still try to post — server will reject if auth is required
+      }
+
+      const settleHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (authSignature) {
+        settleHeaders['X-Wallet-Address'] = address as string;
+        settleHeaders['X-Signature'] = authSignature;
+        settleHeaders['X-Timestamp'] = authTimestamp;
+      }
+
       fetch(apiUrl('/api/payments/settle'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: settleHeaders,
         body: JSON.stringify({
           callId,
           txHash,
           from: address,
-          to: agentAddress,
+          to: payee,
           amount: amount.toString(),
+          amountUsdc,
+          agentShareUsdc,
+          platformShareUsdc,
+          agentWallet: validateAddress(agentAddress) ? agentAddress : '',
+          agentId: agentId || '',
           token,
           method: 'user_settled',
+          splitMode: 'ledger', // on-chain split requires PaymentRouter
+          agentSharePercent: AGENT_SHARE_PERCENT,
+          platformSharePercent: PLATFORM_SHARE_PERCENT,
         }),
       }).catch(err => console.warn('[Payment] Settlement tracking failed:', err));
 
-      const explorerUrl = getExplorerTxUrl(txHash as `0x${string}`);
+      const explorerUrl = getExplorerTxUrl(txHash);
 
       setPayment({
         isProcessing: false,
         isSettled: true,
-        isSimulated: false,
         mode: 'user_settled',
-        txHash: txHash as string,
+        txHash,
         explorerUrl,
         error: null,
+        amountUsdc,
+        agentShareUsdc,
+        platformShareUsdc,
+        payee,
       });
 
-      return { success: true, txHash: txHash as string, explorerUrl };
-
-    } catch (err: any) {
+      return {
+        success: true,
+        txHash,
+        explorerUrl,
+        amountUsdc,
+        agentShareUsdc,
+        platformShareUsdc,
+      };
+    } catch (err: unknown) {
       console.error('[Payment] Settlement error:', err);
-      const msg = err.code === 4001 ? 'Transaction rejected by user' : (err.message || 'Payment failed');
-      setPayment({ isProcessing: false, isSettled: false, isSimulated: false, mode: 'user_settled', error: msg });
+      const e = err as { code?: number; message?: string };
+      const msg = e.code === 4001 ? 'Transaction rejected by user' : (e.message || 'Payment failed');
+      setPayment({ isProcessing: false, isSettled: false, mode: 'user_settled', error: msg });
       return { success: false, error: msg };
     }
-  }, [address, isDemoMode]);
+  }, [address]);
 
   const resetPayment = useCallback(() => {
-    setPayment({ isProcessing: false, isSettled: false, isSimulated: false, mode: 'user_settled', error: null });
+    setPayment({ isProcessing: false, isSettled: false, mode: 'user_settled', error: null });
   }, []);
 
   return { payment, settlePayment, resetPayment };
@@ -245,7 +334,7 @@ function encodeTransferWithAuthorization(params: {
     pad32(params.s),
   ].join('');
 
-  return `0x${data}`;
+  return data as `0x${string}`;
 }
 
 // Hook for checking payment receipt
@@ -267,21 +356,21 @@ export function usePaymentReceipt(callId?: string) {
 
     try {
       const response = await fetch(apiUrl(`/api/payments/settle?callId=${callId}`));
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch receipt');
       }
 
       const data = await response.json();
-      
+
       setReceipt({
         settled: data.settled,
         txHash: data.receipt?.txHash,
         explorerUrl: data.explorerUrl,
-        amount: data.receipt?.amount,
+        amount: data.receipt?.amountUsdc || data.receipt?.amount,
       });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch receipt');
     } finally {
       setIsLoading(false);
     }

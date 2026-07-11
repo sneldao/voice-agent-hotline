@@ -40,6 +40,8 @@ interface WidgetConversationOptions {
   agentId: string;
   userId?: string;
   ratePerMinute?: number;
+  /** Maximum charge in USD. When elapsed*rate exceeds cap, cost is clamped and the call auto-ends. */
+  capUsd?: number;
   useSignedUrl?: boolean;
   onTranscript?: (text: string, speaker: 'user' | 'agent', isFinal: boolean) => void;
   onError?: (error: string) => void;
@@ -52,6 +54,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     agentId,
     userId,
     ratePerMinute = 0.1,
+    capUsd,
     useSignedUrl = true, // Default to signed URLs — probe confirmed they work
     onTranscript,
     onError,
@@ -94,6 +97,17 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
   // Resolution to an ElevenLabs agent ID happens server-side in /api/webrtc/signal
   // via the canonical AGENT_REGISTRY, keeping IDs in a single source of truth.
 
+  /**
+   * Disconnect from SSE endpoint
+   */
+  const disconnectSSE = useCallback(() => {
+    if (sseControllerRef.current) {
+      sseControllerRef.current.abort();
+      sseControllerRef.current = null;
+    }
+    callIdRef.current = '';
+  }, []);
+
   // Centralized connection state handlers
   const handleConnected = useCallback(() => {
     if (connectedRef.current) return; // Deduplicate
@@ -113,8 +127,33 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
     durationIntervalRef.current = setInterval(() => {
       const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      const cost = (duration / 60) * ratePerMinute;
+      const rawCost = (duration / 60) * ratePerMinute;
+      // Enforce cap: bill min(elapsed * rate, cap). Auto-end when cap is reached.
+      const cost = capUsd != null && Number.isFinite(capUsd) && capUsd > 0
+        ? Math.min(rawCost, capUsd)
+        : rawCost;
       setState((prev) => ({ ...prev, duration, cost }));
+
+      // Auto-end call when the cap is hit
+      if (capUsd != null && Number.isFinite(capUsd) && capUsd > 0 && rawCost >= capUsd) {
+        console.log('[WidgetConversation] Cap reached ($' + capUsd.toFixed(4) + '), ending call');
+        intentionalEndRef.current = true;
+        engine.endConversation();
+        if (durationIntervalRef.current) {
+          clearInterval(durationIntervalRef.current);
+          durationIntervalRef.current = null;
+        }
+        connectedRef.current = false;
+        setState((prev) => ({
+          ...prev,
+          isConnected: false,
+          isConnecting: false,
+          isReconnecting: false,
+          status: 'disconnected',
+          mode: 'idle',
+        }));
+        disconnectSSE();
+      }
     }, 1000);
 
     onConnect?.();
@@ -123,7 +162,7 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
     if (callIdRef.current) {
       connectSSE(callIdRef.current);
     }
-  }, [ratePerMinute, onConnect]);
+  }, [ratePerMinute, capUsd, engine, onConnect, disconnectSSE]);
 
   const handleDisconnected = useCallback(() => {
     if (!connectedRef.current) return; // Deduplicate
@@ -234,17 +273,6 @@ export function useWidgetConversation(options: WidgetConversationOptions) {
         // Fetch error or aborted
       });
   }, [onTranscript]);
-
-  /**
-   * Disconnect from SSE endpoint
-   */
-  const disconnectSSE = useCallback(() => {
-    if (sseControllerRef.current) {
-      sseControllerRef.current.abort();
-      sseControllerRef.current = null;
-    }
-    callIdRef.current = '';
-  }, []);
 
   /**
    * Subscribe to widget events for state tracking.

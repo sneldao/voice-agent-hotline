@@ -158,40 +158,22 @@ export class BookingSkill {
    * Cancel a booking
    */
   async cancel(bookingId: string): Promise<SkillResult> {
-    try {
-      // Cancel booking logic
-      return {
-        success: true,
-        data: { cancelled: true, bookingId },
-        timestamp: new Date(),
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Cancellation failed',
-        timestamp: new Date(),
-      };
-    }
+    return {
+      success: false,
+      error: 'Booking cancellation is not available — no booking provider is connected.',
+      timestamp: new Date(),
+    };
   }
 
   /**
    * List bookings for a user
    */
-  async list(userId: string): Promise<SkillResult> {
-    try {
-      // List bookings (mock)
-      return {
-        success: true,
-        data: { bookings: [] },
-        timestamp: new Date(),
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to list bookings',
-        timestamp: new Date(),
-      };
-    }
+  async list(_userId: string): Promise<SkillResult> {
+    return {
+      success: false,
+      error: 'Booking history is not available — no booking provider is connected.',
+      timestamp: new Date(),
+    };
   }
 }
 
@@ -368,24 +350,11 @@ export class OrderingSkill {
    * Track an order
    */
   async track(orderId: string): Promise<SkillResult> {
-    try {
-      return {
-        success: true,
-        data: {
-          orderId,
-          status: 'processing',
-          estimatedDelivery: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          tracking: '1Z999AA10123456784',
-        },
-        timestamp: new Date(),
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Tracking failed',
-        timestamp: new Date(),
-      };
-    }
+    return {
+      success: false,
+      error: 'Order tracking is not available — no ordering provider is connected.',
+      timestamp: new Date(),
+    };
   }
 }
 
@@ -765,19 +734,36 @@ export class ResearchSkill {
 // Skill Execution Framework
 // ============================================
 
+type SkillWallet = {
+  account: { address: Address };
+  writeContract: (args: unknown) => Promise<Hash>;
+};
+
+/** Wallet stub that never pretends to send txs — writeContract always fails honestly. */
+function refuseWallet(address?: Address): SkillWallet {
+  return {
+    account: {
+      address: (address || '0x0000000000000000000000000000000000000000') as Address,
+    },
+    writeContract: async () => {
+      throw new Error('On-chain skill writes are not available without a real execution wallet');
+    },
+  };
+}
+
 export class AgentSkillsFramework {
-  private wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> };
+  private wallet: SkillWallet;
   private bookingSkill: BookingSkill;
   private orderingSkill: OrderingSkill;
   private schedulingSkill: SchedulingSkill;
   private researchSkill: ResearchSkill;
 
-  constructor(wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> }) {
-    this.wallet = wallet;
-    this.bookingSkill = new BookingSkill('default', wallet);
-    this.orderingSkill = new OrderingSkill(wallet);
-    this.schedulingSkill = new SchedulingSkill(wallet);
-    this.researchSkill = new ResearchSkill(wallet);
+  constructor(wallet?: SkillWallet | null) {
+    this.wallet = wallet || refuseWallet();
+    this.bookingSkill = new BookingSkill('default', this.wallet);
+    this.orderingSkill = new OrderingSkill(this.wallet);
+    this.schedulingSkill = new SchedulingSkill(this.wallet);
+    this.researchSkill = new ResearchSkill(this.wallet);
   }
 
   /**
@@ -862,10 +848,13 @@ export class AgentSkillsFramework {
 // ============================================
 
 /**
- * Create a new skills framework instance
+ * Create a new skills framework instance.
+ * Pass null/undefined for research-only paths with no execution wallet.
  */
-export function createSkillsFramework(wallet: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> }) {
-  return new AgentSkillsFramework(wallet);
+export function createSkillsFramework(
+  wallet?: { account: { address: Address }; writeContract: (args: any) => Promise<Hash> } | null
+) {
+  return new AgentSkillsFramework(wallet || null);
 }
 
 /**

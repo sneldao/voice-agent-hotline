@@ -68,7 +68,8 @@ export class VoicePaymentService {
 
   constructor(config?: Partial<PaymentConfig>) {
     this.config = {
-      platformFeePercent: config?.platformFeePercent ?? 10,
+      // Platform fee matches lib/fees.ts PLATFORM_SHARE_PERCENT (20)
+      platformFeePercent: config?.platformFeePercent ?? 20,
       billingIntervalMs: config?.billingIntervalMs ?? 1_000,
       settlementToken: config?.settlementToken ?? 'USDC',
     };
@@ -247,21 +248,15 @@ export class VoicePaymentService {
     // Modifying the value would invalidate the signature.
     console.log(`[x402] Settling ${sessionId}: ${session.secondsBilled}s → ${(session.totalCost / 100).toFixed(4)}`);
 
-    let result: SettlementResult;
-
-    // Use split payment if agent wallet is provided
-    if (session.agentWallet) {
-      console.log(`[x402] Using split payment: 80% agent, 20% platform`);
-      result = await paymentSettlement.settleSplitPayment(
-        session.authorization,
-        session.agentWallet,
-        tokenAddress,
-        sessionId
-      );
-    } else {
-      // Standard single-recipient payment
-      result = await paymentSettlement.settlePayment(session.authorization, tokenAddress, sessionId);
-    }
+    // Settle the ORIGINAL signed authorization only.
+    // Never mutate value/to — that invalidates the EIP-3009 signature.
+    // 80/20 marketplace split is ledgered after a successful single transfer
+    // (atomic on-chain split requires PaymentRouter — not yet deployed).
+    const result = await paymentSettlement.settlePayment(
+      session.authorization,
+      tokenAddress,
+      sessionId
+    );
 
     session.status = result.success ? 'settled' : 'failed';
     session.settlementResult = result;
@@ -275,8 +270,19 @@ export class VoicePaymentService {
       const platformFee = session.totalCost * (this.config.platformFeePercent / 100);
       const agentPayout = session.totalCost - platformFee;
       console.log(
-        `[x402] Settled ${sessionId} | tx: ${result.txHash} | agent: ${(agentPayout / 100).toFixed(4)}`
+        `[x402] Settled ${sessionId} | tx: ${result.txHash} | gross cents: ${session.totalCost} | ledger agent=${(agentPayout / 100).toFixed(4)} platform=${(platformFee / 100).toFixed(4)}`
       );
+      if (session.agentWallet) {
+        await redis.hset(`payment-ledger:${sessionId}`, {
+          sessionId,
+          agentWallet: session.agentWallet,
+          agentShareCents: agentPayout.toString(),
+          platformShareCents: platformFee.toString(),
+          txHash: result.txHash || '',
+          splitMode: 'ledger',
+          timestamp: Date.now().toString(),
+        });
+      }
     } else {
       console.error(`[x402] Settlement failed for ${sessionId}:`, result.error);
     }

@@ -1,6 +1,8 @@
 // x402 Payment API - Demo with built-in data
 
 export const dynamic = 'force-dynamic';
+import { ACTIVE_USDC } from '@/lib/arbitrum-chain';
+
 // In-memory storage for demo (use Redis/KV in production)
 const paymentSessions = new Map<string, {
   callId: string;
@@ -13,7 +15,7 @@ const paymentSessions = new Map<string, {
   createdAt: number;
 }>();
 
-const USDC_TOKEN = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'; // Native USDC on Arbitrum
+const USDC_TOKEN = ACTIVE_USDC;
 
 export async function POST(request: Request) {
   try {

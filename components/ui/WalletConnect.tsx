@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@/lib/WalletContextNew';
 import { showSuccess, showError, showCopied } from '@/lib/useToast';
+import { ACTIVE_CHAIN_ID } from '@/lib/arbitrum-chain';
 
 interface WalletConnectProps {
   onConnect?: () => void;
@@ -43,7 +44,7 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
     }
   }, [connect, onConnect]);
 
-  const isCorrectNetwork = chainId === 42161; // Arbitrum One
+  const isCorrectNetwork = chainId === ACTIVE_CHAIN_ID;
 
   const getWalletIcon = (type: string | null) => {
     switch (type) {
@@ -128,7 +129,7 @@ export function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
         {!isCorrectNetwork && (
           <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-lg">
             <p className="text-xs text-red-400 text-center">
-              Please switch to Arbitrum (chain ID: 42161)
+              Please switch to Arbitrum (chain ID: {ACTIVE_CHAIN_ID})
             </p>
           </div>
         )}

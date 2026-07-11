@@ -16,6 +16,7 @@ import {
 } from 'viem';
 import { arbitrum, arbitrumSepolia } from 'viem/chains';
 import { ACTIVE_CHAIN, ACTIVE_USDC, RPC_URL } from './arbitrum-chain';
+import { ARB_TOKENS } from './payment-settlement';
 
 // ERC-8004 Contract Addresses - MUST be configured for production
 function getContractAddresses(): {
@@ -40,12 +41,8 @@ function getContractAddresses(): {
   return { identity, reputation, delegation };
 }
 
-// Arbitrum Token Addresses
-const ARB_TOKENS = {
-  USDC: ACTIVE_USDC,
-  USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
-  ETH: '0x0000000000000000000000000000000000000000',
-};
+// Arbitrum Token Addresses — imported from payment-settlement.ts (SSOT)
+// ARB_TOKENS is re-exported above from payment-settlement
 
 // ============================================
 // Types
