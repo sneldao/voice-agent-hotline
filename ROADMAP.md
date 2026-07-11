@@ -116,6 +116,56 @@ Three concrete integrations identified:
 - Would enable PSTN inbound calls — users call a real number, reach an agent
 - This is the missing piece for "hotline" to be literal, not just browser-based
 
+#### Marketplace exploration results (July 2026)
+
+Tested with Circle Agent Wallet `0xdd6204dd1b7e0311e184dbe458dcc268715ea061` (mainnet, funded with $4 USDC on Base, wallet deployed via zero-value self-transfer).
+
+**Two telephony providers found:**
+
+| Provider | Network | x402 type | Number cost | AI call cost | AI engine |
+|---|---|---|---|---|---|
+| BlockRun.AI | Polygon | Circle Gateway (batched) | $5/month | $0.54/call | Bland.ai |
+| StablePhone | Base | Vanilla x402 | $20/month | $0.54/call | Bland.ai |
+
+**BlockRun.AI endpoints (https://nano.blockrun.ai):**
+- `POST /api/v1/phone/numbers/buy` — $5 USDC, provision US/CA number, 30-day lease, wallet-bound
+- `POST /api/v1/phone/numbers/list` — $0.001 USDC, list wallet-owned numbers
+- `POST /api/v1/phone/numbers/renew` — $5 USDC, extend 30 days
+- `POST /api/v1/phone/numbers/release` — free, release back to Twilio pool
+- `POST /api/v1/phone/lookup` — $0.01 USDC, carrier identification
+- `POST /api/v1/phone/lookup/fraud` — $0.05 USDC, fraud signals (SIM swap, call forwarding)
+- `POST /api/v1/voice/call` — $0.54 USDC, outbound AI call via Bland.ai (requires wallet-owned "from" number)
+
+**StablePhone endpoints (https://stablephone.dev):**
+- `POST /api/call` — $0.54 USDC, outbound AI call (Bland.ai powered)
+- `POST /api/number` — $20 USDC, buy US/CA number, 30-day lease
+- `POST /api/number/topup` — $15 USDC, extend 30 days
+- `GET /api/numbers` — free (SIWX auth), list wallet-owned numbers
+- `GET /api/call/{call_id}` — free (SIWX auth), poll call status + transcript + recording
+- `POST /api/lookup` — $0.05 USDC, iMessage/FaceTime/carrier lookup
+
+**Critical limitations discovered:**
+- Both services are **outbound-only** — no documented inbound call webhooks
+- Both enforce **US/CA numbers only** (`^\+1\d{10}$` pattern) for AI calls
+- Neither exposes Twilio's inbound webhook configuration (would be needed for VOISSS hotline)
+- Both use Bland.ai as the AI voice engine, not ElevenLabs — different voice quality and agent config
+
+**Circle Agent Wallet findings:**
+- Wallet must be "deployed" on-chain before signing x402 payments — activated via zero-value self-transfer
+- Gas-sponsored by Circle (no ETH needed for transactions)
+- Same wallet address across all chains (BASE, ARB, MATIC, ETH, OP, AVAX, UNI)
+- Circle CLI balance display can be stale — verify via direct RPC (`eth_call` on USDC contract)
+- Supports Arbitrum One (chain 42161) — VOISSS could use Circle wallets natively
+
+**Integration path for VOISSS PSTN (not yet implemented):**
+1. Buy a number via BlockRun.AI ($5/month on Polygon) or StablePhone ($20/month on Base)
+2. For inbound: need Twilio webhook config (not exposed by either marketplace service) OR build direct Twilio integration
+3. For outbound AI calls: use BlockRun.AI/StablePhone's `/api/voice/call` endpoint ($0.54/call)
+4. Bridge: Twilio inbound webhook → VOISSS backend → ElevenLabs Conversational AI (for inbound) or BlockRun/StablePhone API (for outbound)
+5. Billing: x402 per-call payment from caller's wallet, or platform-subsidized for trial
+
+**Recommended next step:** Build a direct Twilio + ElevenLabs inbound bridge for VOISSS, using the marketplace services only for outbound AI calls where the x402 payment flow is valuable. The marketplace phone number procurement is cheaper than direct Twilio ($5 vs ~$1.15/month) but the lack of inbound webhook access is a dealbreaker for a hotline product.
+
 ### Robinhood Chain
 
 Robinhood Chain is an Arbitrum Nitro L2 — same stack as Arbitrum One. Potential considerations:
