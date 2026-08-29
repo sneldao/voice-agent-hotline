@@ -29,6 +29,7 @@ const ProfileTab = dynamic(() => import('@/components/ProfileTab').then(m => ({ 
 
 // DiscoverTab is the landing view — keep it eager
 import { DiscoverTab } from '@/components/DiscoverTab';
+import ConnectionState from '@/components/ConnectionState';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { track } from '@/lib/track';
 
@@ -523,9 +524,12 @@ function HomeInner() {
 
 function TabLoading() {
   return (
-    <div className="p-4 flex flex-col items-center justify-center min-h-[50vh]">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
-      <p className="mt-4 text-sm text-amber-100/55">Loading switchboard...</p>
+    <div className="flex min-h-[50vh] items-center justify-center p-4">
+      <ConnectionState
+        label="Warming up the switchboard"
+        sublabel="patching the lines"
+        timerLabel="connecting"
+      />
     </div>
   );
 }

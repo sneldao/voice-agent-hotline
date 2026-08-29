@@ -8,6 +8,7 @@ import type { Agent } from '@/lib/types';
 import { apiUrl } from '@/lib/api';
 import { Button } from '@/components/ui';
 import { CostPanel } from '@/components/CostPanel';
+import ConnectionState from '@/components/ConnectionState';
 
 const DEFAULT_CAP: number | null = 1;
 
@@ -40,7 +41,11 @@ export default function AgentPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0b0806]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-200 border-t-transparent" />
+        <ConnectionState
+          label="Patching the line…"
+          sublabel="connecting to the switchboard"
+          timerLabel="connecting"
+        />
       </div>
     );
   }

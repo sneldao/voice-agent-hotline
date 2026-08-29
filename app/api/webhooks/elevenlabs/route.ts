@@ -158,6 +158,55 @@ function formatNarration(toolName: string, data: unknown): string {
 }
 
 // ============================================
+// Agent trace — what the agent actually did
+// ============================================
+// Each tool execution is appended to a per-call JSON list (`trace:{callId}`).
+// The client reads it back via GET /api/calls/[id]/trace for the post-call
+// "Trace" tab. Instrumentation is deliberately fail-soft: a Redis hiccup
+// never affects the spoken narration.
+
+const TRACE_ICON: Record<string, 'search' | 'wallet' | 'code' | 'run' | 'check'> = {
+  search_web: 'search',
+  firecrawl_search: 'search',
+  firecrawl_scrape: 'run',
+  compare_prices: 'search',
+  venice_research: 'search',
+  check_solana_balance: 'wallet',
+  gasless_settle: 'wallet',
+  get_github_repos: 'code',
+  get_github_repo_content: 'code',
+  venice_code_review: 'code',
+  book_appointment: 'check',
+  create_order: 'check',
+  set_reminder: 'check',
+};
+
+async function recordToolTrace(
+  callId: string,
+  toolName: string,
+  result: { success: boolean; data?: unknown; error?: string }
+): Promise<void> {
+  if (!callId) return;
+  try {
+    const { redis } = await import('@/lib/redis');
+    const human = toolName.replace(/_/g, ' ');
+    const label = human.charAt(0).toUpperCase() + human.slice(1);
+    const entry = {
+      id: `${toolName}_${Date.now()}`,
+      label,
+      detail: result.success ? undefined : result.error?.slice(0, 96),
+      icon: TRACE_ICON[toolName] ?? 'check',
+      status: result.success ? 'done' : 'failed',
+      timestamp: Date.now(),
+    };
+    await redis.lpush(`trace:${callId}`, JSON.stringify(entry));
+    await redis.ltrim(`trace:${callId}`, 0, 99);
+  } catch (err) {
+    console.warn('[Webhook] Trace record failed (non-fatal):', err);
+  }
+}
+
+// ============================================
 // Helpers
 // ============================================
 
@@ -356,6 +405,12 @@ export async function POST(req: NextRequest) {
 
     // Handle tool calls (existing flow)
     const { tool_name, parameters, metadata = {} } = body;
+    // Best-effort call identity for the tool trace. ElevenLabs includes
+    // conversation_id on some event shapes; fall back to metadata when absent.
+    const traceCallId =
+      body.conversation_id || metadata.conversation_id
+        ? `el_${body.conversation_id || metadata.conversation_id}`
+        : '';
 
     console.log('[ElevenLabs Webhook] Tool call:', {
       tool_name,
@@ -499,6 +554,7 @@ export async function POST(req: NextRequest) {
     if (!result.success) {
       const errorMsg = result.error ?? 'Something went wrong. Please try again.';
       console.error(`[Webhook] Tool execution failed: ${errorMsg}`);
+      await recordToolTrace(traceCallId, tool_name, result);
       return NextResponse.json({ result: `I encountered an issue: ${errorMsg}` }, { status: 200 });
     }
 
@@ -519,6 +575,7 @@ export async function POST(req: NextRequest) {
     const narration = formatNarration(tool_name, result.data);
 
     console.log(`[Webhook] ${tool_name} → narrating: "${narration.slice(0, 80)}…"`);
+    await recordToolTrace(traceCallId, tool_name, result);
 
     return NextResponse.json({ result: narration });
 

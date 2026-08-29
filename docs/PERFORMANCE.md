@@ -124,6 +124,34 @@ endpoint.
 
 ---
 
+## Agentic UI surfaces
+
+Two new surfaces follow the same CSS-driven performance rules as the rest
+of the app; neither introduces per-frame JS:
+
+1. **ConnectionState** (`components/ConnectionState.tsx`) — replaces bare
+   spinners at the directory, tab, and agent-page loading points. Uses a
+   CSS-only signal pulse (`cs-pulse-ring`, `cs-pulse-dot` keyframes) and a
+   shimmering label; the live elapsed timer is a `setInterval` at 100ms
+   that only touches one text node. Respects `prefers-reduced-motion`.
+
+2. **AgentTrace** (`components/AgentTrace.tsx`) — the post-call "Trace" tab
+   in `CallSummary`. Reads `GET /api/calls/[id]/trace`, which is a single
+   Redis `lrange` of `trace:{callId}` (capped at 100 entries). Expand and
+   collapse are `grid-template-rows` transitions; row entry uses the shared
+   `fade-up` keyframe. Fails soft: no key or Redis outage returns an empty
+   step list and the component renders an honest "no trace" state.
+
+   The hook (`lib/useAgentTrace.ts`) sets `errorRetryCount: 0` and
+   `dedupingInterval: 5000` so repeated opens of the summary don't hammer
+   the endpoint.
+
+Webhook instrumentation (`recordToolTrace`) is fail-soft by construction:
+the trace write is wrapped in try/catch and runs after the narration is
+computed, so a Redis hiccup can never delay or break the spoken reply.
+
+---
+
 ## Monitoring
 
 The repo doesn't ship a perf-monitoring integration. Recommended

@@ -12,3 +12,5 @@ export { EmptyState } from './EmptyState';
 export { DarkModeToggle } from './DarkModeToggle';
 export { ThemeProvider, useTheme } from './ThemeProvider';
 export { OfflineBanner } from './OfflineBanner';
+export { default as ConnectionState } from './ConnectionState';
+export { default as AgentTrace, type TraceStep } from './AgentTrace';

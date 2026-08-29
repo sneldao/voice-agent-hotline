@@ -22,6 +22,8 @@ import { PostCallPrompt } from './PostCallPrompt';
 import type { PaymentState } from '@/lib/useRealPayment';
 import type { AgentRecommendation } from '@/lib/agent-recommendations';
 import { getExplorerTxUrl } from '@/lib/arbitrum-chain';
+import AgentTrace from '@/components/AgentTrace';
+import { useAgentTrace } from '@/lib/useAgentTrace';
 
 interface CallSummaryProps {
   isOpen: boolean;
@@ -84,9 +86,10 @@ export function CallSummary({
   const [feedback, setFeedback] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [hasRated, setHasRated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'transcript'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transcript' | 'trace'>('overview');
   const [isSaved, setIsSaved] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const { steps: traceSteps, isLoading: traceLoading } = useAgentTrace(callId);
 
   if (!isOpen) return null;
 
@@ -224,6 +227,16 @@ export function CallSummary({
               }`}
             >
               Transcript ({transcripts.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('trace')}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'trace' 
+                  ? 'bg-red-500/20 text-amber-50 border border-red-400/50' 
+                  : 'bg-black/25 text-amber-100/50 hover:bg-amber-100/10'
+              }`}
+            >
+              Trace
             </button>
           </div>
 
@@ -454,6 +467,24 @@ export function CallSummary({
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'trace' && (
+            <div className="rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-5">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-50 mb-3">
+                <MessageSquare className="w-4 h-4 text-amber-300/70" />
+                What the agent did
+              </h3>
+              <p className="text-xs text-amber-100/45 mb-3 leading-relaxed">
+                Tools the agent ran during this call. Trace events are recorded
+                when a skill is executed — not every call has one.
+              </p>
+              {traceLoading ? (
+                <p className="text-center py-6 text-amber-100/40 text-sm">Loading trace…</p>
+              ) : (
+                <AgentTrace steps={traceSteps} />
               )}
             </div>
           )}
