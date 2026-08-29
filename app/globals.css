@@ -1292,3 +1292,63 @@ nav, header, main, footer,
   animation: live-activity-pulse 1.6s ease-out infinite;
 }
 
+/* ─── Agentic UI primitives ─────────────────────────────────────────────── */
+/* Shared keyframes used by the switchboard-native agent UI components
+ * (ConnectionState, AgentTrace). CSS-driven so the compositor handles them:
+ * no per-frame JS, respects prefers-reduced-motion. */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer-text {
+  0% { background-position: 0% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ConnectionState signal pulse — concentric rings, like a line patching in */
+.cs-pulse-ring {
+  animation: cs-pulse-ring 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.cs-pulse-ring--delay {
+  animation-delay: 0.6s;
+}
+
+@keyframes cs-pulse-ring {
+  0% { transform: scale(0.55); opacity: 0.9; }
+  75%, 100% { transform: scale(1.35); opacity: 0; }
+}
+
+.cs-pulse-dot {
+  animation: cs-pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes cs-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+
+/* Reduced motion: freeze decorative animation, keep meaning */
+@media (prefers-reduced-motion: reduce) {
+  .cs-pulse-ring,
+  .cs-pulse-ring--delay,
+  .cs-pulse-dot {
+    animation: none;
+  }
+}

@@ -85,6 +85,12 @@ Single source of truth for all Redis keys in the VOISSS system.
 | `transcript:{conversationId}` | List | none | Transcript messages (capped at 200) |
 | `transcript:{conversationId}` | Pub/Sub | — | Real-time transcript channel for SSE |
 
+### Tool traces
+
+| Key | Type | TTL | Description |
+|-----|------|-----|-------------|
+| `trace:{callId}` | List | none | Per-call tool-execution trace (each entry a JSON `{id,label,detail,icon,status,timestamp}`; capped at 100, newest-first). Written by the ElevenLabs webhook and read by `GET /api/calls/[id]/trace` for the post-call "Trace" tab. |
+
 ### Events
 
 | Key | Type | TTL | Description |
