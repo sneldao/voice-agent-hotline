@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * Route-level CORS helpers.
  *
- * NOTE: CORS is now handled centrally in middleware.ts for every /api/*
+ * NOTE: CORS is now handled centrally in proxy.ts for every /api/*
  * route (OPTIONS preflights + response headers). These helpers remain for
  * backwards compatibility with routes that still call them, and mirror the
- * middleware policy. New code should rely on the middleware instead of
- * wrapping every response.
+ * proxy policy. New code should rely on the proxy instead of wrapping every
+ * response.
  */
 
 const DEFAULT_ALLOWED_ORIGINS = [

@@ -8,9 +8,9 @@
  *
  * Legacy/direct mode:
  *   - When NEXT_PUBLIC_API_URL is set, calls are routed to that host
- *     cross-origin. This still works (middleware.ts answers preflights and
- *     stamps CORS headers), but prefer the proxy — it cannot be broken by
- *     backend CORS misconfiguration and survives ad-blockers.
+ *     cross-origin. This still works (proxy.ts answers preflights and stamps
+ *     CORS headers), but prefer the proxy — it cannot be broken by backend
+ *     CORS misconfiguration and survives ad-blockers.
  */
 export function apiUrl(path: string): string {
   const base = process.env.NEXT_PUBLIC_API_URL;

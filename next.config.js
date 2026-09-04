@@ -31,7 +31,7 @@ const nextConfig = {
   },
 
   // Headers for security. CORS for /api/* is handled centrally in
-  // middleware.ts (dynamic origin reflection + preflight handling), so we
+  // proxy.ts (dynamic origin reflection + preflight handling), so we
   // deliberately do NOT set static Access-Control-* headers here — duplicate
   // or contradictory CORS headers make browsers reject the response.
   async headers() {

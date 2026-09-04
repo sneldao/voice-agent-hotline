@@ -56,7 +56,6 @@ export function ConnectionError({
   const headline = (kind && HEADLINES[kind]) || HEADLINES.http;
 
   // Back off across automatic attempts: 5s → 10s → 20s → 30s (cap).
-  const nextDelay = Math.min((autoRetrySeconds || 5) * 2 ** attempt, 30);
 
   const fireRetry = useCallback(async () => {
     if (!onRetry || retryingRef.current) return;
@@ -68,9 +67,9 @@ export function ConnectionError({
       retryingRef.current = false;
       setIsRetrying(false);
       setAttempt((a) => a + 1);
-      setSecondsLeft(nextDelay);
+      setSecondsLeft(Math.min((autoRetrySeconds || 5) * 2 ** (attempt + 1), 30));
     }
-  }, [onRetry, nextDelay]);
+  }, [onRetry, autoRetrySeconds, attempt]);
 
   // Visible countdown → automatic retry.
   useEffect(() => {
