@@ -13,12 +13,12 @@ import { playDialTone } from '@/lib/sounds';
 import type { Agent } from '@/lib/types';
 
 const CATEGORIES: Array<{ id: string; name: string; line: string; icon: string }> = [
-  { id: 'all', name: 'All lines', line: 'directory', icon: '◉' },
-  { id: 'general', name: 'General', line: 'life admin', icon: '☎' },
-  { id: 'tech', name: 'Tech', line: 'code, builds', icon: '⌬' },
-  { id: 'blockchain', name: 'Crypto', line: 'wallets, onchain', icon: '⌖' },
-  { id: 'research', name: 'Research', line: 'web, sources', icon: '◐' },
-  { id: 'healthcare', name: 'Health', line: 'symptoms, prep', icon: '✚' },
+  { id: 'all', name: 'All desks', line: 'broker desk', icon: '◉' },
+  { id: 'conservative', name: 'Conservative', line: 'capital preservation', icon: '☎' },
+  { id: 'research', name: 'Research', line: 'fundamentals, filings', icon: '⌬' },
+  { id: 'momentum', name: 'Momentum', line: 'growth, themes, catalysts', icon: '⌖' },
+  { id: 'macro', name: 'Macro', line: 'rates, markets, news', icon: '◐' },
+  { id: 'risk', name: 'Risk', line: 'position sizing, health checks', icon: '✚' },
 ];
 
 interface DiscoverTabProps {
@@ -38,7 +38,7 @@ interface DiscoverTabProps {
   onRefresh: () => Promise<unknown> | unknown;
   hasMore: boolean;
   onLoadMore: () => void;
-  /** Agent ID to use for the main dial button. Defaults to 'general_helper'. */
+  /** Broker ID to use for the main dial button. Defaults to 'general_helper' (Hetty). */
   preferredConciergeId?: string;
 }
 
@@ -86,7 +86,7 @@ export function DiscoverTab({
       // SWR's mutate() resolves to undefined when the fetcher threw — the
       // banner/error state will show it, so don't claim a success that
       // didn't happen.
-      if (result !== undefined) showSuccess('Directory refreshed');
+      if (result !== undefined) showSuccess('Broker desk refreshed');
     } catch { /* error state handles it */ }
   };
 
@@ -162,8 +162,8 @@ export function DiscoverTab({
         <div className="mt-3">
           <EmptyState
             type="agents"
-            title="Directory is quiet"
-            description="No lines are connected right now. Check back soon."
+            title="The desk is quiet"
+            description="No brokers are on the line right now. Check back soon."
           />
         </div>
       </div>
@@ -195,7 +195,7 @@ export function DiscoverTab({
 
         {noSearchResults ? (
           <div className="mt-3 rounded-xl border border-amber-100/10 bg-black/15 p-6 text-center">
-            <p className="font-display text-base font-semibold text-amber-50">No lines match that filter.</p>
+            <p className="font-display text-base font-semibold text-amber-50">No brokers match that filter.</p>
             <p className="mt-1 text-sm text-amber-100/55">Try a different search or clear the filter.</p>
             <button
               type="button"
@@ -225,7 +225,7 @@ export function DiscoverTab({
             onClick={onLoadMore}
             className="mt-3 w-full rounded-lg border border-amber-100/15 bg-black/20 py-2.5 text-sm font-bold text-amber-100 transition-colors hover:bg-red-500/10"
           >
-            Load more lines
+            Load more brokers
           </button>
         )}
       </div>
@@ -268,13 +268,13 @@ function DirectoryHeader({
     <section className="directory-header atmospheric-grain">
       <div className="atmospheric-hero pb-2">
         <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-amber-100/55">
-          VOISSS · Operator switchboard
+          Claflin · Broker desk
         </p>
         <h2 className="mt-2 font-display text-[2.25rem] font-bold leading-[0.95] text-amber-50">
-          Directory
+          Broker desk
         </h2>
         <p className="mt-1.5 text-sm text-amber-100/65 max-w-md">
-          Pick up the line. Say what you need. The right voice picks up.
+          Pick up the line. Ask about tokenized stocks. The first broker is Hetty.
         </p>
         <div className="hero-glow-line mt-4" />
       </div>
@@ -296,7 +296,7 @@ function DirectoryHeader({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="directory-search w-full rounded-lg border border-amber-100/15 bg-black/35 py-2.5 pl-9 pr-10 text-sm text-amber-50 placeholder:text-amber-100/40 focus:border-amber-200/40 focus:outline-none focus:ring-1 focus:ring-amber-200/30"
-            aria-label="Search agents"
+            aria-label="Search brokers"
           />
           {searchQuery && (
             <button
@@ -360,7 +360,7 @@ function SlowLoadHint() {
 
   return (
     <p className="mt-4 animate-pulse text-center font-mono text-[11px] uppercase tracking-[0.18em] text-amber-100/45">
-      Warming up the switchboard…
+      Warming up the broker desk…
     </p>
   );
 }

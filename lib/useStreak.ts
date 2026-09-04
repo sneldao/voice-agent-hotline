@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-const STREAK_KEY = 'voisss-streak';
+const STREAK_KEY = 'claflin-streak';
 
 interface StreakData {
   /** Current consecutive days with at least one call */

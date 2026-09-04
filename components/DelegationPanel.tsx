@@ -40,29 +40,29 @@ const DEFAULT_SCOPE: DelegationScope = {
 const PERMISSION_META = [
   {
     key: 'canResearch' as const,
-    label: 'Research & Web Search',
-    description: 'Let agents search the web and look up blockchain data on your behalf.',
+    label: 'Research & Quotes',
+    description: 'Let brokers search the web and look up market data on your behalf.',
     risk: 'low' as const,
     emoji: '🔍',
   },
   {
     key: 'canSchedule' as const,
-    label: 'Set Reminders & Schedule',
-    description: 'Let agents create calendar events and reminders for you.',
+    label: 'Follow-ups & Reminders',
+    description: 'Let brokers schedule callback reminders or research follow-ups for you.',
     risk: 'low' as const,
     emoji: '📅',
   },
   {
     key: 'canBook' as const,
-    label: 'Book Appointments',
-    description: 'Let agents book consultations and reservations on your behalf.',
+    label: 'Capture Trade Intent',
+    description: 'Let brokers record your trade intent with ticker, side, and size (not real-money execution).',
     risk: 'medium' as const,
     emoji: '📋',
   },
   {
     key: 'canOrder' as const,
-    label: 'Place Orders',
-    description: 'Let agents place orders for goods and services (subject to spend limit).',
+    label: 'Place Paper Trades',
+    description: 'Let brokers place simulated orders on your behalf (subject to your spend limit). No real-money trades.',
     risk: 'high' as const,
     emoji: '🛒',
   },
@@ -163,7 +163,7 @@ export function DelegationPanel() {
         createdAt: Date.now(),
         expiresAt: Date.now() + scope.expiresInDays * 24 * 60 * 60 * 1000,
       });
-      setSuccess('Permissions granted! VOISSS agents can now act on your behalf.');
+      setSuccess('Permissions granted! Claflin brokers can now research on your behalf.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to grant delegation');
     } finally {
@@ -185,7 +185,7 @@ export function DelegationPanel() {
         throw new Error(d.error ?? 'Failed to revoke');
       }
       setActiveDelegation(null);
-      setSuccess('Permissions revoked. VOISSS agents can no longer act on your behalf.');
+      setSuccess('Permissions revoked. Claflin brokers can no longer act on your behalf.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to revoke delegation');
     } finally {
@@ -204,10 +204,10 @@ export function DelegationPanel() {
       <Card className="p-5">
         <div className="flex items-center gap-3 mb-3">
           <Shield className="w-5 h-5 text-violet-400" />
-          <h3 className="font-semibold text-white">ERC-8004 Agent Permissions</h3>
+          <h3 className="font-semibold text-white">ERC-8004 Broker Permissions</h3>
         </div>
         <p className="text-sm text-gray-400 mb-4">
-          Connect your wallet to grant VOISSS agents permission to act on your behalf (book, order, schedule).
+          Connect your wallet to grant Claflin brokers permission to research and capture trade intent on your behalf.
         </p>
         <Button onClick={connect} className="w-full bg-gradient-to-r from-violet-500 to-purple-500">
           Connect Wallet to Grant Permissions
@@ -225,7 +225,7 @@ export function DelegationPanel() {
           <h3 className="font-semibold text-white">ERC-8004 Not Configured</h3>
         </div>
         <p className="text-sm text-gray-400 mb-2">
-          The delegation contracts are not yet deployed. Agent permissions are running in sandbox mode.
+          The delegation contracts are not yet deployed. Broker permissions are running in sandbox mode.
         </p>
         <p className="text-xs text-gray-600">
           To enable: deploy ERC-8004 contracts on Arbitrum and set{' '}
@@ -313,13 +313,13 @@ export function DelegationPanel() {
           <Shield className="w-5 h-5 text-gray-400" />
         </div>
         <div>
-          <h3 className="font-semibold text-white">ERC-8004 Agent Permissions</h3>
-          <p className="text-xs text-gray-400">Grant VOISSS agents permission to act for you</p>
+          <h3 className="font-semibold text-white">ERC-8004 Broker Permissions</h3>
+          <p className="text-xs text-gray-400">Grant Claflin brokers permission to research for you</p>
         </div>
       </div>
 
       <p className="text-sm text-gray-400 mb-4">
-        Without a delegation, agents can only <span className="text-white font-medium">research</span>. Grant permissions to enable booking, ordering, and scheduling on your behalf.
+        Without a delegation, brokers can only <span className="text-white font-medium">research</span>. Grant broader permissions to enable capturing trade intent, scheduling follow-ups, or placing paper trades on your behalf (subject to your spend limit).
       </p>
 
       {/* Permission toggles */}

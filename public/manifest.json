@@ -1,7 +1,7 @@
 {
-  "name": "VOISSS — A phonebook for AI you can talk to",
-  "short_name": "VOISSS",
-  "description": "Say what you need. Get connected to the right voice agent. Hands-free AI calls, billed per minute in USDC on Arbitrum.",
+  "name": "Claflin — your broker is on the line",
+  "short_name": "Claflin",
+  "description": "Call Hetty, the first Claflin broker. Ask about tokenized stocks, get quotes, and place paper trades by voice — all confirmed before anything moves.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1c1917",
@@ -14,6 +14,6 @@
       "type": "image/png"
     }
   ],
-  "categories": ["productivity", "utilities", "lifestyle"],
+  "categories": ["finance", "business", "utilities"],
   "lang": "en-US"
 }

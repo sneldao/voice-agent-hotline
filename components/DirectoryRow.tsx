@@ -42,6 +42,7 @@ export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0,
         onClick={() => onSelect(agent)}
         className={`directory-row group ${isLiveCall ? 'directory-row--live-call' : ''}`}
         aria-label={`${agent.name} — ${persona.desk} desk, $${rate.toFixed(2)} per minute`}
+        title={`Call ${agent.name}`}
       >
         <span className="directory-row__code" aria-hidden="true">
           {String(codeValue).padStart(3, '0')}
@@ -59,7 +60,7 @@ export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0,
             {agent.verified && (
               <span
                 className="inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300"
-                title="Verified agent"
+                title="Verified broker"
               >
                 <ShieldCheck className="h-3 w-3" />
               </span>

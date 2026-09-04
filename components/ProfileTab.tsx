@@ -15,7 +15,7 @@ interface ProfileTabProps {
   address?: string | null;
   isLoading?: boolean;
   onDisconnect?: () => void;
-  /** Currently selected use-case for agent personalization */
+  /** Currently selected use-case for broker personalization */
   selectedUseCase?: UseCase | null;
   /** Callback to change the use-case preference */
   onSetUseCase?: (useCase: UseCase) => void;
@@ -65,7 +65,7 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect, selected
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4 text-amber-300" />
             <h3 className="text-sm font-bold text-amber-50">Your Interests</h3>
-            <p className="text-[10px] text-amber-100/35 ml-auto">Personalizes agent recommendations</p>
+            <p className="text-[10px] text-amber-100/35 ml-auto">Personalizes broker recommendations</p>
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
             {USE_CASES.map((uc) => {
@@ -90,7 +90,7 @@ export function ProfileTab({ balance, address, isLoading, onDisconnect, selected
           </div>
           {selectedUseCase && (
             <p className="mt-2 text-[10px] text-emerald-400/70 text-center">
-              ✓ Personalized — agents are sorted to match your interests
+              ✓ Personalized — brokers are sorted to match your interests
             </p>
           )}
         </div>

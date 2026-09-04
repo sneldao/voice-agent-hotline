@@ -1,6 +1,6 @@
 # Redis Key Naming Conventions
 
-Single source of truth for all Redis keys in the VOISSS system.
+Single source of truth for all Redis keys in the Claflin system.
 
 ## Naming rules
 

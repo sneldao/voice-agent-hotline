@@ -13,7 +13,7 @@ export async function GET(
   try {
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
     }
     return NextResponse.json({ agent });
   } catch (error: any) {
@@ -40,7 +40,7 @@ export async function PATCH(
 
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
     }
 
     const body = await req.json();
@@ -59,7 +59,7 @@ export async function PATCH(
       // Notify via webhook if configured
       await sendNotification('approved', agent, id);
 
-      return NextResponse.json({ message: 'Agent approved', id });
+      return NextResponse.json({ message: 'Broker approved', id });
     }
 
     if (action === 'reject') {
@@ -74,7 +74,7 @@ export async function PATCH(
       // Notify via webhook if configured
       await sendNotification('rejected', agent, id, reason);
 
-      return NextResponse.json({ message: 'Agent rejected', id });
+      return NextResponse.json({ message: 'Broker rejected', id });
     }
 
     if (Object.keys(fields).length > 0) {
@@ -109,7 +109,7 @@ async function sendNotification(
         wallet_address: agent.wallet_address,
         reason: reason || null,
         timestamp: new Date().toISOString(),
-        platform: 'voisss',
+        platform: 'claflin',
       }),
     });
   } catch (err: any) {
@@ -133,12 +133,12 @@ export async function DELETE(
 
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
     }
 
     await redis.srem('agent_index', id);
     await redis.del(`agent:${id}`);
-    return NextResponse.json({ message: 'Agent deleted', id });
+    return NextResponse.json({ message: 'Broker deleted', id });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

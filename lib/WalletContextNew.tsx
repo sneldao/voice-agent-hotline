@@ -20,11 +20,16 @@ const arbitrumSepolia = arbitrumSepoliaWallet;
 // Initialize Web3Modal
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
 
+const appUrl =
+  (typeof window !== 'undefined' ? window.location.origin : undefined) ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  'https://your-claflin-app.vercel.app';
+
 const metadata = {
-  name: 'VOISSS - Voice Agent Hotline',
-  description: 'Talk to verified AI agents. Pay per second.',
-  url: 'https://voisss-agent-hotline.vercel.app',
-  icons: ['https://voisss-agent-hotline.vercel.app/logo.png'],
+  name: 'Claflin - Voice Broker Desk',
+  description: 'Call Hetty. Research tokenized stocks and place paper trades by voice.',
+  url: appUrl,
+  icons: [`${appUrl}/logo.png`],
 };
 
 // Determine which chain to use based on environment

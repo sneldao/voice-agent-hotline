@@ -1,6 +1,6 @@
 # Hetzner VPS Deployment
 
-App directory: `/opt/voice-hotline` — Port 3042 — PM2: `voice-hotline`
+Claflin API server. App directory: `/opt/claflin` — Port 3042 — PM2: `claflin`
 
 ---
 
@@ -24,8 +24,8 @@ NODE_ENV=production pnpm build      → build standalone
         • copies static/ + public/ into .next/standalone/
         • removes .next/{cache,server,static,types,trace}  (~1.2 GB saved)
         • preserves .git + source files for next deploy
-rsync .next/standalone/ → snel-bot:/opt/voice-hotline/releases/<timestamp>/
-ln -sfn releases/<timestamp> /opt/voice-hotline/current   (atomic swap)
+rsync .next/standalone/ → snel-bot:/opt/claflin/releases/<timestamp>/
+ln -sfn releases/<timestamp> /opt/claflin/current   (atomic swap)
 pm2 delete + start ecosystem.config.js                    (reload)
 pm2 save                                                  (persist)
 ```
@@ -37,8 +37,8 @@ Final server size: **~52 MB** (was 2.0 GB before cleanup).
 ## Initial Setup (one-time)
 
 ```bash
-git clone https://github.com/sneldao/voice-agent-hotline voice-hotline
-cd voice-hotline
+git clone https://github.com/sneldao/claflin claflin
+cd claflin
 cp .env.hetzner.example .env.hetzner
 # Edit .env.hetzner with your credentials
 export UPSTASH_REDIS_REST_TOKEN=your_token
@@ -73,14 +73,14 @@ Secrets are written to `.env.hetzner` by deploy.sh and read by `ecosystem.config
 
 ```bash
 # Rebuild from scratch
-cd /opt/voice-hotline
+cd /opt/claflin
 git fetch origin main && git reset --hard origin/main
 UPSTASH_REDIS_REST_URL=https://game-corgi-122374.upstash.io \
 UPSTASH_REDIS_REST_TOKEN=your_token \
 bash scripts/deploy-hetzner.sh
 
 # Check disk usage
-du -sh /opt/voice-hotline
+du -sh /opt/claflin
 ```
 
 ---

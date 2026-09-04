@@ -10,7 +10,7 @@ export type OnboardingStep =
   | 'free-call'
   | 'complete';
 
-export type UseCase = 'coding' | 'health' | 'research' | 'crypto' | 'travel' | 'general';
+export type UseCase = 'conservative' | 'research' | 'momentum' | 'macro' | 'risk' | 'general';
 
 interface OnboardingState {
   isFirstTime: boolean;
@@ -39,16 +39,16 @@ interface UseOnboardingReturn extends OnboardingState {
 }
 
 export const USE_CASES: { id: UseCase; emoji: string; label: string; description: string }[] = [
-  { id: 'coding', emoji: '💻', label: 'Code & Tech', description: 'Debug, review, build' },
-  { id: 'health', emoji: '⚕️', label: 'Health', description: 'Doctor visit prep' },
-  { id: 'research', emoji: '🔍', label: 'Research', description: 'Find answers fast' },
-  { id: 'crypto', emoji: '🪙', label: 'Crypto & Web3', description: 'Wallets, DeFi, chains' },
-  { id: 'travel', emoji: '🌍', label: 'Travel', description: 'Plan trips by voice' },
+  { id: 'conservative', emoji: '🔔', label: 'Conservative', description: 'Tokenized stocks, confirmation-first' },
+  { id: 'research', emoji: '🔍', label: 'Research', description: 'Fundamentals and valuation' },
+  { id: 'momentum', emoji: '🚀', label: 'Momentum', description: 'Growth themes and catalysts' },
+  { id: 'macro', emoji: '📰', label: 'Macro', description: 'Rates, markets, news' },
+  { id: 'risk', emoji: '🛡️', label: 'Risk', description: 'Position sizing and health checks' },
   { id: 'general', emoji: '🤖', label: 'General Help', description: 'A bit of everything' },
 ];
 
-const STORAGE_KEY = 'voisss-onboarding';
-const PREFERENCES_KEY = 'voisss-preferences';
+const STORAGE_KEY = 'claflin-onboarding';
+const PREFERENCES_KEY = 'claflin-preferences';
 
 const STEPS: OnboardingStep[] = [
   'splash',

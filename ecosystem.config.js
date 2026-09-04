@@ -1,6 +1,6 @@
 /**
  * PM2 Ecosystem Configuration
- * Voice Agent Hotline — Hetzner Production
+ * Claflin — Hetzner Production
  *
  * Usage:
  *   pm2 start ecosystem.config.js
@@ -9,12 +9,12 @@
  *
  * Env vars are read from .env.hetzner (server secrets).
  * The `current` symlink points to the active release in releases/.
- * After deploy, reload with: pm2 delete voice-hotline && pm2 start ecosystem.config.js && pm2 save
+ * After deploy, reload with: pm2 delete claflin && pm2 start ecosystem.config.js && pm2 save
  */
 
 const fs = require('fs');
 
-const ENV_PATH = '/opt/voice-hotline/.env.hetzner';
+const ENV_PATH = '/opt/claflin/.env.hetzner';
 
 function loadEnv(envPath) {
   if (!fs.existsSync(envPath)) return {};
@@ -38,9 +38,9 @@ const env = loadEnv(ENV_PATH);
 module.exports = {
   apps: [
     {
-      name: 'voice-hotline',
-      script: '/opt/voice-hotline/current/server.js',
-      cwd: '/opt/voice-hotline/current',
+      name: 'claflin',
+      script: '/opt/claflin/current/server.js',
+      cwd: '/opt/claflin/current',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -94,9 +94,9 @@ module.exports = {
         NEXT_PUBLIC_X402_ENABLED: env.NEXT_PUBLIC_X402_ENABLED || 'true',
         NEXT_PUBLIC_PAYMENT_SETTLEMENT_ENABLED: env.NEXT_PUBLIC_PAYMENT_SETTLEMENT_ENABLED || 'true',
       },
-      error_file: '/opt/voice-hotline/logs/pm2-err.log',
-      out_file: '/opt/voice-hotline/logs/pm2-out.log',
-      log_file: '/opt/voice-hotline/logs/pm2-combined.log',
+      error_file: '/opt/claflin/logs/pm2-err.log',
+      out_file: '/opt/claflin/logs/pm2-out.log',
+      log_file: '/opt/claflin/logs/pm2-combined.log',
       time: true,
       autorestart: true,
       max_memory_restart: '1G',

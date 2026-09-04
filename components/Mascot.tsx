@@ -11,8 +11,7 @@ interface MascotProps {
 }
 
 /**
- * Vox — the VOISSS mascot.
- * A retro rotary telephone character with expressive eyes and a coiled cord tail.
+ * Claflin's desk bell — a retro rotary telephone character with expressive eyes and a coiled cord tail.
  * Rendered as inline SVG so it can be animated with framer-motion.
  */
 export function Mascot({ mood = 'idle', size = 120, className = '' }: MascotProps) {
@@ -47,7 +46,7 @@ export function Mascot({ mood = 'idle', size = 120, className = '' }: MascotProp
         viewBox="0 0 120 120"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        aria-label="Vox the VOISSS mascot"
+        aria-label="Claflin desk bell"
         role="img"
       >
         {/* Body — rotary phone base */}

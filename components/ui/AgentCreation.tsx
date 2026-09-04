@@ -42,29 +42,27 @@ const VOICE_OPTIONS = [
 ];
 
 const SPECIALTY_CATEGORIES = [
-  { id: 'language', icon: '🗣️', name: 'Language Learning', examples: ['Spanish', 'French', 'Mandarin'] },
-  { id: 'coding', icon: '💻', name: 'Programming', examples: ['JavaScript', 'Python', 'React'] },
-  { id: 'cooking', icon: '🍳', name: 'Cooking', examples: ['Italian', 'French', 'Asian'] },
-  { id: 'music', icon: '🎵', name: 'Music', examples: ['Guitar', 'Piano', 'Theory'] },
-  { id: 'fitness', icon: '💪', name: 'Fitness', examples: ['Yoga', ' HIIT', 'Nutrition'] },
-  { id: 'business', icon: '💼', name: 'Business', examples: ['Marketing', 'Sales', 'Startup'] },
-  { id: 'therapy', icon: '🧠', name: 'Mental Health', examples: ['Meditation', 'Coaching'] },
+  { id: 'conservative', icon: '🔔', name: 'Conservative', examples: ['Tokenized stocks', 'Dividend plays', 'Blue-chip'] },
+  { id: 'research', icon: '🔍', name: 'Research', examples: ['Fundamentals', 'Valuation', 'Earnings'] },
+  { id: 'momentum', icon: '🚀', name: 'Momentum', examples: ['Growth themes', 'Catalysts', 'Breakouts'] },
+  { id: 'macro', icon: '📰', name: 'Macro', examples: ['Rates', 'Markets', 'News'] },
+  { id: 'risk', icon: '🛡️', name: 'Risk', examples: ['Position sizing', 'Drawdown checks', 'Hedging'] },
   { id: 'other', icon: '✨', name: 'Other', examples: ['Anything else'] },
 ];
 
 const AGENT_TYPES = [
   {
     id: 'ai',
-    name: 'AI Agent',
+    name: 'AI Broker',
     icon: '🤖',
-    description: 'Powered by ElevenLabs voice synthesis. Available 24/7.',
+    description: 'Powered by ElevenLabs Conversational AI. Available 24/7.',
     advantages: ['Instant availability', 'Unlimited calls', 'Lower rate'],
   },
   {
     id: 'human',
-    name: 'Human Expert',
+    name: 'Human Broker',
     icon: '👤',
-    description: 'Real person with expertise. Premium experience.',
+    description: 'Real person with market expertise. Premium experience.',
     advantages: ['Personal touch', 'Deep expertise', 'Complex topics'],
   },
 ];
@@ -89,7 +87,7 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
       return;
     }
     onSubmit(formData as any);
-    showSuccess('Agent created successfully!');
+    showSuccess('Broker submitted for review!');
     onClose();
     setStep(1);
     setFormData({
@@ -117,9 +115,9 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
         <div className="p-6 border-b border-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Create Agent</h2>
+              <h2 className="text-xl font-bold text-white">Create Broker</h2>
               <p className="text-sm text-gray-400 mt-1">
-                {step === 1 && 'Choose your agent type'}
+                {step === 1 && 'Choose your broker type'}
                 {step === 2 && 'Basic information'}
                 {step === 3 && 'Voice & pricing'}
                 {step === 4 && 'Review & launch'}
@@ -184,7 +182,7 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">Agent Name</label>
+                <label className="text-sm font-medium text-gray-300">Broker Name</label>
                 <Input
                   placeholder="e.g., Maria Garcia"
                   value={formData.name}
@@ -298,7 +296,7 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
                     {formData.name.charAt(0) || 'A'}
                   </Avatar>
                   <div>
-                    <div className="font-bold text-white">{formData.name || 'Your Agent'}</div>
+                    <div className="font-bold text-white">{formData.name || 'Your Broker'}</div>
                     <div className="text-sm text-gray-400">{formData.specialty || 'Your specialty'}</div>
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant={formData.type === 'ai' ? 'info' : 'success'}>
@@ -354,7 +352,7 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
               className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              Launch Agent
+              Launch Broker
             </Button>
           )}
         </div>
@@ -364,7 +362,7 @@ export function AgentCreationModal({ isOpen, onClose, onSubmit }: AgentCreationM
 }
 
 // ─── Self-Registration Form ───────────────────────────────────────────────────
-// Used on /list-your-agent — external developers submit their ElevenLabs agent
+// Used on /list-your-broker — external developers submit their ElevenLabs broker
 // for review. Stores as status: "pending" until approved by an admin.
 
 const CATEGORIES = [
@@ -417,7 +415,7 @@ export function AgentRegistrationForm() {
         throw new Error(data.error || 'Submission failed');
       }
       setSubmitted(true);
-      showSuccess('Agent submitted for review!');
+      showSuccess('Broker submitted for review!');
     } catch (err: any) {
       showError(err.message);
     } finally {
@@ -431,10 +429,10 @@ export function AgentRegistrationForm() {
         <div className="text-5xl">🎉</div>
         <h2 className="text-2xl font-bold text-white">Submission received!</h2>
         <p className="text-gray-400">
-          Your agent is under review. We will reach out to <span className="text-cyan-400">{form.contact_email}</span> once approved.
+          Your broker is under review. We will reach out to <span className="text-cyan-400">{form.contact_email}</span> once approved.
         </p>
         <Button onClick={() => { setForm(EMPTY_SUBMISSION); setSubmitted(false); }} variant="secondary">
-          Submit another agent
+          Submit another broker
         </Button>
       </div>
     );
@@ -442,11 +440,11 @@ export function AgentRegistrationForm() {
 
   return (
     <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6">
-      {/* Agent identity */}
+      {/* Broker identity */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Agent identity</h3>
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Broker identity</h3>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-300">Agent name <span className="text-red-400">*</span></label>
+          <label className="text-sm font-medium text-gray-300">Broker name <span className="text-red-400">*</span></label>
           <Input placeholder="e.g. Tax Advisor" value={form.name} onChange={e => set('name', e.target.value)} icon="🤖" />
         </div>
         <div className="space-y-2">
@@ -493,7 +491,7 @@ export function AgentRegistrationForm() {
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-300">System prompt <span className="text-red-400">*</span></label>
           <textarea
-            placeholder="Describe what your agent does and how it behaves..."
+            placeholder="Describe what your broker does and how it behaves..."
             value={form.system_prompt}
             onChange={e => set('system_prompt', e.target.value)}
             rows={4}
@@ -535,7 +533,7 @@ export function AgentRegistrationForm() {
       <div className="flex items-start gap-3 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
         <Clock className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
         <p className="text-sm text-yellow-300">
-          Submissions are reviewed within 48 hours. Your agent will appear as pending until approved.
+          Submissions are reviewed within 48 hours. Your broker will appear as pending until approved.
         </p>
       </div>
 

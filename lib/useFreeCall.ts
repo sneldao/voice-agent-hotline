@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiUrl } from './api';
 
-const FREE_CALL_KEY = 'voisss-free-call';
+const FREE_CALL_KEY = 'claflin-free-call';
 export const TRIAL_CALL_CAP_SECONDS = 120;
 
 interface FreeCallState {

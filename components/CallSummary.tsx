@@ -261,7 +261,7 @@ export function CallSummary({
                 {(payment?.agentShareUsdc != null || payment?.platformShareUsdc != null) && status === 'settled' && (
                   <div className="mt-3 rounded-lg border border-amber-100/10 bg-black/20 p-3 text-xs text-amber-100/70">
                     <p className="font-medium text-amber-100/90 mb-1">Marketplace ledger (not a second on-chain transfer)</p>
-                    <p>Agent share: ${(payment.agentShareUsdc ?? 0).toFixed(4)} · Platform: ${(payment.platformShareUsdc ?? 0).toFixed(4)}</p>
+                    <p>Broker share: ${(payment.agentShareUsdc ?? 0).toFixed(4)} · Platform: ${(payment.platformShareUsdc ?? 0).toFixed(4)}</p>
                     <p className="mt-1 text-amber-100/45">Atomic 80/20 on-chain split ships with PaymentRouter.</p>
                   </div>
                 )}
@@ -318,7 +318,7 @@ export function CallSummary({
                       How was your call?
                     </h3>
                     <p className="text-amber-100/50 text-sm mb-4">
-                      Your feedback helps improve our agents
+                      Your feedback helps improve our brokers
                     </p>
                     
                     <div className="flex gap-2 mb-4">
@@ -388,7 +388,7 @@ export function CallSummary({
                 />
               </div>
 
-              {/* Related Agents */}
+              {/* Related Brokers */}
               {relatedAgents.length > 0 && (
                 <div className="rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-6">
                   <h3 className="text-lg font-semibold text-amber-50 mb-4">
@@ -471,7 +471,7 @@ export function CallSummary({
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
           title={`Call with ${agent.name}`}
-          description={`I just had a ${formatDuration(duration)} voice call with ${agent.name} on Voice Agent Hotline! 🎙️`}
+          description={`I just had a ${formatDuration(duration)} voice call with ${agent.name} on Claflin! 🎙️`}
           url={typeof window !== 'undefined' ? window.location.href : ''}
           callData={{
             agentName: agent.name,

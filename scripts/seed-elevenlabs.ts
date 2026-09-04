@@ -1,9 +1,9 @@
 #!/usr/bin/env npx tsx
 /**
  * ============================================
- * VOISSS ElevenLabs Agent Seeder
+ * Claflin ElevenLabs Broker Seeder
  * ============================================
- * Creates the 4 canonical VOISSS agents in ElevenLabs Conversational AI,
+ * Creates the Claflin brokers in ElevenLabs Conversational AI,
  * registers their tools with the webhook endpoint, and prints the .env
  * variables you need to add to .env.local.
  *
@@ -16,8 +16,8 @@
  *
  * What it does:
  *   1. Creates (or re-uses) webhook tools for all skill types.
- *   2. Creates (or updates) one ConvAI agent per registry entry.
- *   3. Outputs the ELEVENLABS_AGENT_* env vars to add to .env.local.
+ *   2. Creates (or updates) one ConvAI broker per entry in AGENTS.
+ *   3. Outputs the ELEVENLABS_AGENT_<KEY> env vars to add to .env.local.
  * ============================================
  */
 
@@ -53,53 +53,8 @@ interface ToolDef {
 
 const TOOLS: ToolDef[] = [
   {
-    name: 'book_appointment',
-    description: 'Book an appointment or reservation on behalf of the user. Requires delegation.',
-    parameters: {
-      type: 'object',
-      properties: {
-        serviceType: { type: 'string', description: 'Type of service', enum: ['appointment', 'consultation', 'reservation'] },
-        providerId: { type: 'string', description: 'Provider or vendor identifier' },
-        providerName: { type: 'string', description: 'Human-readable provider name' },
-        dateTime: { type: 'string', description: 'ISO 8601 datetime for the appointment' },
-        duration: { type: 'number', description: 'Duration in minutes' },
-        notes: { type: 'string', description: 'Optional notes or special requests' },
-      },
-      required: ['serviceType', 'providerName', 'dateTime', 'duration'],
-    },
-  },
-  {
-    name: 'create_order',
-    description: 'Place an order (food, products, services) on behalf of the user. Requires delegation.',
-    parameters: {
-      type: 'object',
-      properties: {
-        vendorId: { type: 'string', description: 'Vendor identifier' },
-        vendorName: { type: 'string', description: 'Vendor display name' },
-        items: { type: 'string', description: 'JSON string of order items [{itemId, name, quantity, price}]' },
-        specialInstructions: { type: 'string', description: 'Optional delivery or special instructions' },
-      },
-      required: ['vendorName', 'items'],
-    },
-  },
-  {
-    name: 'set_reminder',
-    description: 'Schedule a reminder, meeting, or task for the user. Requires delegation.',
-    parameters: {
-      type: 'object',
-      properties: {
-        eventType: { type: 'string', description: 'Type of event', enum: ['reminder', 'meeting', 'call', 'task'] },
-        title: { type: 'string', description: 'Title or description of the event' },
-        dateTime: { type: 'string', description: 'ISO 8601 datetime' },
-        duration: { type: 'number', description: 'Duration in minutes (optional)' },
-        reminderBefore: { type: 'number', description: 'Minutes before to send reminder' },
-      },
-      required: ['eventType', 'title', 'dateTime'],
-    },
-  },
-  {
     name: 'search_web',
-    description: 'Search the web for real-time information on any topic.',
+    description: 'Search the web for real-time market info, stock prices, tokenized-stock context, and broker-relevant news.',
     parameters: {
       type: 'object',
       properties: {
@@ -110,59 +65,20 @@ const TOOLS: ToolDef[] = [
     },
   },
   {
-    name: 'check_solana_balance',
-    description: 'Check the SOL or token balance of a Solana wallet address.',
+    name: 'route_to_agent',
+    description: 'Internal routing tool — not used by user-facing brokers.',
     parameters: {
       type: 'object',
       properties: {
-        walletAddress: { type: 'string', description: 'The Solana wallet address (base58)' },
-        token: { type: 'string', description: 'Token symbol (SOL, USDC, etc.) — defaults to SOL' },
+        specialty: { type: 'string', description: 'Target specialty or broker desk' },
       },
-      required: ['walletAddress'],
-    },
-  },
-  {
-    name: 'get_github_repos',
-    description: 'List GitHub repositories for a user or organization.',
-    parameters: {
-      type: 'object',
-      properties: {
-        username: { type: 'string', description: 'GitHub username or org name' },
-        limit: { type: 'number', description: 'Maximum number of repos to return' },
-      },
-      required: ['username'],
-    },
-  },
-  {
-    name: 'get_github_repo_content',
-    description: 'Get the content of a file or directory in a GitHub repository.',
-    parameters: {
-      type: 'object',
-      properties: {
-        owner: { type: 'string', description: 'Repository owner (username or org)' },
-        repo: { type: 'string', description: 'Repository name' },
-        path: { type: 'string', description: 'File or directory path within the repo' },
-      },
-      required: ['owner', 'repo', 'path'],
-    },
-  },
-  {
-    name: 'compare_prices',
-    description: 'Compare prices for a product or service across multiple vendors.',
-    parameters: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Product or service to compare' },
-        category: { type: 'string', description: 'Category (flights, hotels, electronics, etc.)' },
-        location: { type: 'string', description: 'Location or market (optional)' },
-      },
-      required: ['query'],
+      required: ['specialty'],
     },
   },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Agent definitions (mirrors lib/agent-registry.ts, standalone for seeding)
+// Broker definitions (mirrors lib/agent-registry.ts, standalone for seeding)
 // ──────────────────────────────────────────────────────────────────────────────
 
 interface AgentDef {
@@ -176,36 +92,52 @@ interface AgentDef {
 
 const AGENTS: AgentDef[] = [
   {
+    key: 'general_helper',
+    envKey: 'ELEVENLABS_AGENT_GENERAL_HELPER',
+    name: 'Hetty',
+    voiceId: process.env.ELEVENLABS_VOICE_GENERAL_HELPER ?? 'pNInz6obpgDQGcFmaJgB',
+    systemPrompt: `You are Hetty, the first Claflin broker. You help users research tokenized stocks, check market context, and capture trade intent — but you never execute real-money orders. You are conservative, independent, and obsessed with confirmation. Before you record any trade intent, briefly confirm: "I'm about to note a paper trade for [ticker] [quantity] [side] — shall I proceed?" Only proceed if the user clearly agrees. Be warm, efficient, and always narrate what you did. You can search the web for current market info when a user asks. You work on the Arbitrum network and USDC is the settlement currency.`,
+    toolNames: ['search_web'],
+  },
+  {
     key: 'solana_sage',
     envKey: 'ELEVENLABS_AGENT_SOLANA_SAGE',
-    name: 'Solana Sage',
+    name: 'Benham',
     voiceId: process.env.ELEVENLABS_VOICE_SOLANA_SAGE ?? 'TxGEqnHWrfWFTfGW9XjX',
-    systemPrompt: `You are Solana Sage, an expert AI agent specializing in Solana blockchain, DeFi protocols, and on-chain analytics. You can check wallet balances and look up transactions in real time. When a user wants a balance or transaction lookup, call the check_solana_balance or search_web tool immediately — never make up data. Be concise, precise, and explain technical results in plain language. Always confirm the wallet address before executing a lookup.`,
-    toolNames: ['check_solana_balance', 'search_web'],
+    systemPrompt: `You are Benham, a Claflin research broker. You specialize in fundamentals, earnings, and valuation for tokenized equities and crypto-adjacent stocks. You can search the web for real-time data, but you do not execute trades. When a user wants a quote or research, call search_web immediately — never make up data. Be concise, precise, and explain results in plain language. Always confirm the ticker and quantity before recording any trade intent.`,
+    toolNames: ['search_web'],
   },
   {
     key: 'code_reviewer',
     envKey: 'ELEVENLABS_AGENT_CODE_REVIEWER',
-    name: 'Code Reviewer',
+    name: 'Woodhull',
     voiceId: process.env.ELEVENLABS_VOICE_CODE_REVIEWER ?? 'ErXwobaYiN019PkySvjV',
-    systemPrompt: `You are a senior software engineer and code reviewer. You help developers with code quality, architecture decisions, debugging, and best practices. When a user wants to review a repo or file, call get_github_repos or get_github_repo_content immediately. Be specific, actionable, and assume the user is a competent developer. When scheduling a follow-up review, use set_reminder.`,
-    toolNames: ['get_github_repos', 'get_github_repo_content', 'search_web', 'set_reminder'],
-  },
-  {
-    key: 'general_helper',
-    envKey: 'ELEVENLABS_AGENT_GENERAL_HELPER',
-    name: 'General Helper',
-    voiceId: process.env.ELEVENLABS_VOICE_GENERAL_HELPER ?? 'pNInz6obpgDQGcFmaJgB',
-    systemPrompt: `You are a helpful, friendly AI concierge. You can book appointments, place orders, set reminders, and research almost anything. Before executing any book, order, or schedule action, briefly confirm: "I'm about to [action] on your behalf — shall I proceed?" Then call the tool. Be warm, efficient, and always narrate what you did after the tool returns. You accept USDC on Arbitrum.`,
-    toolNames: ['book_appointment', 'create_order', 'set_reminder', 'search_web'],
+    systemPrompt: `You are Woodhull, a Claflin momentum broker. You focus on growth stocks, thematic baskets, and catalyst-driven opportunities. You can search the web for current prices, news, and sentiment. You do not execute real-money trades; you capture and confirm trade intent. Be energetic but disciplined: always confirm ticker, side, and size before recording anything.`,
+    toolNames: ['search_web'],
   },
   {
     key: 'tour_master',
     envKey: 'ELEVENLABS_AGENT_TOUR_MASTER',
-    name: 'Tour Master',
+    name: 'Claflin Concierge',
     voiceId: process.env.ELEVENLABS_VOICE_TOUR_MASTER ?? '21m00Tcm4TlvDq8ikWAM',
-    systemPrompt: `You are Tour Master, a world-class travel planner. You help users plan trips, research destinations, find hotels, compare prices, and book travel. When a user asks about a destination or price comparison, call search_web or compare_prices immediately. For bookings, call book_appointment. Be enthusiastic and always include cost estimates.`,
-    toolNames: ['search_web', 'compare_prices', 'book_appointment'],
+    systemPrompt: `You are the Claflin Concierge, a helpful desk assistant. You answer account and platform questions, explain how Claflin works, and route users to the right broker (Hetty for conservative execution, Benham for research, Woodhull for momentum). You can search the web for general information. You do not handle trades or payments. Be warm, clear, and brief.`,
+    toolNames: ['search_web'],
+  },
+  {
+    key: 'web_researcher',
+    envKey: 'ELEVENLABS_AGENT_WEB_RESEARCHER',
+    name: 'Baruch',
+    voiceId: process.env.ELEVENLABS_VOICE_WEB_RESEARCHER ?? 'pqHfZKP75CvOlQylNhV4',
+    systemPrompt: `You are Baruch, a Claflin macro broker. You track rates, central-bank policy, macro trends, and breaking market news. You can search the web for current information and synthesize it for users. You do not execute trades; you provide context and research. Cite your sources when possible.`,
+    toolNames: ['search_web'],
+  },
+  {
+    key: 'medical_advisor',
+    envKey: 'ELEVENLABS_AGENT_MEDICAL_ADVISOR',
+    name: 'Marks',
+    voiceId: process.env.ELEVENLABS_VOICE_MEDICAL_ADVISOR ?? 'EXAVITQu4vr4xnSDxMaL',
+    systemPrompt: `You are Marks, a Claflin risk broker. You help users think through position sizing, concentration risk, and portfolio health. You can search the web for market context. You do not execute trades. Be calm, clear, and protective — your job is to help the user avoid overextending.`,
+    toolNames: ['search_web'],
   },
 ];
 
@@ -246,7 +178,7 @@ async function apiPatch(path: string, body: unknown) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('🚀  VOISSS ElevenLabs Agent Seeder');
+  console.log('🚀  Claflin ElevenLabs Broker Seeder');
   console.log(`📡  Webhook URL: ${WEBHOOK_URL}\n`);
 
   // ── Step 1: Upsert workspace tools ────────────────────────────────────────
@@ -272,11 +204,6 @@ async function main() {
     }
 
     try {
-      // ElevenLabs ConvAI tool schema (v1, 2025):
-      // - tool_config is a discriminated union on "type"
-      // - When type="webhook", tool_config has: name, description, api_schema
-      // - api_schema is an object with: url, method, plus the request body JSON schema
-      //   (url and method live INSIDE api_schema, not at the tool_config level)
       const created = await apiPost('/convai/tools', {
         name: tool.name,
         tool_config: {
@@ -286,12 +213,10 @@ async function main() {
           api_schema: {
             url: WEBHOOK_URL,
             method: 'POST',
-            // POST method requires the JSON schema under "request_body_schema"
             request_body_schema: tool.parameters,
           },
         },
       });
-      // The API may return id as "tool_id", "id", or nested in the response
       const toolId = created.tool_id ?? created.id ?? created.data?.tool_id ?? created.data?.id;
       toolIdMap[tool.name] = toolId;
       console.log(`   ✅  Created ${tool.name} → ${toolId ?? JSON.stringify(Object.keys(created))}`);
@@ -300,8 +225,8 @@ async function main() {
     }
   }
 
-  // ── Step 2: Create / update agents ────────────────────────────────────────
-  console.log('\n── Step 2: Creating / updating agents ─────────────────────────');
+  // ── Step 2: Create / update brokers ──────────────────────────────────────
+  console.log('\n── Step 2: Creating / updating brokers ──────────────────────────');
 
   let existingAgents: any[] = [];
   try {
@@ -315,25 +240,19 @@ async function main() {
   const results: Record<string, string> = {};
 
   for (const agent of AGENTS) {
-    // Resolve tool IDs for this agent
     const resolvedToolIds = agent.toolNames
       .map(n => toolIdMap[n])
       .filter(Boolean);
 
     const existing = existingAgents.find((a: any) => a.name === agent.name);
 
-    // ⚠️  Send ONLY the agent section — omit tts/asr completely.
-    //    ElevenLabs re-validates the FULL merged config on every PATCH, and any
-    //    tts.model_id or asr override triggers "English Agents must use turbo or
-    //    flash v2". Sending just the prompt + first_message + tool_ids is safe.
-    //    Voice can be updated separately via the ElevenLabs dashboard if needed.
     const agentSection = {
       conversation_config: {
         agent: {
           prompt: {
             prompt: agent.systemPrompt,
           },
-          first_message: `Hello! I'm ${agent.name}. How can I assist you today?`,
+          first_message: `Hello! I'm ${agent.name}, a Claflin broker. How can I help you today?`,
           language: 'en',
           tool_ids: resolvedToolIds,
         },
@@ -346,7 +265,6 @@ async function main() {
         results[agent.envKey] = existing.agent_id;
         console.log(`   ✅  Updated ${agent.name} → ${existing.agent_id}`);
       } else {
-        // ElevenLabs create endpoint is POST /convai/agents/create (not /convai/agents)
         const created = await apiPost('/convai/agents/create', {
           name: agent.name,
           ...agentSection,
@@ -366,7 +284,7 @@ async function main() {
     console.log(`${envKey}=${agentId}`);
   }
 
-  console.log('\n# ERC-8004 tokenIds (add after deploying contracts and registering agents)');
+  console.log('\n# ERC-8004 tokenIds (add after deploying contracts and registering brokers)');
   for (const agent of AGENTS) {
     const tokenEnvKey = `ERC8004_TOKEN_${agent.key.toUpperCase()}`;
     console.log(`${tokenEnvKey}=   # Set after on-chain registration`);

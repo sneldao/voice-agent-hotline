@@ -45,7 +45,7 @@ const STEP_META: Record<OnboardingStep, { title: string; subtitle: string; mood:
   },
   'complete': {
     title: 'You\'re live.',
-    subtitle: 'Connecting you to the concierge line.',
+    subtitle: 'Connecting you to the broker desk.',
     mood: 'celebrating',
   },
 };
@@ -172,7 +172,7 @@ export function OnboardingFlow({
           {currentStep === 'splash' ? (
             <div className="rotary-dial h-40 w-40 rounded-full flex items-center justify-center relative">
               <div className="absolute inset-6 rounded-full bg-gradient-to-br from-red-700 to-amber-700 flex items-center justify-center shadow-inner">
-                <span className="font-display text-3xl text-amber-50 tracking-tight">VO</span>
+                <span className="font-display text-3xl text-amber-50 tracking-tight">C</span>
               </div>
               {/* 10 dial holes */}
               {Array.from({ length: 10 }).map((_, i) => {

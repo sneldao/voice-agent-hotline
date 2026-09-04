@@ -64,7 +64,7 @@ export function ShareModal({
     // Logo area
     ctx.fillStyle = '#06b6d4';
     ctx.font = 'bold 48px system-ui';
-    ctx.fillText('🎙️ Voice Agent Hotline', 80, 100);
+    ctx.fillText('🎙️ Claflin', 80, 100);
 
     // Call info
     ctx.fillStyle = '#ffffff';

@@ -9,9 +9,9 @@ import type { ApiErrorKind } from '@/lib/api-client';
 /**
  * Delightful failure UX.
  *
- * The old experience was a dead-end: "Failed to load agents / Failed to
+ * The old experience was a dead-end: "Failed to load brokers / Failed to
  * fetch / Try Again". This component instead:
- * - speaks in the product's switchboard voice (never raw browser errors),
+ * - speaks in the Claflin broker-desk voice (never raw browser errors),
  * - adapts to the failure mode (offline vs server snag vs slow line),
  * - retries automatically on a visible countdown with backoff,
  * - retries the instant the device comes back online,
@@ -32,13 +32,13 @@ interface ConnectionErrorProps {
 
 const HEADLINES: Record<ApiErrorKind, string> = {
   offline: "The line's gone quiet",
-  network: "Can't reach the switchboard",
+  network: "Can't reach the broker desk",
   timeout: 'The line is ringing… and ringing',
-  http: 'The switchboard is having a moment',
-  parse: 'The switchboard answered with static',
+  http: 'The broker desk is having a moment',
+  parse: 'The broker desk answered with static',
 };
 
-const DEFAULT_MESSAGE = 'Our operators have been paged and are scrambling to reconnect.';
+const DEFAULT_MESSAGE = 'Our broker has been paged and is scrambling to reconnect.';
 
 export function ConnectionError({
   message,
@@ -127,7 +127,7 @@ export function ConnectionError({
             {isRetrying ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Ringing the switchboard…
+                Ringing the broker desk…
               </>
             ) : (
               <>
@@ -196,7 +196,7 @@ export function ReconnectingBanner({ message, isRetrying = false, onRetry }: Rec
         <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
       </span>
       <p className="flex-1 text-left text-xs font-medium text-amber-100/80">
-        {message || 'Having trouble reaching the switchboard — showing the last known directory.'}
+        {message || 'Having trouble reaching the broker desk — showing the last known lines.'}
         {spinning && <span className="text-amber-100/55"> Reconnecting…</span>}
       </p>
       {onRetry && (

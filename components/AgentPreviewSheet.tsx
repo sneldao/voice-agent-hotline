@@ -17,25 +17,25 @@ interface AgentPreviewSheetProps {
 }
 
 const EXAMPLES_BY_CATEGORY: Record<string, string[]> = {
-  healthcare: ['Summarize symptoms for a doctor visit', 'Explain a lab result in plain language'],
-  research: ['Find the strongest argument on a topic', 'Turn a question into a research plan'],
-  tech: ['Debug an implementation plan', 'Compare tools for a build decision'],
-  blockchain: ['Explain a wallet or transaction', 'Talk through a DeFi concept'],
-  general: ['Brainstorm next steps', 'Practice a difficult conversation'],
+  conservative: ['Ask about a tokenized stock', 'Get a conservative take before acting'],
+  research: ['Walk through a ticker and fundamentals', 'Build a quick research plan'],
+  momentum: ['Discuss growth themes and catalysts', 'Compare momentum baskets'],
+  macro: ['Get the latest on rates and markets', 'Synthesize breaking news'],
+  risk: ['Check position sizing for a trade', 'Review portfolio concentration'],
 };
 
 const PREVIEW_PERSONAS: Record<string, { desk: string; voice: string; promise: string }> = {
-  solana_sage: { desk: 'Chain Desk', voice: 'Precise and technical', promise: 'Best when you need a plain-English read on wallets, DeFi, or transactions.' },
-  code_reviewer: { desk: 'Debug Desk', voice: 'Direct senior engineer', promise: 'Best when you need to talk through bugs, architecture, or review tradeoffs.' },
-  general_helper: { desk: 'Life Admin', voice: 'Warm concierge', promise: 'Best when you need a hands-free assistant for errands, reminders, or research.' },
-  tour_master: { desk: 'Travel Desk', voice: 'Upbeat local guide', promise: 'Best when you need ideas, routes, budgets, or itinerary planning.' },
-  web_researcher: { desk: 'Research Desk', voice: 'Thorough analyst', promise: 'Best when you need current information with sources and synthesis.' },
-  medical_advisor: { desk: 'Health Prep', voice: 'Calm and careful', promise: 'Best when you need educational health information or visit prep questions.' },
+  general_helper: { desk: 'Main Desk', voice: 'Warm and disciplined', promise: 'Best when you want a conservative, confirmation-first take on tokenized stocks.' },
+  solana_sage: { desk: 'Research Desk', voice: 'Analytical and precise', promise: 'Best when you need fundamentals, earnings, and valuation for tokenized equities.' },
+  code_reviewer: { desk: 'Momentum Desk', voice: 'Direct and energetic', promise: 'Best when you want growth themes, catalysts, and momentum-driven trade ideas.' },
+  tour_master: { desk: 'Concierge Desk', voice: 'Upbeat and helpful', promise: 'Best when you have account questions or need to be routed to the right broker.' },
+  web_researcher: { desk: 'Macro Desk', voice: 'Thorough and measured', promise: 'Best when you need macro context, rates, and breaking market news.' },
+  medical_advisor: { desk: 'Risk Desk', voice: 'Calm and protective', promise: 'Best when you want to think through position sizing and portfolio risk.' },
 };
 
 function getExamples(agent: Agent): string[] {
   const category = agent.category?.toLowerCase() || '';
-  const specialty = agent.specialty || agent.category || 'this agent';
+  const specialty = agent.specialty || agent.category || 'this broker';
   return EXAMPLES_BY_CATEGORY[category] || [
     `Ask about ${specialty.toLowerCase()}`,
     'Get a quick second opinion before acting',
@@ -44,8 +44,8 @@ function getExamples(agent: Agent): string[] {
 
 function getPreviewPersona(agent: Agent) {
   return PREVIEW_PERSONAS[agent.id] || {
-    desk: agent.category ? `${agent.category} Desk` : 'Hotline Desk',
-    voice: 'Helpful voice agent',
+    desk: agent.category ? `${agent.category} Desk` : 'Broker Desk',
+    voice: 'Helpful voice broker',
     promise: agent.bio || agent.specialty,
   };
 }
@@ -87,7 +87,7 @@ export function AgentPreviewSheet({
                   type="button"
                   onClick={onClose}
                   className="rounded-full p-2 text-amber-100/40 transition-colors hover:bg-amber-100/10 hover:text-amber-50"
-                  aria-label="Close agent preview"
+                  aria-label="Close broker preview"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -157,7 +157,7 @@ export function AgentPreviewSheet({
           <div className="rounded-xl border border-amber-100/15 bg-amber-100/[0.04] p-3">
             <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-50">
               <CheckCircle className="h-4 w-4 text-emerald-400" />
-              What this agent can do
+              What this broker can do
             </p>
             <div className="space-y-2">
               {examples.map((example) => (
@@ -174,8 +174,8 @@ export function AgentPreviewSheet({
               </p>
               <p className="mt-1 text-xs leading-5 text-amber-100/80">
                 {hasFreeCall
-                  ? 'Try a 2-minute call without a wallet. The agent is not paid for trial calls — connect a wallet for paid calls that settle on Arbitrum.'
-                  : 'Sign in before starting so the hotline can settle against a real address.'}
+                  ? 'Try a 2-minute call without a wallet. The broker is not paid for trial calls — connect a wallet for paid calls that settle on Arbitrum.'
+                  : 'Sign in before starting so the desk can settle against a real address.'}
               </p>
             </div>
           ) : !hasEnoughBalance ? (

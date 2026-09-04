@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
  * (Next.js 16 "proxy" file convention — formerly "middleware".)
  *
  * Why this exists:
- * - The Vercel frontend (voisss-agent-hotline.vercel.app) and any embedded
- *   widgets call this API cross-origin. Previously each route had to remember
+ * - The Claflin Vercel frontend and any embedded widgets call this API
+ *   cross-origin. Previously each route had to remember
  *   to wrap responses in `withCors()` — several didn't, and NO route answered
  *   OPTIONS preflights, so browsers hard-failed with
  *   "No 'Access-Control-Allow-Origin' header" whenever the backend hiccupped.

@@ -15,7 +15,7 @@ const nextConfig = {
     unoptimized: true,
   },
   
-  // Disable static generation for all routes - this app requires dynamic rendering
+  // Disable static generation for all routes - Claflin requires dynamic rendering
   // due to client-only SDKs (ElevenLabs, WebRTC, WalletConnect)
   generateBuildId: async () => {
     return 'build-' + Date.now()

@@ -4,35 +4,35 @@ import { useMemo } from 'react';
 import type { Agent } from './types';
 import type { UseCase } from './useOnboarding';
 
-const PREFERENCES_KEY = 'voisss-preferences';
+const PREFERENCES_KEY = 'claflin-preferences';
 
 /**
- * Maps use-case selections to agent categories and IDs that should be prioritized.
+ * Maps use-case selections to broker categories and IDs that should be prioritized.
  */
 const USE_CASE_PRIORITY: Record<UseCase, { categories: string[]; agentIds: string[] }> = {
-  coding: {
-    categories: ['tech'],
-    agentIds: ['code_reviewer', 'general_helper'],
-  },
-  health: {
-    categories: ['healthcare'],
-    agentIds: ['medical_advisor', 'general_helper'],
+  conservative: {
+    categories: ['conservative'],
+    agentIds: ['general_helper', 'tour_master'],
   },
   research: {
     categories: ['research'],
+    agentIds: ['solana_sage', 'general_helper'],
+  },
+  momentum: {
+    categories: ['momentum'],
+    agentIds: ['code_reviewer', 'general_helper'],
+  },
+  macro: {
+    categories: ['macro'],
     agentIds: ['web_researcher', 'general_helper'],
   },
-  crypto: {
-    categories: ['blockchain'],
-    agentIds: ['solana_sage', 'code_reviewer'],
-  },
-  travel: {
-    categories: ['general'],
-    agentIds: ['tour_master', 'web_researcher'],
+  risk: {
+    categories: ['risk'],
+    agentIds: ['medical_advisor', 'general_helper'],
   },
   general: {
-    categories: ['general'],
-    agentIds: ['general_helper', 'web_researcher'],
+    categories: ['conservative'],
+    agentIds: ['general_helper', 'tour_master'],
   },
 };
 

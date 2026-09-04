@@ -8,22 +8,22 @@ interface Persona {
 }
 
 const AGENT_PERSONAS: Record<string, Persona> = {
-  solana_sage: { desk: 'Chain Desk', tone: 'Precise', line: 'Wallets, transactions, DeFi signals', voiceId: 'Josh' },
-  code_reviewer: { desk: 'Debug Desk', tone: 'Direct', line: 'Architecture, bugs, repo reviews', voiceId: 'Antoni' },
-  general_helper: { desk: 'Life Admin', tone: 'Warm', line: 'Booking, reminders, everyday tasks', voiceId: 'Adam' },
-  tour_master: { desk: 'Travel Desk', tone: 'Upbeat', line: 'Trips, routes, local plans', voiceId: 'Rachel' },
-  web_researcher: { desk: 'Research Desk', tone: 'Thorough', line: 'Sources, summaries, current info', voiceId: 'Steve' },
-  medical_advisor: { desk: 'Health Prep', tone: 'Calm', line: 'Questions, symptoms, visit prep', voiceId: 'Sarah' },
+  general_helper: { desk: 'Main Desk', tone: 'Warm', line: 'Tokenized stocks, conservative execution', voiceId: 'Adam' },
+  solana_sage: { desk: 'Research Desk', tone: 'Analytical', line: 'Fundamentals, earnings, valuation', voiceId: 'Josh' },
+  code_reviewer: { desk: 'Momentum Desk', tone: 'Direct', line: 'Growth baskets, themes, catalysts', voiceId: 'Antoni' },
+  tour_master: { desk: 'Concierge Desk', tone: 'Upbeat', line: 'Account questions, routing, help', voiceId: 'Rachel' },
+  web_researcher: { desk: 'Macro Desk', tone: 'Thorough', line: 'Rates, markets, news', voiceId: 'Steve' },
+  medical_advisor: { desk: 'Risk Desk', tone: 'Calm', line: 'Position sizing, portfolio health', voiceId: 'Sarah' },
 };
 
 const DEFAULT_PERSONA: Omit<Persona, 'voiceId'> & { voiceId: string } = {
-  desk: 'Hotline Desk',
+  desk: 'Broker Desk',
   tone: 'helpful',
   line: '',
   voiceId: 'Custom',
 };
 
-/** Returns a display persona for an agent, falling back to category/specialty. */
+/** Returns a display persona for a broker, falling back to category/specialty. */
 export function getPersona(agent: Agent): Persona {
   return (
     AGENT_PERSONAS[agent.id] || {

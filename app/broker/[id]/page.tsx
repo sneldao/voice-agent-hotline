@@ -13,7 +13,7 @@ import { CostPanel } from '@/components/CostPanel';
 
 const DEFAULT_CAP: number | null = 1;
 
-export default function AgentPage() {
+export default function BrokerPage() {
   const params = useParams();
   const router = useRouter();
   const agentId = params.id as string;
@@ -83,16 +83,16 @@ export default function AgentPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#0b0806] px-4 text-center">
         <div className="operator-panel rounded-[1.5rem] p-8">
-          <h1 className="text-xl font-bold text-amber-50">Agent not found</h1>
+          <h1 className="text-xl font-bold text-amber-50">Broker not found</h1>
           <p className="mt-2 text-sm text-amber-100/60">
-            The agent &quot;{agentId}&quot; doesn&apos;t exist or is no longer available.
+            The broker &quot;{agentId}&quot; doesn&apos;t exist or is no longer on the line.
           </p>
           <Link
             href="/"
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-100/20 bg-black/25 px-4 py-2 text-sm font-semibold text-amber-100/60 transition-colors hover:text-amber-50"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Switchboard
+            Back to broker desk
           </Link>
         </div>
       </div>
@@ -109,18 +109,18 @@ export default function AgentPage() {
           <Link
             href="/"
             className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-100/15 bg-black/25 transition-colors hover:bg-amber-100/10"
-            aria-label="Back to switchboard"
+            aria-label="Back to broker desk"
           >
             <ArrowLeft className="h-4 w-4 text-amber-100/60" />
           </Link>
           <div>
-            <h1 className="text-lg font-bold text-amber-50">Agent Profile</h1>
-            <p className="text-xs text-amber-100/45">VOISSS Switchboard</p>
+            <h1 className="text-lg font-bold text-amber-50">Broker Profile</h1>
+            <p className="text-xs text-amber-100/45">Claflin Broker Desk</p>
           </div>
         </div>
       </div>
 
-      {/* Agent card */}
+      {/* Broker card */}
       <div className="mx-auto max-w-2xl px-4 py-8">
         <div className="operator-panel rounded-[1.5rem] border border-amber-100/15 p-6">
           {/* Avatar + name */}

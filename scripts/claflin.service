@@ -1,6 +1,6 @@
 [Unit]
-Description=Voice Agent Hotline - Arbitrum
-Documentation=https://github.com/sneldao/voice-agent-hotline
+Description=Claflin Broker Desk - Arbitrum
+Documentation=https://github.com/sneldao/claflin
 After=network.target redis.service
 Wants=redis.service
 
@@ -10,7 +10,7 @@ User=www-data
 Group=www-data
 
 # Working directory
-WorkingDirectory=/opt/voice-hotline
+WorkingDirectory=/opt/claflin
 
 # Environment
 Environment=NODE_ENV=production
@@ -19,8 +19,8 @@ Environment=HOSTNAME=0.0.0.0
 
 # Start with PM2
 ExecStart=/usr/bin/pm2 start ecosystem.config.js
-ExecReload=/usr/bin/pm2 reload voice-hotline
-ExecStop=/usr/bin/pm2 stop voice-hotline
+ExecReload=/usr/bin/pm2 reload claflin
+ExecStop=/usr/bin/pm2 stop claflin
 
 # Restart policy
 Restart=always
@@ -37,7 +37,7 @@ PrivateTmp=true
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=voice-hotline
+SyslogIdentifier=claflin
 
 [Install]
 WantedBy=multi-user.target

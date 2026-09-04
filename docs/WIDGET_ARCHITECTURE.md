@@ -51,14 +51,14 @@ User taps agent → Widget controller sets agent-id → widget.startConversation
 
 ### Layer 1: Widget Instance (global, visually suppressed)
 
-A single `<elevenlabs-convai>` element lives in the layout/provider. It is the actual voice engine. We control it programmatically while the custom VOISSS UI remains the visible experience.
+A single `<elevenlabs-convai>` element lives in the layout/provider. It is the actual voice engine. We control it programmatically while the custom Claflin UI remains the visible experience.
 
 Important: do **not** assume `display: none` is safe. First prove the widget can start, capture audio, emit state, and end while visually suppressed. Prefer an offscreen or zero-opacity mounted container if the widget needs layout/audio lifecycle hooks.
 
 ```tsx
 // In layout or a global provider
 <elevenlabs-convai
-  id="voisss-widget"
+  id="claflin-widget"
   agent-id=""           // Set dynamically before starting
   className="sr-only-widget-engine"
 />
@@ -214,4 +214,4 @@ Backend: GET /api/get-signed-url?agentId=X → calls ElevenLabs API → returns 
 Frontend: widget.setAttribute('signed-url', url) → widget.startConversation()
 ```
 
-This would let us track usage per wallet address and correlate ElevenLabs conversations with VOISSS call IDs. Public `agent-id` may be enough for a demo, but signed URLs are preferred before relying on receipts, billing, or per-user analytics.
+This would let us track usage per wallet address and correlate ElevenLabs conversations with Claflin call IDs. Public `agent-id` may be enough for a demo, but signed URLs are preferred before relying on receipts, billing, or per-user analytics.

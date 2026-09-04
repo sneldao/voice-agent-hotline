@@ -57,7 +57,7 @@ export default function AdminPage() {
       const data = await res.json();
       setAgents(data.agents || []);
     } catch {
-      showToast('Failed to load agents', 'error');
+      showToast('Failed to load brokers', 'error');
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export default function AdminPage() {
     try {
       // Sign auth message for admin wallet auth
       const ts = Math.floor(Date.now() / 1000).toString();
-      const msg = `VOISSS auth: ${address!.toLowerCase()} at ${ts}`;
+      const msg = `Claflin auth: ${address!.toLowerCase()} at ${ts}`;
       const eth = (window as any).ethereum;
       let signature = '';
       if (eth) {
@@ -101,8 +101,8 @@ export default function AdminPage() {
       if (!res.ok) throw new Error(data.error || 'Action failed');
       showToast(
         action === 'approve'
-          ? `Agent approved${data.erc8004TokenId ? ` · ERC-8004 #${data.erc8004TokenId}` : ''}`
-          : 'Agent rejected'
+          ? `Broker approved${data.erc8004TokenId ? ` · ERC-8004 #${data.erc8004TokenId}` : ''}`
+          : 'Broker rejected'
       );
       fetchAgents();
     } catch (e: any) {
@@ -113,12 +113,12 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this agent permanently?')) return;
+    if (!confirm('Delete this broker permanently?')) return;
     setActionLoading(id + 'delete');
     try {
       // Sign auth message for admin wallet auth
       const ts = Math.floor(Date.now() / 1000).toString();
-      const msg = `VOISSS auth: ${address!.toLowerCase()} at ${ts}`;
+      const msg = `Claflin auth: ${address!.toLowerCase()} at ${ts}`;
       const eth = (window as any).ethereum;
       let signature = '';
       if (eth) {
@@ -145,7 +145,7 @@ export default function AdminPage() {
         headers,
       });
       if (!res.ok) throw new Error('Delete failed');
-      showToast('Agent deleted');
+      showToast('Broker deleted');
       fetchAgents();
     } catch (e: any) {
       showToast(e.message, 'error');
@@ -223,8 +223,8 @@ export default function AdminPage() {
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold">Agent Admin</h1>
-            <p className="text-amber-100/60 text-sm mt-1">Review and manage agent registrations</p>
+            <h1 className="text-2xl font-bold">Broker Admin</h1>
+            <p className="text-amber-100/60 text-sm mt-1">Review and manage broker registrations</p>
           </div>
           <button
             onClick={fetchAgents}
@@ -253,9 +253,9 @@ export default function AdminPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-16 text-amber-100/40">Loading agents…</div>
+          <div className="text-center py-16 text-amber-100/40">Loading brokers…</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-amber-100/40">No {filter} agents</div>
+          <div className="text-center py-16 text-amber-100/40">No {filter} brokers</div>
         ) : (
           <div className="space-y-4">
             {filtered.map(agent => (

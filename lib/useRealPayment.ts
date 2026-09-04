@@ -220,7 +220,7 @@ export function useRealPayment(): UseRealPaymentReturn {
       // Mirror only — not proof of settlement. Chain tx is source of truth.
       // Sign auth message for the tracking endpoint
       const authTimestamp = Math.floor(Date.now() / 1000).toString();
-      const authMessage = `VOISSS auth: ${address.toLowerCase()} at ${authTimestamp}`;
+      const authMessage = `Claflin auth: ${address.toLowerCase()} at ${authTimestamp}`;
       let authSignature = '';
       try {
         authSignature = await eth.request({

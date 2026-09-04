@@ -1,10 +1,10 @@
 # ============================================
-# VOISSS Voice Agent Hotline - Production Dockerfile
+# Claflin - Production Dockerfile
 # ============================================
 # Multi-stage build for minimal production image
 # Usage:
-#   docker build -t voisss .
-#   docker run -p 3000:3000 --env-file .env.local voisss
+#   docker build -t claflin .
+#   docker run -p 3000:3000 --env-file .env.local claflin
 
 # ── Stage 1: Dependencies ────────────────────
 FROM node:20-alpine AS deps

@@ -18,7 +18,7 @@ import {
 } from '@/lib/db';
 import { parseUnits, encodeFunctionData } from 'viem';
 
-// The VOISSS platform address that acts as delegate
+// The Claflin platform address that acts as delegate
 const PLATFORM_ADDRESS = process.env.NEXT_PUBLIC_PLATFORM_ADDRESS || '0x54351049081A5A64Ea93c56b666830ED5076b960';
 
 // DelegationRegistry ABI for encoding transaction data
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     const delegation = await createDelegation({
       id: delegationId,
       userId: userAddress,
-      agentId: 'voisss_platform',
+      agentId: 'claflin_platform',
       scope: {
         canBook,
         canOrder,

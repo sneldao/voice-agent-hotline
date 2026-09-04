@@ -1,10 +1,10 @@
 # Error Resilience & CORS Architecture
 
-How VOISSS prevents — and gracefully survives — API failures like:
+How Claflin prevents — and gracefully survives — API failures like:
 
 ```
-Access to fetch at 'https://voisss.celo.famile.xyz/api/agents?...' from origin
-'https://voisss-agent-hotline.vercel.app' has been blocked by CORS policy:
+Access to fetch at 'https://api.your-claflin-app.com/api/agents?...' from origin
+'https://your-claflin-app.vercel.app' has been blocked by CORS policy:
 No 'Access-Control-Allow-Origin' header is present on the requested resource.
 ```
 
@@ -24,7 +24,7 @@ rewrite so the browser calls its **own origin** at `/api/*` and the Next.js
 server forwards server-to-server. No browser CORS, no preflight round-trips,
 first-party cookies, and ad-blockers stop flagging API calls.
 
-- Vercel: `API_PROXY_TARGET=https://voisss.celo.famile.xyz` (and unset the
+- Vercel: `API_PROXY_TARGET=https://api.your-claflin-app.com` (and unset the
   legacy `NEXT_PUBLIC_API_URL`).
 - Hetzner / local dev: leave it unset — local route handlers serve directly.
 
@@ -46,7 +46,7 @@ For direct cross-origin hits (embedded widgets, SDK consumers):
 - `apiFetch()` — 12s timeout, jittered exponential backoff, retries **only**
   idempotent GETs (never replay a POST/payment), fast-fails when offline.
 - `ApiError` — typed `kind` (`offline | network | timeout | http | parse`) +
-  `friendlyMessage` in the product's switchboard voice. Raw
+  `friendlyMessage` in the Claflin broker-desk voice. Raw
   "Failed to fetch" never reaches the UI.
 - SWR keeps previous data, retries with a capped outer backoff, and exposes
   `errorKind` / `isRetrying`.
@@ -55,12 +55,12 @@ For direct cross-origin hits (embedded widgets, SDK consumers):
 
 | Situation | What the user sees |
 |---|---|
-| First load | Skeleton rows; after 4s, "Warming up the switchboard…" |
-| Cold-start failure (no cache) | `ConnectionError`: Vox mascot, friendly headline, "Ring again" button, visible auto-redial countdown (5s→10s→20s→30s), instant retry on `online` event |
-| Failure with stale data | Directory stays on screen + `ReconnectingBanner` ("showing the last known directory") |
+| First load | Skeleton rows; after 4s, "Warming up the broker desk…" |
+| Cold-start failure (no cache) | `ConnectionError`: desk bell mascot, friendly headline, "Ring again" button, visible auto-redial countdown (5s→10s→20s→30s), instant retry on `online` event |
+| Failure with stale data | Broker desk stays on screen + `ReconnectingBanner` ("showing the last known lines") |
 | Offline | Offline copy + automatic redial the moment connectivity returns |
-| Agent page network failure | Retryable `ConnectionError` — never a false "Agent not found" |
-| Page crash | `app/error.tsx`: on-theme "The line went dead" with Vox + digest ref |
+| Broker page network failure | Retryable `ConnectionError` — never a false "Broker not found" |
+| Page crash | `app/error.tsx`: on-theme "The line went dead" with desk bell + digest ref |
 
 Accessibility: the failure headline/message is announced once via
 `role="alert"`; the per-second countdown is `aria-hidden` (screen readers get

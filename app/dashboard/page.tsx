@@ -239,7 +239,7 @@ export default function DashboardPage() {
     }
     setMintLoading(agent.id);
     try {
-      const agentURI = `https://voisss-agent-hotline.vercel.app/api/agents/${agent.id}`;
+      const agentURI = `${window.location.origin}/api/agents/${agent.id}`;
       const rateWei = BigInt(Math.floor(parseFloat(String(agent.rate || '0.10')) * 1e18));
       const specialties = agent.category ? [agent.category] : ['general'];
       const data = encodeRegisterAgent(agentURI, rateWei, specialties);
@@ -288,8 +288,8 @@ export default function DashboardPage() {
         <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 80px)' }}>
           <div className="text-center space-y-4">
             <div className="text-4xl">🎙️</div>
-            <h1 className="text-xl font-bold text-amber-50">Developer Dashboard</h1>
-            <p className="text-amber-100/60 text-sm">Connect the wallet you used to register your agents</p>
+            <h1 className="text-xl font-bold text-amber-50">Broker Dashboard</h1>
+            <p className="text-amber-100/60 text-sm">Connect the wallet you used to register your brokers</p>
             <button
               onClick={connect}
               className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white rounded-full text-sm font-bold transition-all"
@@ -327,22 +327,22 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Link href="/" className="text-xs text-amber-100/45 hover:text-amber-100/70 transition-colors">
-                Switchboard
+                Broker Desk
               </Link>
               <span className="text-xs text-amber-100/25">/</span>
               <span className="text-xs text-amber-100/60">Dashboard</span>
             </div>
-            <h1 className="text-2xl font-bold text-amber-50">Developer Dashboard</h1>
+            <h1 className="text-2xl font-bold text-amber-50">Broker Dashboard</h1>
             <p className="text-amber-100/45 text-sm mt-1 font-mono">
               {address?.slice(0, 8)}…{address?.slice(-4)}
             </p>
           </div>
           <div className="flex gap-2">
             <Link
-              href="/list-your-agent"
+              href="/list-your-broker"
               className="px-4 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white rounded-full text-sm font-bold transition-all"
             >
-              + List Agent
+              + List Broker
             </Link>
             <button
               onClick={fetchData}
@@ -385,7 +385,7 @@ export default function DashboardPage() {
               <p className="text-xs text-amber-100/60 leading-relaxed">
                 <span className="font-semibold text-amber-200">How earnings work:</span>{' '}
                 Your 80% share is ledgered in Redis when a call settles on Arbitrum.
-                Withdrawals send USDC from the platform wallet to your agent wallet.
+                Withdrawals send USDC from the platform wallet to your broker wallet.
                 The 80/20 split is not yet atomic on-chain — that requires the PaymentRouter contract (roadmap).
               </p>
             </div>
@@ -393,26 +393,26 @@ export default function DashboardPage() {
             {/* Platform stats */}
             {summary && (
               <div className="rounded-xl border border-amber-100/15 bg-[#17100d] p-4 mb-8 flex flex-wrap gap-6 text-sm">
-                <div><span className="text-amber-100/45">Platform agents:</span> <span className="font-semibold text-amber-100">{summary.totalAgents}</span></div>
+                <div><span className="text-amber-100/45">Platform brokers:</span> <span className="font-semibold text-amber-100">{summary.totalAgents}</span></div>
                 <div><span className="text-amber-100/45">Platform calls:</span> <span className="font-semibold text-amber-100">{summary.totalCalls}</span></div>
                 {summary.topAgent && (
-                  <div><span className="text-amber-100/45">Top agent:</span> <span className="font-semibold text-amber-100">{summary.topAgent.name}</span></div>
+                  <div><span className="text-amber-100/45">Top broker:</span> <span className="font-semibold text-amber-100">{summary.topAgent.name}</span></div>
                 )}
               </div>
             )}
 
-            {/* My agents */}
-            <h2 className="text-lg font-semibold text-amber-50 mb-4">My Agents ({myAgents.length})</h2>
+            {/* My brokers */}
+            <h2 className="text-lg font-semibold text-amber-50 mb-4">My Brokers ({myAgents.length})</h2>
 
             {myAgents.length === 0 ? (
               <div className="rounded-xl border border-amber-100/15 bg-[#17100d] p-8 text-center">
                 <div className="text-3xl mb-3">🤖</div>
-                <p className="text-amber-100/60 text-sm">No agents registered with this wallet yet.</p>
+                <p className="text-amber-100/60 text-sm">No brokers registered with this wallet yet.</p>
                 <Link
-                  href="/list-your-agent"
+                  href="/list-your-broker"
                   className="inline-block mt-4 px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white rounded-full text-sm font-bold transition-all"
                 >
-                  Register your first agent
+                  Register your first broker
                 </Link>
               </div>
             ) : (

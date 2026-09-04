@@ -1,11 +1,11 @@
-# Agentic Architecture
+# Claflin Architecture
 
 ## Overview
 
-The platform is a voice agent marketplace where:
-- **Users** connect a wallet, browse agents, and pay per minute via USDC on Arbitrum
-- **Agents** are ElevenLabs Conversational AI instances with on-chain ERC-8004 identity
-- **Developers** can self-register their own agents via `/list-your-agent`
+The platform is a voice-native broker desk where:
+- **Users** connect a wallet, browse brokers, and call Hetty (the first Claflin broker)
+- **Brokers** are ElevenLabs Conversational AI instances with on-chain ERC-8004 identity
+- **Developers** can self-register their own brokers via `/list-your-broker`
 
 Voice transport note: the agent lifecycle below is still the correct product architecture. The voice connection uses the official `<elevenlabs-convai>` widget engine, controlled programmatically via `useWidgetConversation`. See `docs/WIDGET_ARCHITECTURE.md` for details.
 
@@ -14,13 +14,13 @@ Voice transport note: the agent lifecycle below is still the correct product arc
 ## Agent Lifecycle
 
 ```
-Developer submits via /list-your-agent
+Developer submits via /list-your-broker
         │
         ▼
 POST /api/agents  { register: true }
         │
         ▼
-Redis: agent stored as status="pending"
+Redis: broker stored as status="pending"
         │
         ▼
 Admin reviews → PATCH /api/agents/:id  { action: "approve" | "reject" }
@@ -29,7 +29,7 @@ Admin reviews → PATCH /api/agents/:id  { action: "approve" | "reject" }
 status="active" → appears in GET /api/agents
         │
         ▼
-User calls agent → ElevenLabs Conversational AI session
+User calls broker → ElevenLabs Conversational AI session
         │
         ├─ Controlled via `<elevenlabs-convai>` widget engine (implemented)
         └─ `useWidgetConversation` hook drives shadow DOM button + signed URLs

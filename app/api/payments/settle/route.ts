@@ -190,7 +190,7 @@ export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://voisss-agent-hotline.vercel.app',
+      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || '*',
       'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },

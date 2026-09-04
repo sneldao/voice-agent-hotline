@@ -89,7 +89,7 @@ function exportAsTXT(call: CallRecord, timestamp: string): { filename: string; c
   }
 
   lines.push('', '───────────────────────────────────────────────────────────────');
-  lines.push('Exported from Voice Agent Hotline');
+  lines.push('Exported from Claflin');
   lines.push(`Export Date: ${new Date().toLocaleString()}`);
   lines.push('═══════════════════════════════════════════════════════════════');
 
@@ -366,7 +366,7 @@ function exportAsPDF(call: CallRecord, timestamp: string): { filename: string; c
   <div class="container">
     <div class="header">
       <div class="logo">🎙️</div>
-      <div class="logo-text">Voice Agent Hotline</div>
+      <div class="logo-text">Claflin</div>
       <h1>Call Transcript</h1>
     </div>
 
@@ -433,13 +433,13 @@ function exportAsPDF(call: CallRecord, timestamp: string): { filename: string; c
 
     <div class="footer">
       <p class="footer-text">
-        Exported from <strong>Voice Agent Hotline</strong>
+        Exported from <strong>Claflin</strong>
       </p>
       <p class="footer-text">
         Export Date: ${new Date().toLocaleString()}
       </p>
       <p class="footer-text">
-        <a class="footer-link" href="https://voisss-agent-hotline.vercel.app">voisss-agent-hotline.vercel.app</a>
+        <span class="footer-link">your-claflin-app.vercel.app</span>
       </p>
     </div>
   </div>
@@ -645,7 +645,7 @@ export function exportMultipleCalls(calls: CallRecord[], format: 'txt' | 'json' 
   });
 
   lines.push('═══════════════════════════════════════════════════════════════');
-  lines.push('Exported from Voice Agent Hotline');
+  lines.push('Exported from Claflin');
   lines.push(`Export Date: ${new Date().toLocaleString()}`);
   lines.push('═══════════════════════════════════════════════════════════════');
 

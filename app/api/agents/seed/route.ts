@@ -11,12 +11,12 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      message: 'Agents seeded successfully'
+      message: 'Brokers seeded successfully'
     });
   } catch (error) {
-    console.error('Error seeding agents:', error);
+    console.error('Error seeding brokers:', error);
     return NextResponse.json(
-      { error: 'Failed to seed agents' },
+      { error: 'Failed to seed brokers' },
       { status: 500 }
     );
   }
@@ -24,6 +24,6 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    message: 'Use POST to seed agents'
+    message: 'Use POST to seed brokers'
   });
 }

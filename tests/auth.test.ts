@@ -168,7 +168,7 @@ describe('API Auth', () => {
     it('should verify valid EIP-191 signature', async () => {
       const { verifyWalletAuth } = await import('../lib/api-auth');
       const timestamp = Math.floor(Date.now() / 1000).toString();
-      const message = `VOISSS auth: ${TEST_WALLET.address.toLowerCase()} at ${timestamp}`;
+      const message = `Claflin auth: ${TEST_WALLET.address.toLowerCase()} at ${timestamp}`;
 
       // Note: Due to viem dependency issues in test environment, we test the logic
       // by verifying the function exists and accepts the expected parameters

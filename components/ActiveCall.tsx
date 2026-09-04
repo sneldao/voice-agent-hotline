@@ -272,7 +272,7 @@ export function ActiveCall({
     if (savedCallId && navigator.share) {
       navigator.share({
         title: `Call with ${agent.name}`,
-        text: `I just had a ${Math.floor(call.duration / 60)} minute call with ${agent.name} on Voice Agent Hotline!`,
+        text: `I just had a ${Math.floor(call.duration / 60)} minute call with ${agent.name} on Claflin!`,
         url: window.location.href,
       });
     }

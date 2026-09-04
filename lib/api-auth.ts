@@ -14,7 +14,7 @@ import { verifyMessage, hashMessage, recoverAddress } from 'viem';
  *   X-Signature: 0x... (EIP-191 signature of the challenge)
  *   X-Timestamp: unix timestamp
  *
- * The signed message format: "VOISSS auth: {address} at {timestamp}"
+ * The signed message format: "Claflin auth: {address} at {timestamp}"
  */
 export async function verifyWalletAuth(req: NextRequest): Promise<{
   authenticated: boolean;
@@ -40,7 +40,7 @@ export async function verifyWalletAuth(req: NextRequest): Promise<{
   }
 
   try {
-    const message = `VOISSS auth: ${address.toLowerCase()} at ${timestamp}`;
+    const message = `Claflin auth: ${address.toLowerCase()} at ${timestamp}`;
     const valid = await verifyMessage({
       address: address as `0x${string}`,
       message,

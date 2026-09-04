@@ -109,7 +109,7 @@ export class BookingSkill {
           date: params.dateTime,
           time: params.dateTime,
           party_size: 2, // Default party size
-          name: 'Voice Agent User', // Could be obtained from user profile
+          name: 'Claflin caller', // Could be obtained from user profile
           phone: '+1234567890', // Could be obtained from user profile
           special_requests: params.notes || '',
         },

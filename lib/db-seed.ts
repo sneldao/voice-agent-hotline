@@ -1,12 +1,12 @@
 /**
- * Agent Seeding — Sources from AGENT_REGISTRY (single source of truth).
+ * Broker Seeding — Sources from AGENT_REGISTRY (single source of truth).
  *
  * This module NEVER creates new ElevenLabs agents. It only writes to Redis
- * using the pre-configured agent IDs from environment variables. If an agent
+ * using the pre-configured broker IDs from environment variables. If a broker
  * doesn't have an ElevenLabs ID configured, it's skipped (not shown to users).
  *
- * To add a new agent:
- *   1. Create it manually in the ElevenLabs dashboard
+ * To add a new broker:
+ *   1. Create it manually in the ElevenLabs dashboard or run scripts/seed-elevenlabs.ts
  *   2. Add its ID as ELEVENLABS_AGENT_<KEY> in the environment
  *   3. Add the entry to AGENT_REGISTRY in lib/agent-registry.ts
  *   4. Run the seed endpoint: POST /api/agents/seed
@@ -36,15 +36,15 @@ export interface AgentSeed {
   totalCalls: number;
 }
 
-/** Map registry categories to user-facing categories */
+/** Map registry specialties to broker-desk categories */
 function primaryCategory(entry: AgentRegistryEntry): string {
   const specs = entry.specialties;
-  if (specs.includes('health') || specs.includes('medical')) return 'healthcare';
-  if (specs.includes('blockchain') || specs.includes('crypto')) return 'blockchain';
-  if (specs.includes('code') || specs.includes('tech')) return 'tech';
-  if (specs.includes('research') || specs.includes('web')) return 'research';
-  if (specs.includes('travel')) return 'travel';
-  return 'general';
+  if (specs.includes('risk') || specs.includes('position-sizing')) return 'risk';
+  if (specs.includes('momentum') || specs.includes('growth') || specs.includes('thematic')) return 'momentum';
+  if (specs.includes('macro') || specs.includes('news') || specs.includes('rates')) return 'macro';
+  if (specs.includes('research') || specs.includes('fundamentals') || specs.includes('earnings')) return 'research';
+  if (specs.includes('conservative') || specs.includes('stocks') || specs.includes('tokenized')) return 'conservative';
+  return 'conservative';
 }
 
 /** Convert a registry entry to a Redis-storable agent record */
@@ -70,9 +70,9 @@ function registryToSeed(entry: AgentRegistryEntry): AgentSeed {
 }
 
 export async function seedAgents() {
-  console.log('🌱 Seeding agents from AGENT_REGISTRY...');
+  console.log('🌱 Seeding brokers from AGENT_REGISTRY...');
 
-  // Clear existing agent index
+  // Clear existing broker index
   const existingIds = await redis.smembers('agent_index');
   if (existingIds && existingIds.length > 0) {
     // Remove old agent hashes
@@ -82,7 +82,7 @@ export async function seedAgents() {
     }
     pipeline.del('agent_index');
     await pipeline.exec();
-    console.log(`  🧹 Cleared ${existingIds.length} old agents from Redis`);
+    console.log(`  🧹 Cleared ${existingIds.length} old brokers from Redis`);
   }
 
   // Also clear the online sorted set
@@ -92,10 +92,10 @@ export async function seedAgents() {
   let skipped = 0;
 
   for (const entry of Object.values(AGENT_REGISTRY)) {
-    // Skip the voice router — it's not a user-facing agent
+    // Skip the voice router — it's not a user-facing broker
     if (entry.key === 'voice_router') continue;
 
-    // Only seed agents that have a working ElevenLabs agent ID
+    // Only seed brokers that have a working ElevenLabs agent ID
     if (!entry.elevenLabsAgentId) {
       console.log(`  ⏭️  Skipping ${entry.name} — no ElevenLabs agent ID configured`);
       skipped++;
@@ -129,7 +129,7 @@ export async function seedAgents() {
     seeded++;
   }
 
-  console.log(`🎉 Done! ${seeded} agents seeded, ${skipped} skipped (no ElevenLabs ID).`);
+  console.log(`🎉 Done! ${seeded} brokers seeded, ${skipped} skipped (no ElevenLabs ID).`);
 }
 
 export async function getAgent(agentId: string): Promise<AgentSeed | null> {

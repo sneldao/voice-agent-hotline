@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://voisss-agent-hotline.vercel.app',
+  'https://your-claflin-app.vercel.app',
   'http://localhost:3000',
 ];
 

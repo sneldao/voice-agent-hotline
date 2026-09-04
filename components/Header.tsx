@@ -42,12 +42,12 @@ export function Header({
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="signal-scan flex h-10 w-10 items-center justify-center rounded-xl border border-amber-100/25 bg-red-950/50 shadow-lg shadow-red-950/30" role="img" aria-label="VOISSS Hotline logo">
+          <div className="signal-scan flex h-10 w-10 items-center justify-center rounded-xl border border-amber-100/25 bg-red-950/50 shadow-lg shadow-red-950/30" role="img" aria-label="Claflin logo">
             <PhoneCall className="h-5 w-5 text-amber-100" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-amber-50">VOISSS</h1>
+              <h1 className="text-lg font-bold text-amber-50">Claflin</h1>
               {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
                 <span className="rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-300">
                   Demo
@@ -61,7 +61,7 @@ export function Header({
             </div>
             <p className="hidden text-xs text-amber-100/45 sm:flex sm:items-center sm:gap-1.5">
               <Radio className="h-3 w-3 text-emerald-300" />
-              Operator switchboard for AI lines
+              Your broker is on the line
                 </p>
               </div>
             </div>
@@ -93,11 +93,11 @@ export function Header({
                     📊 Dashboard
                   </Link>
                   <Link
-                    href="/list-your-agent"
+                    href="/list-your-broker"
                     onClick={() => setShowMenu(false)}
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-amber-100/70 transition-colors hover:bg-amber-100/10"
                   >
-                    🎙️ List Agent
+                    🎙️ List Broker
                   </Link>
                   <button
                     onClick={() => {

@@ -22,14 +22,14 @@ export default function Error({
           <Mascot mood="thinking" size={110} />
         </div>
         <p className="mt-4 font-mono text-[10px] font-bold uppercase tracking-[0.32em] text-amber-100/55">
-          VOISSS · Operator switchboard
+          Claflin · Broker desk
         </p>
         <h2 className="mt-2 font-display text-2xl font-bold text-amber-50">
           The line went dead
         </h2>
         <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-amber-100/60">
-          Something crackled and dropped the call on our end. Our operators have
-          been paged — try ringing again.
+          Something crackled and dropped the call on our end. Hetty has been
+          paged — try ringing again.
         </p>
         {error?.digest && (
           <p className="mt-3 font-mono text-[10px] text-amber-100/35">

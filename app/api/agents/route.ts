@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       // Get single agent
       const agent = await redis.hgetall(`agent:${agentId}`);
       if (!agent || Object.keys(agent).length === 0) {
-        return withCors(NextResponse.json({ error: 'Agent not found' }, { status: 404 }), req);
+        return withCors(NextResponse.json({ error: 'Broker not found' }, { status: 404 }), req);
       }
       return withCors(NextResponse.json({ agent }), req);
     }
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
     }
     if (register && !submitted_elevenlabs_id) {
       return NextResponse.json(
-        { error: 'Missing required field: elevenlabs_agent_id for self-registration' },
+        { error: 'Missing required field: elevenlabs_agent_id for broker submission' },
         { status: 400 }
       );
     }
@@ -338,7 +338,7 @@ export async function PATCH(req: NextRequest) {
 
     const agent = await redis.hgetall(`agent:${id}`);
     if (!agent || Object.keys(agent).length === 0) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
     }
 
     // Update ElevenLabs agent if needed
@@ -382,7 +382,7 @@ export async function DELETE(req: NextRequest) {
     await redis.srem('agent_index', id);
 
     if (deleted === 0) {
-      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Broker not found' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });

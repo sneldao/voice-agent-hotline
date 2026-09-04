@@ -1,26 +1,33 @@
-# VOISSS — Voice Agent Hotline
+# Claflin — voice-native broker desk
 
-A voice-first AI agent marketplace. Browse the directory, pick up a line, and task specialist agents using natural speech — no keyboard required. Pay per minute in USDC on Arbitrum.
+A voice-first trading desk. Pick up the line, ask about tokenized stocks, and place paper trades by voice. The first Claflin broker is **Hetty** — conservative, independent, and obsessed with confirmation before execution.
 
-**Live:** [voisss-agent-hotline.vercel.app](https://voisss-agent-hotline.vercel.app)
-**API:** [api.sneldao.com](https://api.sneldao.com) (Hetzner VPS, port 3042)
+**Live:** [your-claflin-app.vercel.app](https://your-claflin-app.vercel.app)  
+**API:** [api.your-claflin-app.com](https://api.your-claflin-app.com) (Hetzner VPS, port 3042)
 
 ---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/sneldao/voice-agent-hotline.git
-cd voice-agent-hotline
+git clone https://github.com/sneldao/claflin.git
+cd claflin
 pnpm install
 cp .env.local.example .env.local
 # Fill in your API keys (ElevenLabs, Upstash, WalletConnect, etc.)
 pnpm dev
 ```
 
-Seed ElevenLabs agents with tool configs:
+Seed the Hetty broker and tools in ElevenLabs:
+
 ```bash
 pnpm tsx scripts/seed-elevenlabs.ts
+```
+
+Then seed the directory:
+
+```bash
+curl -X POST https://your-claflin-app.vercel.app/api/agents/seed
 ```
 
 ---
@@ -31,28 +38,28 @@ pnpm tsx scripts/seed-elevenlabs.ts
 |---|---|
 | Frontend | Next.js 16, React 19, Tailwind CSS, Fraunces (display) + JetBrains Mono (codes) + IBM Plex Sans (body) |
 | Voice | ElevenLabs Conversational AI via controlled `<elevenlabs-convai>` widget (`components/WidgetEngine.tsx`) |
-| Payments | x402 / USDC on Arbitrum via MetaMask Smart Accounts — 80/20 platform/agent split (ledgered until PaymentRouter) |
+| Payments | x402 / USDC on Arbitrum via MetaMask Smart Accounts — 80/20 platform/broker split (ledgered until PaymentRouter) |
 | Settlement | 1Shot Permissionless Relayer — gasless on-chain settlement |
 | Identity | ERC-8004 delegation registry (Arbitrum Sepolia, testnet) |
 | LLM | Venice AI (privacy-first research) |
-| Tools | Firecrawl (web), Composio (GitHub, Solana) |
+| Tools | Firecrawl (web research), Coinbase / broker APIs via Composio (where available) |
 | Storage | Upstash Redis |
 | Infra | Vercel (frontend) + Hetzner VPS (API, PM2 standalone) |
 
 ---
 
-## Agents
+## Brokers
 
-| Agent | Specialty | Voice |
+| Broker | Specialty | Voice |
 |---|---|---|
-| Solana Sage | Blockchain analytics, wallet balances | Josh |
-| Code Reviewer | GitHub operations, code reviews | Antoni |
-| General Helper | Booking, ordering, scheduling | Adam |
-| Tour Master | Travel planning, price comparison | Rachel |
-| Web Researcher | Real-time web search (ElevenLabs agent) | Steve |
-| Medical Advisor | Health visit prep, symptoms, questions | Sarah |
+| **Hetty** | Tokenized stocks, conservative execution, confirmation-first voice trading | Adam |
+| Benham | Fundamental research and earnings analysis | Josh |
+| Woodhull | Growth & momentum, thematic baskets | Antoni |
+| Claflin Concierge | Account questions, hand-offs, and desk routing | Rachel |
+| Baruch *(planned)* | Macro, rates, and real-time market news | Steve |
+| Marks *(planned)* | Risk, position sizing, and portfolio health | Sarah |
 
-Each agent has a unique voice, system prompt, and tool set invoked via webhooks during calls. See `lib/agent-registry.ts` for the canonical list and `lib/agent-personas.ts` for the display copy.
+The canonical broker registry lives in `lib/agent-registry.ts`; display personas live in `lib/agent-personas.ts`. The `general_helper` entry (Hetty) is the default concierge in `components/DiscoverTab.tsx`.
 
 ---
 
@@ -60,17 +67,17 @@ Each agent has a unique voice, system prompt, and tool set invoked via webhooks 
 
 ```
 Voice Layer (ElevenLabs ConvAI widget) → Webhook Handler (tool routing)
-  → Skill Execution (Firecrawl, Composio, Venice AI)
+  → Skill Execution (web research, quote lookup, simulated trade intent)
     → Settlement (x402 → 1Shot relayer → Arbitrum)
 ```
 
-- **WidgetEngine** mounts a single offscreen `<elevenlabs-convai>` element via `WidgetEngineProvider` and controls it programmatically
-- **ActiveCall** is the switchboard-style operator console during a conversation
-- **Directory** (`components/DiscoverTab.tsx` + `DirectoryRow`) is the phonebook — mono dial codes, live activity, per-minute price, no card grid
-- **CostPanel** is the first-class cost surface: per-minute rate, optional cap ($0.50 / $1 / $2 / $5 / Open), live ticker with soft "30s left on the line" warnings
-- **LiveActivity** ticker shows "3 on the line · 17 in the last hour" from `/api/activity/live` — fails soft and hides if there's no activity
-- **Webhook** routes tool calls per-agent and handles x402 payment negotiation
-- **DelegationRegistry** (ERC-8004, Arbitrum Sepolia) manages agent permissions
+- **WidgetEngine** mounts a single offscreen `<elevenlabs-convai>` element via `WidgetEngineProvider` and controls it programmatically.
+- **ActiveCall** is the broker-desk console during a conversation: live cost ticker, cap selector, and mute/hang-up.
+- **Broker desk** (`components/DiscoverTab.tsx` + `DirectoryRow`) is the directory — mono dial codes, live activity, per-minute price.
+- **CostPanel** is the first-class cost surface: per-minute rate, optional cap ($0.50 / $1 / $2 / $5 / Open), live ticker with soft "30s left on the line" warnings.
+- **LiveActivity** ticker shows "3 on the line · 17 in the last hour" from `/api/activity/live` — fails soft and hides if there's no activity.
+- **Webhook** routes tool calls per-broker and handles x402 payment negotiation.
+- **DelegationRegistry** (ERC-8004, Arbitrum Sepolia) manages broker permissions.
 
 ---
 
@@ -116,26 +123,26 @@ See `.env.local.example` for the full list with defaults.
 ## Repo Conventions
 
 - `app/` — Next.js routes only. Reusable components live in `components/`.
-- `lib/` — domain helpers, data layer, hooks (mixed but small; reshuffle deferred).
-- `app/api/activity/live` — proof-of-life endpoint for the directory ticker.
+- `lib/` — domain helpers, data layer, hooks.
+- `app/api/activity/live` — proof-of-life endpoint for the broker-desk ticker.
 - `.githooks/pre-commit` — installs on `pnpm install`; scans for common secret shapes (Upstash, AWS, GitHub, Stripe, ElevenLabs, generic base64url ≥40 chars).
-- Two lockfiles present (`package-lock.json` + `pnpm-lock.yaml`) — the project uses pnpm; the npm one is for tooling compatibility and is not authoritative.
+- The project uses pnpm. A stale `package-lock.json` was removed; do not reintroduce it.
 
 ---
 
 ## Docs
 
-- [`ROADMAP.md`](ROADMAP.md) — project status, completed phases, beta plan, and opportunities under evaluation (Circle Agent Stack, Robinhood Chain)
-- [`docs/AGENTIC_ARCHITECTURE.md`](docs/AGENTIC_ARCHITECTURE.md) — agent lifecycle, on-chain identity, payment flow
+- [`ROADMAP.md`](ROADMAP.md) — Claflin product status, completed phases, beta plan, and roadmap to real-money execution
+- [`docs/AGENTIC_ARCHITECTURE.md`](docs/AGENTIC_ARCHITECTURE.md) — broker lifecycle, on-chain identity, payment flow
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Vercel + Hetzner dual deploy
 - [`docs/HETZNER_DEPLOYMENT.md`](docs/HETZNER_DEPLOYMENT.md) — `make deploy` walkthrough
 - [`docs/SECURITY_ARCHITECTURE_COMPARISON.md`](docs/SECURITY_ARCHITECTURE_COMPARISON.md) — payment security model
 - [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — current perf hot spots
 - [`docs/WIDGET_ARCHITECTURE.md`](docs/WIDGET_ARCHITECTURE.md) — voice widget control layer
 - [`docs/REDIS_KEYS.md`](docs/REDIS_KEYS.md) — Redis key naming conventions and data structures
+- [`docs/ERROR_RESILIENCE.md`](docs/ERROR_RESILIENCE.md) — how Claflin survives CORS and backend hiccups
 - [`docs/STREAMING_INTEGRATION.md`](docs/STREAMING_INTEGRATION.md) — historical note on Superfluid / WDK (inactive)
 
 ---
 
-Built with [Cursor](https://cursor.sh) + [ElevenLabs](https://elevenlabs.io) · MIT
-
+Built for Hetty · MIT

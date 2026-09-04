@@ -20,7 +20,7 @@ export class ApiError extends Error {
   readonly status?: number;
   /** Whether another attempt has a reasonable chance of succeeding. */
   readonly retryable: boolean;
-  /** Human copy safe to show end users (matches the switchboard voice). */
+  /** Human copy safe to show end users (matches the Claflin broker-desk voice). */
   readonly friendlyMessage: string;
 
   constructor(kind: ApiErrorKind, message: string, options?: { status?: number; retryable?: boolean; friendlyMessage?: string }) {
@@ -76,14 +76,14 @@ export function friendlyMessageFor(kind: ApiErrorKind, status?: number): string 
     case 'timeout':
       return 'The line is taking too long to answer. Give it another ring.';
     case 'network':
-      return "Can't reach the switchboard right now. We'll keep trying.";
+      return "Can't reach the broker desk right now. We'll keep trying.";
     case 'parse':
-      return 'The switchboard answered with static. Please try again.';
+      return 'The broker desk answered with static. Please try again.';
     case 'http':
       if (status === 429) return 'Too many calls at once — give it a moment and redial.';
       if (status === 404) return 'That line has been disconnected.';
       if (status !== undefined && status >= 500) {
-        return 'Our operators are scrambling — the switchboard hit a snag.';
+        return 'Our broker is scrambling — the desk hit a snag.';
       }
       return 'Something unexpected happened on the line.';
   }

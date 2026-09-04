@@ -299,22 +299,22 @@ describe('ElevenLabs Webhook', () => {
   });
 
   describe('Agent Registry Integration', () => {
-    it('should find agent by agent_key', async () => {
+    it('should find broker by key', async () => {
       const { AGENT_REGISTRY } = await import('../lib/agent-registry');
 
-      // Test that we can look up agents
+      // Test that we can look up brokers
       const agent = AGENT_REGISTRY.solana_sage;
       assert.ok(agent, 'solana_sage should exist in registry');
-      assert.equal(agent.name, 'Solana Sage');
+      assert.equal(agent.name, 'Benham');
     });
 
-    it('should check agent can use skill', async () => {
+    it('should check broker can use skill', async () => {
       const { agentCanUseSkill } = await import('../lib/agent-registry');
 
       // Test skill permissions
       assert.ok(agentCanUseSkill('solana_sage', 'research'), 'solana_sage should be able to research');
       assert.ok(!agentCanUseSkill('solana_sage', 'book'), 'solana_sage should not be able to book');
-      assert.ok(agentCanUseSkill('general_helper', 'book'), 'general_helper should be able to book');
+      assert.ok(agentCanUseSkill('general_helper', 'research'), 'general_helper should be able to research');
     });
   });
 

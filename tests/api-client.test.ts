@@ -154,7 +154,7 @@ describe('apiFetch', () => {
       .then(() => null, (e: unknown) => e);
     assert.ok(err instanceof ApiError);
     assert.equal((err as ApiError).kind, 'network');
-    assert.match((err as ApiError).friendlyMessage, /switchboard/i);
+    assert.match((err as ApiError).friendlyMessage, /broker desk/i);
   });
 
   it('times out hung requests instead of spinning forever', async () => {

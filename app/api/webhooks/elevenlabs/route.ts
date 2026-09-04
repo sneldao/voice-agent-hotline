@@ -21,7 +21,7 @@ import { oneshotRelayer } from '@/lib/oneshot-relayer';
 /**
  * ElevenLabs Conversational AI Webhook Handler
  *
- * Implements the VOISSS Layer 2 Orchestrator:
+ * Implements the Claflin Layer 2 Orchestrator:
  *  1. Identify which ConvAI agent is calling (via metadata.agent_key).
  *  2. Resolve the caller's wallet from metadata.user_address.
  *  3. Verify ERC-8004 delegation for the requested skill type.
@@ -207,7 +207,7 @@ async function recordTaskCompletion(
       tokenId,
       5,
       'task_completed',
-      `Task '${toolName}' completed successfully via VOISSS orchestrator`
+      `Task '${toolName}' completed successfully via Claflin orchestrator`
     );
     console.log(`[Webhook] ✅ On-chain reputation recorded for tokenId ${tokenId}`);
   } catch (err) {
@@ -423,7 +423,7 @@ export async function POST(req: NextRequest) {
       if (!delegationId) {
         return NextResponse.json(
           {
-            result: `To ${skillType} on your behalf, I need a delegation. Please grant VOISSS permission in your profile settings first.`,
+            result: `To ${skillType} on your behalf, I need a delegation. Please grant Claflin permission in your profile settings first.`,
           },
           { status: 200 }
         );

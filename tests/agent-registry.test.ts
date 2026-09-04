@@ -5,11 +5,11 @@ import assert from 'node:assert/strict';
 // Agent Registry Tests
 // ============================================
 
-describe('Agent Registry', () => {
-  it('should export AGENT_REGISTRY with 7 agents', async () => {
+describe('Broker Registry', () => {
+  it('should export AGENT_REGISTRY with 7 brokers', async () => {
     const { AGENT_REGISTRY } = await import('../lib/agent-registry');
     const keys = Object.keys(AGENT_REGISTRY);
-    assert.equal(keys.length, 7, 'Should have 7 canonical agents (6 specialists + 1 router)');
+    assert.equal(keys.length, 7, 'Should have 7 canonical brokers (6 specialists + 1 router)');
     assert.ok(keys.includes('solana_sage'));
     assert.ok(keys.includes('code_reviewer'));
     assert.ok(keys.includes('general_helper'));
@@ -19,7 +19,7 @@ describe('Agent Registry', () => {
     assert.ok(keys.includes('voice_router'));
   });
 
-  it('each agent should have required fields', async () => {
+  it('each broker should have required fields', async () => {
     const { AGENT_REGISTRY } = await import('../lib/agent-registry');
     for (const [key, agent] of Object.entries(AGENT_REGISTRY)) {
       assert.ok(agent.name, `${key} should have a name`);
@@ -32,11 +32,11 @@ describe('Agent Registry', () => {
     }
   });
 
-  it('findBySpecialty should return matching agent', async () => {
+  it('findBySpecialty should return matching broker', async () => {
     const { findBySpecialty } = await import('../lib/agent-registry');
-    const agent = findBySpecialty('blockchain');
-    assert.ok(agent, 'Should find an agent for blockchain');
-    assert.equal(agent?.key, 'solana_sage');
+    const agent = findBySpecialty('stocks');
+    assert.ok(agent, 'Should find a broker for stocks');
+    assert.equal(agent?.key, 'general_helper');
   });
 
   it('findBySpecialty should fallback to general_helper for unknown', async () => {
@@ -47,12 +47,12 @@ describe('Agent Registry', () => {
 
   it('agentCanUseSkill should validate permissions correctly', async () => {
     const { agentCanUseSkill } = await import('../lib/agent-registry');
-    assert.ok(agentCanUseSkill('general_helper', 'book'));
-    assert.ok(agentCanUseSkill('general_helper', 'order'));
-    assert.ok(!agentCanUseSkill('solana_sage', 'book'), 'Solana Sage should not be able to book');
-    assert.ok(agentCanUseSkill('code_reviewer', 'schedule'));
-    assert.ok(!agentCanUseSkill('tour_master', 'order'), 'Tour Master should not be able to order');
-    assert.ok(agentCanUseSkill('web_researcher', 'research'), 'Web Researcher should be able to research');
-    assert.ok(!agentCanUseSkill('web_researcher', 'book'), 'Web Researcher should not be able to book');
+    assert.ok(agentCanUseSkill('general_helper', 'research'), 'Hetty should be able to research');
+    assert.ok(!agentCanUseSkill('general_helper', 'book'), 'Hetty should not be able to book');
+    assert.ok(!agentCanUseSkill('solana_sage', 'book'), 'Benham should not be able to book');
+    assert.ok(agentCanUseSkill('code_reviewer', 'research'), 'Woodhull should be able to research');
+    assert.ok(!agentCanUseSkill('tour_master', 'order'), 'Concierge should not be able to order');
+    assert.ok(agentCanUseSkill('web_researcher', 'research'), 'Baruch should be able to research');
+    assert.ok(!agentCanUseSkill('web_researcher', 'book'), 'Baruch should not be able to book');
   });
 });
