@@ -76,6 +76,9 @@ export function ActiveCall({
   const [savedCallId, setSavedCallId] = useState<string | null>(null);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  // Transcript is collapsed by default — during a voice call the only
+  // glanceable facts are connection + cost. Transcript is on demand.
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   // #20: Keep a ref to transcripts so handleEnd always reads the latest
   const transcriptsRef = useRef(transcripts);
@@ -366,7 +369,14 @@ export function ActiveCall({
             <span className="text-lg">{agent.avatar || agent.name.charAt(0)}</span>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-amber-50">{agent.name}</h3>
+            <h3 className="text-sm font-bold text-amber-50">
+              {agent.name}
+              {isTrialCall && (
+                <span className="ml-2 inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 align-middle font-mono text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+                  Free call · 2:00
+                </span>
+              )}
+            </h3>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className={`line-lamp h-2 w-2 rounded-full ${call.isConnected ? 'bg-emerald-300 text-emerald-300' : 'animate-pulse bg-amber-300 text-amber-300'}`} />
               <span className="text-xs text-amber-100/55">{call.isConnected ? 'Live patched line' : 'Connecting line'}</span>
@@ -376,7 +386,12 @@ export function ActiveCall({
         
           <div className="flex items-center gap-2">
             <div className="rounded-full border border-amber-100/15 bg-black/25 px-3 py-1.5 text-right">
-              <span className="text-sm font-bold tabular-nums text-amber-200">${(call.cost || 0).toFixed(4)}</span>
+              <span className="block text-sm font-bold tabular-nums text-amber-200">
+                $<RollingCost value={call.cost || 0} />
+              </span>
+              <span className="block text-[10px] leading-tight text-amber-100/45">
+                {isTrialCall ? 'free — nothing to pay' : 'USDC · settled at hang-up'}
+              </span>
             </div>
           </div>
         </div>
@@ -409,7 +424,30 @@ export function ActiveCall({
           </div>
         </div>
 
-        <div className="mb-4 h-48 w-full max-w-md overflow-y-auto rounded-xl border border-amber-100/15 bg-[#17100d]/85 p-4">
+        {/* Transcript — collapsed by default; tap to expand. Collapsed shows
+            the latest line so users know talking is being registered. */}
+        <div className="mb-4 w-full max-w-md rounded-xl border border-amber-100/15 bg-[#17100d]/85">
+          <button
+            type="button"
+            onClick={() => setTranscriptOpen(o => !o)}
+            className="flex w-full items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-amber-100/60 transition-colors hover:bg-amber-100/5"
+            aria-expanded={transcriptOpen}
+            aria-controls="call-transcript"
+          >
+            <span>
+              Transcript
+              {transcripts.length > 0 && (
+                <span className="ml-2 font-mono text-[10px] normal-case text-amber-100/35">
+                  {transcripts.length} {transcripts.length === 1 ? 'line' : 'lines'}
+                </span>
+              )}
+            </span>
+            <span aria-hidden="true" className={`transition-transform duration-200 ${transcriptOpen ? 'rotate-180' : ''}`}>
+              ▾
+            </span>
+          </button>
+          {transcriptOpen ? (
+            <div id="call-transcript" className="h-48 overflow-y-auto border-t border-amber-100/10 p-4">
           {/* TODO: Wire the ElevenLabs webhook (app/api/webhooks/elevenlabs/) to an SSE or
               WebSocket endpoint so the frontend receives transcript chunks in real time during
               the call, rather than only after it ends. */}
@@ -431,7 +469,15 @@ export function ActiveCall({
               ))
             )}
             <div ref={transcriptEndRef} />
-          </div>
+            </div>
+          ) : (
+            <p className="border-t border-amber-100/10 px-4 py-3 text-xs leading-5 text-amber-100/45">
+              {transcripts.length > 0
+                ? <>Last line: “{transcripts[transcripts.length - 1].text}”</>
+                : 'Follow along live — tap to open. The full transcript is saved after the call.'}
+            </p>
+          )}
+        </div>
 
         {/* #9: Single large duration counter + live indicator */}
         <div 
@@ -569,5 +615,24 @@ export function ActiveCall({
         onConnectWallet={onConnectWallet}
       />
     </div>
+  );
+}
+
+/**
+ * RollingCost — odometer-style live cost readout. Each character remounts
+ * when its value changes (key includes the value), re-triggering the
+ * CSS `odometer-flip` animation. No JS animation loop; disabled under
+ * prefers-reduced-motion via CSS.
+ */
+function RollingCost({ value }: { value: number }) {
+  const text = value.toFixed(4);
+  return (
+    <span className="tabular-nums" aria-label={`$${text}`}>
+      {text.split('').map((ch, i) => (
+        <span key={`${i}-${ch}`} className="odometer-digit" aria-hidden="true">
+          {ch}
+        </span>
+      ))}
+    </span>
   );
 }

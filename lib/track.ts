@@ -13,6 +13,7 @@
 
 export type TrackEvent =
   | 'onboarding_step_viewed'
+  | 'onboarding_dial_spun'
   | 'onboarding_skipped'
   | 'onboarding_completed'
   | 'use_case_selected'

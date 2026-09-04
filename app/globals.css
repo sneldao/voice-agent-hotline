@@ -530,7 +530,8 @@ nav, header, main, footer,
   box-shadow: 
     inset 0 1px 0 rgba(237, 214, 152, 0.10),
     0 -8px 24px rgba(0, 0, 0, 0.40);
-  backdrop-filter: blur(20px);
+  /* No backdrop-filter here: the background is ~0.97 opaque already, so blur
+     was pure GPU cost on mid-tier Android. The sticky header keeps its blur. */
 }
 
 .switchboard-tab {
@@ -849,6 +850,41 @@ nav, header, main, footer,
 /* ─── Engraved numbers (period letterpress treatment) ─────────────────────── */
 /* Adds tactile depth to figures without images — subtle top highlight,
    bottom shadow, like type pressed into paper. */
+
+/* ═══ Scroll & GPU performance ═══
+   Skip layout/paint for directory rows scrolled offscreen; the intrinsic
+   size approximates one row so the scrollbar stays stable. */
+.directory-row-reveal {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 84px;
+}
+
+/* ═══ Brass bezel FAB ═══
+   The concierge quick-dial framed like a machined brass button — replaces
+   the generic Tailwind shadow with an era-appropriate bezel. */
+.operator-fab {
+  box-shadow:
+    0 0 0 2px rgba(237, 214, 152, 0.35),
+    0 0 0 5px rgba(0, 0, 0, 0.35),
+    0 12px 28px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* ═══ Odometer digits ═══
+   Each digit flips in when its value changes (CSS-only; the key change in
+   RollingCost remounts the span, re-triggering the animation). */
+@keyframes odometer-flip {
+  from { transform: translateY(-45%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.odometer-digit {
+  display: inline-block;
+  animation: odometer-flip 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .odometer-digit { animation: none; }
+}
 .engraved {
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 0.55),

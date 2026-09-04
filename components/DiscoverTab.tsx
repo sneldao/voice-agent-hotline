@@ -204,6 +204,7 @@ export function DiscoverTab({
                 onVoicePreview={handleVoicePreview}
                 revealDelay={Math.min(idx, 8) * 70}
                 isLiveCall={liveCallAgentIds.has(agent.id)}
+                animateCode={agents.length <= 20}
               />
             ))}
           </ul>
@@ -223,7 +224,7 @@ export function DiscoverTab({
       <button
         onClick={handleDialClick}
         disabled={!concierge || isConnecting}
-        className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-amber-500 shadow-lg shadow-red-900/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="operator-fab fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-amber-500 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="Start a voice call"
       >
         {isConnecting ? (
@@ -263,7 +264,7 @@ function DirectoryHeader({
           Broker desk
         </h2>
         <p className="mt-1.5 text-sm text-amber-100/65 max-w-md">
-          Pick up the line. Ask about tokenized stocks. The first broker is Hetty.
+          Ask about tokenized stocks in plain English — no typing. Every trade is a paper trade, confirmed by your broker before it books. Your first 2 minutes are free; paid calls settle in USDC only after you approve.
         </p>
         <div className="hero-glow-line mt-4" />
       </div>

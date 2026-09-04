@@ -25,21 +25,32 @@ interface DirectoryRowProps {
   revealDelay?: number;
   /** Whether this agent is currently on a call (from /api/activity/live only). */
   isLiveCall?: boolean;
+  /** Run the dial-code count-up RAF animation (disabled for long lists). */
+  animateCode?: boolean;
 }
 
-export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0, isLiveCall = false }: DirectoryRowProps) {
+export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0, isLiveCall = false, animateCode = false }: DirectoryRowProps) {
   const codeRaw = dialCodeFor(agent.id);
   const codeTarget = Number(codeRaw);
-  const codeValue = useCountUp(codeTarget, 720, 120 + revealDelay);
+  const codeValue = useCountUp(codeTarget, 720, 120 + revealDelay, animateCode);
   const persona = getPersona(agent);
   const rating = Number(agent.rating) || 0;
   const rate = Number(agent.rate) || 0;
 
   return (
     <li className="directory-row-reveal" style={{ animationDelay: `${revealDelay}ms` }}>
-      <button
-        type="button"
+      {/* A real <button> can't nest the voice-preview <button>, so the row is a
+          div with button semantics (role/tabIndex/keyboard support). */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onSelect(agent)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect(agent);
+          }
+        }}
         className={`directory-row group ${isLiveCall ? 'directory-row--live-call' : ''}`}
         aria-label={`${agent.name} — ${persona.desk} desk, $${rate.toFixed(2)} per minute`}
         title={`Call ${agent.name}`}
@@ -83,25 +94,17 @@ export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0,
             <span className="tabular-nums text-amber-100/65">{rating.toFixed(1)}</span>
             <span className="text-amber-100/25">·</span>
             {onVoicePreview && persona.voiceId && (
-              <span
+              <button
+                type="button"
                 className="voice-preview-chip"
-                role="button"
-                tabIndex={0}
                 onClick={(e) => {
                   e.stopPropagation();
                   onVoicePreview(agent);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onVoicePreview(agent);
-                  }
-                }}
                 aria-label={`Preview ${agent.name}'s voice`}
               >
                 {persona.voiceId}
-              </span>
+              </button>
             )}
             {isLiveCall && (
               <>
@@ -122,15 +125,15 @@ export function DirectoryRow({ agent, onSelect, onVoicePreview, revealDelay = 0,
           </span>
           <span className="directory-row__status">
             {agent.online ? (
-              <span className="text-emerald-300/85">on air</span>
+              <span className="text-emerald-300/85">Available now</span>
             ) : (
-              <span className="text-amber-100/35">off line</span>
+              <span className="text-amber-100/35">Off the line</span>
             )}
           </span>
         </span>
 
         <ChevronRight className="directory-row__chev" aria-hidden="true" />
-      </button>
+      </div>
     </li>
   );
 }

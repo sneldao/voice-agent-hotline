@@ -4,7 +4,6 @@ import { useReducer, useCallback, Suspense, useEffect, useMemo, useRef, useState
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ToastProvider, showError, showInfo } from '@/components/ui';
 import { useWallet } from '@/lib/WalletContextNew';
 import { useLocalCallHistory } from '@/lib/useCallHistory';
@@ -27,9 +26,14 @@ const ActiveCall = dynamic(() => import('@/components/ActiveCall').then(m => ({ 
 const CallsHistoryTab = dynamic(() => import('@/components/CallsHistoryTab').then(m => ({ default: m.CallsHistoryTab })));
 const ProfileTab = dynamic(() => import('@/components/ProfileTab').then(m => ({ default: m.ProfileTab })));
 
-// DiscoverTab is the landing view — keep it eager
+// DiscoverTab is the landing view — keep it eager. OnboardingFlow (and its
+// framer-motion/Mascot dependencies) is only needed for first-time visitors,
+// so it's lazy — keeps ~30-40KB gz of framer-motion off the first paint.
 import { DiscoverTab } from '@/components/DiscoverTab';
-import { OnboardingFlow } from '@/components/OnboardingFlow';
+const OnboardingFlow = dynamic(
+  () => import('@/components/OnboardingFlow').then(m => ({ default: m.OnboardingFlow })),
+  { ssr: false }
+);
 import { track } from '@/lib/track';
 
 interface PageState {
@@ -433,24 +437,15 @@ function HomeInner() {
             CALL CONFIRMATION OVERLAY
             Shown before mic activation — prevents accidental calls.
         ═══════════════════════════════════════════════════════════════════ */}
-        <AnimatePresence>
-          {confirmingAgent && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-              onClick={() => setConfirmingAgent(null)}
+        {confirmingAgent && (
+          <div
+            className="animate-fadeIn fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setConfirmingAgent(null)}
+          >
+            <div
+              className="animate-fadeIn mx-4 w-full max-w-sm overflow-hidden rounded-2xl border border-amber-100/15 bg-gradient-to-br from-[#1a110e] to-[#231712] shadow-2xl shadow-black/60"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.92, y: 16 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 8 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-                className="mx-4 w-full max-w-sm overflow-hidden rounded-2xl border border-amber-100/15 bg-gradient-to-br from-[#1a110e] to-[#231712] shadow-2xl shadow-black/60"
-                onClick={(e: React.MouseEvent) => e.stopPropagation()}
-              >
                 <div className="p-6 text-center">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-red-500/20 to-amber-500/20">
                     <PhoneCall className="h-8 w-8 text-amber-200" />
@@ -487,10 +482,9 @@ function HomeInner() {
                     Connect
                   </button>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        )}
 
         <nav className="switchboard-tab-bar fixed bottom-0 left-0 right-0 z-50" role="navigation" aria-label="Main navigation">
           <div className="mx-auto flex max-w-2xl items-center justify-around px-4 py-2">

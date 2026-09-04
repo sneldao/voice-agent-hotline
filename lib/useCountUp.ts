@@ -6,10 +6,14 @@ import { useEffect, useState } from 'react';
  * Counts up from 0 to `target` over `duration` ms using easeOutCubic.
  * Skips animation if the user prefers reduced motion.
  */
-export function useCountUp(target: number, duration = 800, delay = 0): number {
-  const [value, setValue] = useState(0);
+export function useCountUp(target: number, duration = 800, delay = 0, enabled = true): number {
+  const [value, setValue] = useState(enabled ? 0 : target);
 
   useEffect(() => {
+    if (!enabled) {
+      setValue(target);
+      return;
+    }
     if (typeof window === 'undefined') return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       setValue(target);
@@ -33,7 +37,7 @@ export function useCountUp(target: number, duration = 800, delay = 0): number {
     }, delay);
 
     return () => cancelAnimationFrame(raf);
-  }, [target, duration, delay]);
+  }, [target, duration, delay, enabled]);
 
   return value;
 }

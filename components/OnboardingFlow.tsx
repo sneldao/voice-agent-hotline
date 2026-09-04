@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, PhoneCall, ShieldCheck, X, Radio } from 'lucide-react';
 import { Mascot } from './Mascot';
@@ -121,6 +121,53 @@ export function OnboardingFlow({
     onSkip();
   }, [currentStep, onSkip]);
 
+  // ── Tactile rotary dial (splash step) ─────────────────────────────────
+  // The dial on the splash screen is not decorative: spin it clockwise one
+  // full turn and the dial "picks up" — advancing to the next step. The
+  // Next button still works for anyone who doesn't try it.
+  const dialRef = useRef<HTMLDivElement>(null);
+  const spinState = useRef<{ lastAngle: number | null; total: number }>({ lastAngle: null, total: 0 });
+  const [dialRotation, setDialRotation] = useState(0);
+  const hasSpunRef = useRef(false);
+
+  const angleFromCenter = (e: React.PointerEvent): number | null => {
+    const rect = dialRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    return (Math.atan2(
+      e.clientY - (rect.top + rect.height / 2),
+      e.clientX - (rect.left + rect.width / 2)
+    ) * 180) / Math.PI;
+  };
+
+  const handleDialDown = useCallback((e: React.PointerEvent) => {
+    if (currentStep !== 'splash') return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    spinState.current.lastAngle = angleFromCenter(e);
+  }, [currentStep]);
+
+  const handleDialMove = useCallback((e: React.PointerEvent) => {
+    if (currentStep !== 'splash' || spinState.current.lastAngle === null) return;
+    const angle = angleFromCenter(e);
+    if (angle === null) return;
+    let delta = angle - spinState.current.lastAngle;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    spinState.current.lastAngle = angle;
+    spinState.current.total += delta;
+    setDialRotation(spinState.current.total);
+    if (spinState.current.total >= 360 && !hasSpunRef.current) {
+      hasSpunRef.current = true;
+      playClick();
+      try { navigator.vibrate?.(30); } catch { /* unsupported */ }
+      track('onboarding_dial_spun');
+      handleNext();
+    }
+  }, [currentStep, handleNext]);
+
+  const handleDialUp = useCallback(() => {
+    spinState.current.lastAngle = null;
+  }, []);
+
   const handleRequestMic = useCallback(async () => {
     setMicState('requesting');
     playClick();
@@ -170,24 +217,42 @@ export function OnboardingFlow({
           className="mb-6"
         >
           {currentStep === 'splash' ? (
-            <div className="rotary-dial h-40 w-40 rounded-full flex items-center justify-center relative">
+            <div
+              ref={dialRef}
+              role="img"
+              aria-label="Rotary dial — spin it clockwise to pick up the phone"
+              onPointerDown={handleDialDown}
+              onPointerMove={handleDialMove}
+              onPointerUp={handleDialUp}
+              onPointerCancel={handleDialUp}
+              style={{ touchAction: 'none' }}
+              className="rotary-dial h-40 w-40 cursor-grab rounded-full flex items-center justify-center relative active:cursor-grabbing"
+            >
               <div className="absolute inset-6 rounded-full bg-gradient-to-br from-red-700 to-amber-700 flex items-center justify-center shadow-inner">
                 <span className="font-display text-3xl text-amber-50 tracking-tight">C</span>
               </div>
-              {/* 10 dial holes */}
-              {Array.from({ length: 10 }).map((_, i) => {
-                const angle = (i * 36 - 90) * (Math.PI / 180);
-                const r = 60;
-                const x = Math.cos(angle) * r;
-                const y = Math.sin(angle) * r;
-                return (
-                  <span
-                    key={i}
-                    className="absolute h-3 w-3 rounded-full bg-[#1a100c] border border-amber-200/30 shadow-inner"
-                    style={{ transform: `translate(${x}px, ${y}px)` }}
-                  />
-                );
-              })}
+              {/* 10 dial holes — rotate the ring with the pointer */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  transform: `rotate(${dialRotation}deg)`,
+                  transition: spinState.current.lastAngle === null ? 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
+                }}
+              >
+                {Array.from({ length: 10 }).map((_, i) => {
+                  const angle = (i * 36 - 90) * (Math.PI / 180);
+                  const r = 60;
+                  const x = Math.cos(angle) * r;
+                  const y = Math.sin(angle) * r;
+                  return (
+                    <span
+                      key={i}
+                      className="absolute h-3 w-3 rounded-full bg-[#1a100c] border border-amber-200/30 shadow-inner"
+                      style={{ transform: `translate(${x}px, ${y}px)` }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <Mascot mood={meta.mood} size={140} />
@@ -215,7 +280,7 @@ export function OnboardingFlow({
 
             {currentStep === 'splash' && (
               <p className="mt-6 mx-auto max-w-xs text-xs font-mono uppercase tracking-[0.18em] text-amber-100/40">
-                No signup · No forms · No keyboard
+                Spin the dial to pick up · No signup · No keyboard
               </p>
             )}
 
