@@ -1,44 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Radio } from 'lucide-react';
-
-interface ActivityData {
-  active: number;
-  lastHour: number;
-  activeAgentIds: string[];
-}
+import { useLiveActivity } from '@/lib/useLiveActivity';
 
 export function LiveActivity() {
-  const [data, setData] = useState<ActivityData | null>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchData = async () => {
-      try {
-        const res = await fetch('/api/activity/live', { cache: 'no-store' });
-        if (!res.ok) return;
-        const json = (await res.json()) as ActivityData;
-        if (!cancelled) {
-          setData(json);
-          // Hide the ticker entirely if there is no activity at all
-          setVisible(json.active > 0 || json.lastHour > 0);
-        }
-      } catch {
-        // Fail silent — ticker just stays hidden
-      }
-    };
-
-    fetchData();
-    const interval = setInterval(fetchData, 30_000); // refresh every 30s
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
+  const data = useLiveActivity();
+  const visible = !!(data && (data.active > 0 || data.lastHour > 0));
 
   return (
     <AnimatePresence>

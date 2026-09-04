@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Search, PhoneCall, Loader2 } from 'lucide-react';
 import { showInfo, PullToRefresh, showSuccess } from '@/components/ui';
 import { EmptyState } from '@/components/EmptyState';
@@ -10,6 +10,7 @@ import { DirectoryRow } from '@/components/DirectoryRow';
 import { LiveActivity } from '@/components/LiveActivity';
 import { getPersona } from '@/lib/agent-personas';
 import { playDialTone } from '@/lib/sounds';
+import { useLiveActivity } from '@/lib/useLiveActivity';
 import type { Agent } from '@/lib/types';
 
 const CATEGORIES: Array<{ id: string; name: string; line: string; icon: string }> = [
@@ -60,25 +61,13 @@ export function DiscoverTab({
   preferredConciergeId = 'general_helper',
 }: DiscoverTabProps) {
   const [isConnecting, setIsConnecting] = useState(false);
-  const [liveCallAgentIds, setLiveCallAgentIds] = useState<Set<string>>(new Set());
+  const activity = useLiveActivity();
+  const liveCallAgentIds = useMemo(
+    () => new Set(activity?.activeAgentIds ?? []),
+    [activity]
+  );
 
-  // Poll the live activity endpoint to mark rows as "someone is calling right now"
-  useEffect(() => {
-    let cancelled = false;
-    const fetchLive = async () => {
-      try {
-        const res = await fetch('/api/activity/live', { cache: 'no-store' });
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!cancelled && Array.isArray(json.activeAgentIds)) {
-          setLiveCallAgentIds(new Set(json.activeAgentIds));
-        }
-      } catch { /* handled silently */ }
-    };
-    fetchLive();
-    const interval = setInterval(fetchLive, 30_000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  // Live activity polling is shared (see lib/useLiveActivity.ts)
 
   const handleRefresh = async () => {
     try {

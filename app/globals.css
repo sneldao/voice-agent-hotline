@@ -778,6 +778,90 @@ nav, header, main, footer,
   z-index: -1;
 }
 
+/* ─── Ticker Tape (period stock-quote marquee) ────────────────────────────── */
+/* Pure CSS marquee: one transform animation on the track, content duplicated
+   once for a seamless loop. GPU-only (transform), no JS, no per-frame cost. */
+.ticker-tape {
+  overflow: hidden;
+  border-top: 1px solid rgba(237, 214, 152, 0.12);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.22));
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.5);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+
+.ticker-tape__track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 55s linear infinite;
+}
+
+.ticker-tape:hover .ticker-tape__track {
+  animation-play-state: paused; /* let users read a quote they're interested in */
+}
+
+@keyframes ticker-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); } /* one full duplicated group */
+}
+
+.ticker-tape__group {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.ticker-tape__quote {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.4rem 1.1rem;
+  border-right: 1px dashed rgba(237, 214, 152, 0.14);
+  font-family: var(--font-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticker-tape__sym {
+  font-weight: 700;
+  color: rgba(254, 243, 199, 0.78);
+}
+
+.ticker-tape__price {
+  color: rgba(254, 243, 199, 0.55);
+}
+
+.ticker-tape__delta {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ticker-tape__delta.is-up { color: rgba(52, 211, 153, 0.85); }
+.ticker-tape__delta.is-down { color: rgba(248, 113, 113, 0.85); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-tape__track {
+    animation: none; /* static strip — the first group is still fully readable */
+  }
+}
+
+/* ─── Engraved numbers (period letterpress treatment) ─────────────────────── */
+/* Adds tactile depth to figures without images — subtle top highlight,
+   bottom shadow, like type pressed into paper. */
+.engraved {
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.55),
+    0 -1px 0 rgba(237, 214, 152, 0.12);
+}
+
+.directory-row__code,
+.directory-row__price {
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.55),
+    0 -1px 0 rgba(237, 214, 152, 0.12);
+}
+
 /* ─── Phonebook Directory (replaces agent card grid) ──────────────────────── */
 .directory-list {
   list-style: none;

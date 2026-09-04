@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { PhoneCall, Wallet, LogOut, ChevronDown, Radio, Sparkles } from 'lucide-react';
+import { PhoneCall, Wallet, LogOut, ChevronDown, Radio, Sparkles, BarChart3, Mic, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { TickerTape } from '@/components/TickerTape';
 
 interface HeaderProps {
   connected: boolean;
@@ -33,8 +34,15 @@ export function Header({
         setShowMenu(false);
       }
     }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') setShowMenu(false);
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
   return (
@@ -74,10 +82,12 @@ export function Header({
                 onClick={() => setShowMenu(prev => !prev)}
                 className="flex items-center gap-2 rounded-full border border-amber-100/20 bg-black/25 px-3 py-1.5 transition-colors hover:bg-amber-100/10"
                 aria-label="Wallet menu"
+                aria-haspopup="menu"
+                aria-expanded={showMenu}
               >
                 <Wallet className="h-4 w-4 text-amber-200" />
                 <span className="text-xs text-amber-100/65">{formatAddress()}</span>
-                <ChevronDown className="h-3 w-3 text-amber-100/40" />
+                <ChevronDown className={`h-3 w-3 text-amber-100/40 transition-transform ${showMenu ? 'rotate-180' : ''}`} />
               </button>
               {showMenu && (
                 <div className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border border-amber-100/20 bg-[#17100d] shadow-xl">
@@ -90,14 +100,16 @@ export function Header({
                     onClick={() => setShowMenu(false)}
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-amber-100/70 transition-colors hover:bg-amber-100/10"
                   >
-                    📊 Dashboard
+                    <BarChart3 className="h-4 w-4 text-amber-200/70" />
+                    Dashboard
                   </Link>
                   <Link
                     href="/list-your-broker"
                     onClick={() => setShowMenu(false)}
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-amber-100/70 transition-colors hover:bg-amber-100/10"
                   >
-                    🎙️ List Broker
+                    <Mic className="h-4 w-4 text-amber-200/70" />
+                    List Broker
                   </Link>
                   <button
                     onClick={() => {
@@ -123,13 +135,16 @@ export function Header({
             <button
               onClick={onConnect}
               disabled={isConnecting}
-              className="rounded-full border border-amber-100/20 bg-black/25 px-3 py-1.5 text-xs font-bold text-amber-100/65 transition-colors hover:bg-amber-100/10 hover:text-amber-50 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full border border-amber-100/20 bg-black/25 px-3 py-1.5 text-xs font-bold text-amber-100/65 transition-colors hover:bg-amber-100/10 hover:text-amber-50 disabled:opacity-50"
             >
-              {isConnecting ? 'Connecting...' : 'Sign In'}
+              {isConnecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {isConnecting ? 'Connecting…' : 'Sign In'}
             </button>
           )}
         </div>
       </div>
+      {/* Period ticker tape — ambient quotes, pure CSS marquee */}
+      <TickerTape />
     </header>
   );
 }
