@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { PhoneCall, ArrowLeft, Star, Clock, Wallet } from 'lucide-react';
 import type { Agent } from '@/lib/types';
 import { apiUrl } from '@/lib/api';
+import { apiFetch, ApiError, type ApiErrorKind } from '@/lib/api-client';
+import { ConnectionError } from '@/components/ConnectionError';
 import { Button } from '@/components/ui';
 import { CostPanel } from '@/components/CostPanel';
 
@@ -18,24 +20,43 @@ export default function AgentPage() {
 
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [fetchError, setFetchError] = useState<{ message: string; kind: ApiErrorKind } | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const [cap, setCap] = useState<number | null>(DEFAULT_CAP);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchAgent() {
+      setLoading(true);
+      setFetchError(null);
       try {
-        const res = await fetch(apiUrl(`/api/agents/${agentId}`));
-        if (res.ok) {
-          const data = await res.json();
-          setAgent(data.agent || data);
+        const data = await apiFetch<{ agent?: Agent } | Agent>(apiUrl(`/api/agents/${agentId}`));
+        if (cancelled) return;
+        const record = (data && 'agent' in data ? data.agent : data) as Agent | null;
+        if (record && record.id) {
+          setAgent(record);
+        } else {
+          setNotFound(true);
         }
-      } catch {
-        // handled by null state
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && error.status === 404) {
+          setNotFound(true);
+        } else {
+          // Network/timeout/5xx — NOT "not found". Show a retryable state.
+          setFetchError({
+            message: error instanceof ApiError ? error.friendlyMessage : 'Something unexpected happened on the line.',
+            kind: error instanceof ApiError ? error.kind : 'network',
+          });
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchAgent();
-  }, [agentId]);
+    return () => { cancelled = true; };
+  }, [agentId, reloadNonce]);
 
   if (loading) {
     return (
@@ -45,7 +66,20 @@ export default function AgentPage() {
     );
   }
 
-  if (!agent) {
+  if (fetchError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0b0806] px-4">
+        <ConnectionError
+          message={fetchError.message}
+          kind={fetchError.kind}
+          onRetry={() => setReloadNonce((n) => n + 1)}
+          autoRetrySeconds={5}
+        />
+      </div>
+    );
+  }
+
+  if (notFound || !agent) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#0b0806] px-4 text-center">
         <div className="operator-panel rounded-[1.5rem] p-8">

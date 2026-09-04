@@ -74,11 +74,10 @@ export const metadata: Metadata = {
     description: 'Say what you need. Get connected to the right voice agent. Hands-free AI calls, billed per minute in USDC on Arbitrum.',
     images: ['/og-image.svg'],
   },
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
-  },
+  // Icons come from file conventions: app/icon.tsx (32px PNG) and
+  // app/apple-icon.tsx (180px) are auto-injected by Next.js; /favicon.ico
+  // is served from /public. (The old manual entries pointed at files that
+  // never existed — the favicon-16x16.png 404 in the console.)
   manifest: '/manifest.json',
 };
 

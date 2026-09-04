@@ -30,10 +30,10 @@ const nextConfig = {
     },
   },
 
-  // Headers for security and performance.
-  // CORS is enabled for /api/* because the Vercel-hosted frontend
-  // (voisss-agent-hotline.vercel.app) talks to the Hetzner-hosted
-  // API (api.sneldao.com) cross-origin in production.
+  // Headers for security. CORS for /api/* is handled centrally in
+  // middleware.ts (dynamic origin reflection + preflight handling), so we
+  // deliberately do NOT set static Access-Control-* headers here — duplicate
+  // or contradictory CORS headers make browsers reject the response.
   async headers() {
     return [
       {
@@ -42,12 +42,37 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
         ],
       },
     ];
+  },
+
+  // Same-origin API proxy — the architectural fix for the CORS failures.
+  //
+  // Topology: the Vercel deployment is a pure frontend; the Hetzner VPS runs
+  // the real API. Previously the browser called the VPS directly
+  // (cross-origin), so any backend restart/proxy error surfaced as a CORS
+  // failure with no response body for the UI to work with.
+  //
+  // When API_PROXY_TARGET is set (Vercel production only), the browser calls
+  // its OWN origin at /api/* and the Next.js server forwards the request
+  // server-to-server — no browser CORS at all, no preflight round-trips,
+  // first-party cookies, and ad-blockers stop flagging the calls.
+  //
+  // beforeFiles makes the proxy take precedence over the local route handlers
+  // (which only have real backing services on the VPS anyway). Leave
+  // API_PROXY_TARGET unset on the VPS itself and in local dev.
+  async rewrites() {
+    const target = (process.env.API_PROXY_TARGET || '').replace(/\/+$/, '');
+    if (!target) return [];
+    return {
+      beforeFiles: [
+        {
+          source: '/api/:path*',
+          destination: `${target}/api/:path*`,
+        },
+      ],
+    };
   },
 
   // Webpack configuration to suppress third-party warnings and handle client-only modules
