@@ -5,6 +5,7 @@ const nextConfig = {
   // Standalone output for Hetzner/VPS deployment
   // Creates minimal server bundle in .next/standalone
   output: 'standalone',
+  outputFileTracingRoot: __dirname,
   
   // Optimize for production
   poweredByHeader: false,
