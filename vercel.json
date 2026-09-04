@@ -1,10 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm dev",
+  "installCommand": "pnpm install",
   "regions": ["iad1"],
+  "env": {
+    "CLEANUP_BUILD": "0"
+  },
   "headers": [
     {
       "source": "/(.*)\\.json",
