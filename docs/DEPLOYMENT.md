@@ -25,7 +25,8 @@ UPSTASH_REDIS_REST_URL=https://game-corgi-122374.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your_token
 
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
-NEXT_PUBLIC_API_URL=https://api.sneldao.com
+# Same-origin API proxy (kills browser CORS — see below)
+API_PROXY_TARGET=https://voisss.celo.famile.xyz
 
 NEXT_PUBLIC_ERC8004_ENABLED=true
 NEXT_PUBLIC_ERC8004_IDENTITY_ADDRESS=0x8004A818BFB912233c491871b3d84c89A494BD9e
@@ -62,13 +63,22 @@ make restart  # restart without rebuilding
 
 ```
 Browser
-  └─► Vercel (HTML/JS/CSS)
-        └─► NEXT_PUBLIC_API_URL = https://api.sneldao.com
+  └─► Vercel (HTML/JS/CSS) — same-origin /api/* calls
+        └─► API_PROXY_TARGET = https://voisss.celo.famile.xyz  (server-to-server rewrite)
               └─► Hetzner Next.js standalone (port 3042)
                     └─► Upstash Redis (shared)
 ```
 
-When `NEXT_PUBLIC_API_URL` is set, browser API calls route to the VPS. If unset, Vercel's serverless functions handle them directly (same Redis).
+**Preferred: same-origin proxy.** Set `API_PROXY_TARGET` on Vercel. The browser only ever
+talks to its own origin; Vercel forwards `/api/*` to the VPS server-to-server. No browser
+CORS, no preflight round-trips, and backend restarts surface as ordinary retryable 5xxs
+instead of opaque CORS failures.
+
+**Legacy: direct cross-origin.** Set `NEXT_PUBLIC_API_URL` instead and the browser calls
+the VPS directly. This still works — `proxy.ts` answers all OPTIONS preflights and
+stamps CORS headers on every API response — but prefer the proxy.
+
+If neither is set, Vercel's serverless functions handle API calls directly (same Redis).
 
 ---
 

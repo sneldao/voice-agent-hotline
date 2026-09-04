@@ -140,7 +140,7 @@ function HomeInner() {
     track('page_visited_first_time', { referrer: document.referrer || null });
   }, [onboarding.isFirstTime]);
 
-  const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, mutate: mutateAgents } = useAgents({
+  const { agents, total, hasMore, isLoading: isLoadingAgents, error: agentsError, errorKind: agentsErrorKind, isRetrying: agentsRetrying, mutate: mutateAgents } = useAgents({
     search: debouncedQuery,
     category: debouncedCategory,
     page,
@@ -363,6 +363,8 @@ function HomeInner() {
                     agents={displayedAgents}
                     isLoading={isLoadingAgents && displayedAgents.length === 0}
                     error={agentsError}
+                    errorKind={agentsErrorKind}
+                    isRetrying={agentsRetrying}
                     onSelect={handleSelectAgent}
                     onVoiceCall={(agent) => {
                       const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';

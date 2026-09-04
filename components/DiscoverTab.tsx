@@ -4,6 +4,8 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Search, PhoneCall, Loader2 } from 'lucide-react';
 import { showInfo, PullToRefresh, showSuccess } from '@/components/ui';
 import { EmptyState } from '@/components/EmptyState';
+import { ConnectionError, ReconnectingBanner } from '@/components/ConnectionError';
+import type { ApiErrorKind } from '@/lib/api-client';
 import { DirectoryRow } from '@/components/DirectoryRow';
 import { LiveActivity } from '@/components/LiveActivity';
 import { getPersona } from '@/lib/agent-personas';
@@ -23,13 +25,17 @@ interface DiscoverTabProps {
   agents: Agent[];
   isLoading: boolean;
   error: string | null;
+  /** Structured failure mode so the error UI can adapt (offline vs snag). */
+  errorKind?: ApiErrorKind | null;
+  /** True while a background retry/revalidation is in flight after an error. */
+  isRetrying?: boolean;
   onSelect: (a: Agent) => void;
   onVoiceCall: (a: Agent) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedCategory: string;
   onCategoryChange: (c: string) => void;
-  onRefresh: () => Promise<void>;
+  onRefresh: () => Promise<unknown> | unknown;
   hasMore: boolean;
   onLoadMore: () => void;
   /** Agent ID to use for the main dial button. Defaults to 'general_helper'. */
@@ -40,6 +46,8 @@ export function DiscoverTab({
   agents,
   isLoading,
   error,
+  errorKind = null,
+  isRetrying = false,
   onSelect,
   onVoiceCall,
   searchQuery,
@@ -74,9 +82,12 @@ export function DiscoverTab({
 
   const handleRefresh = async () => {
     try {
-      await onRefresh();
-      showSuccess('Directory refreshed');
-    } catch { /* handled */ }
+      const result = await onRefresh();
+      // SWR's mutate() resolves to undefined when the fetcher threw — the
+      // banner/error state will show it, so don't claim a success that
+      // didn't happen.
+      if (result !== undefined) showSuccess('Directory refreshed');
+    } catch { /* error state handles it */ }
   };
 
   const concierge = agents.find(a => a.id === preferredConciergeId) || agents.find(a => a.id === 'general_helper') || agents[0];
@@ -116,19 +127,21 @@ export function DiscoverTab({
             <DirectoryRowSkeleton key={i} />
           ))}
         </div>
+        <SlowLoadHint />
       </div>
     );
   }
 
-  if (error) {
+  if (error && agents.length === 0) {
+    // Cold-start failure: nothing cached to fall back on, so make the
+    // error state itself a good experience (auto-retry on a countdown).
     return (
       <div className="py-4">
-        <EmptyState
-          type="agents"
-          title="Directory unavailable"
-          description={error}
-          actionLabel="Try Again"
-          onAction={handleRefresh}
+        <ConnectionError
+          message={error}
+          kind={errorKind}
+          onRetry={handleRefresh}
+          autoRetrySeconds={5}
         />
       </div>
     );
@@ -171,6 +184,14 @@ export function DiscoverTab({
           onCategoryChange={onCategoryChange}
           agents={agents}
         />
+
+        {error && (
+          <ReconnectingBanner
+            message={error}
+            isRetrying={isRetrying}
+            onRetry={handleRefresh}
+          />
+        )}
 
         {noSearchResults ? (
           <div className="mt-3 rounded-xl border border-amber-100/10 bg-black/15 p-6 text-center">
@@ -323,5 +344,23 @@ function DirectoryRowSkeleton(): ReactNode {
       </span>
       <span className="directory-row__price skeleton-pulse" />
     </li>
+  );
+}
+
+/** After a few seconds of skeletons, reassure the user we're still on it. */
+function SlowLoadHint() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <p className="mt-4 animate-pulse text-center font-mono text-[11px] uppercase tracking-[0.18em] text-amber-100/45">
+      Warming up the switchboard…
+    </p>
   );
 }

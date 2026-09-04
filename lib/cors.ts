@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * Route-level CORS helpers.
+ *
+ * NOTE: CORS is now handled centrally in proxy.ts for every /api/*
+ * route (OPTIONS preflights + response headers). These helpers remain for
+ * backwards compatibility with routes that still call them, and mirror the
+ * proxy policy. New code should rely on the proxy instead of wrapping every
+ * response.
+ */
+
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://voisss-agent-hotline.vercel.app',
   'https://voisss-agent-hotline.vercel.app',
   'http://localhost:3000',
 ];
@@ -24,7 +33,8 @@ export function corsHeaders(req?: NextRequest): HeadersInit {
   return {
     'Access-Control-Allow-Origin': getAllowedOrigin(req?.headers.get('origin') ?? null),
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Requested-With',
+    'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
 }
@@ -38,5 +48,5 @@ export function withCors(response: NextResponse, req?: NextRequest): NextRespons
 }
 
 export function handleOptions(req?: NextRequest): NextResponse {
-  return withCors(new NextResponse(null, { status: 200 }), req);
+  return withCors(new NextResponse(null, { status: 204 }), req);
 }
