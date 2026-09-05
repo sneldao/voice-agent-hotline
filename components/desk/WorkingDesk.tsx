@@ -8,27 +8,35 @@ import { DeskInstrument } from './DeskInstrument';
 import { TradeTicket } from './TradeTicket';
 import { PaperHistory } from './PaperHistory';
 import { VoiceIntent } from './VoiceIntent';
+import { HettyStatus } from './HettyStatus';
+import { DeskBoard } from './DeskBoard';
 import styles from './WorkingDesk.module.css';
 
 export function WorkingDesk() {
   const desk = useTradingDesk();
   const hetty = HOUSE_DESKS[0];
+  const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'loading' || desk.state.stage === 'saved';
+  const instrumentStage = desk.state.stage === 'review' || desk.state.stage === 'saved' ? 'confirmation' : 'arrival';
 
   return <div className={styles.workspace}>
     <div className={styles.room} aria-hidden="true"><div className={styles.window}><i /><i /><i /></div><div className={styles.lightPool} /></div>
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="Claflin, your trading desk"><HouseMark className={styles.houseMark} /><span><strong>CLAFLIN</strong><small>A CONSIDERED APPROACH</small></span></Link>
-      <nav aria-label="Desk navigation"><a href="#instruction">The desk</a><a href="#paper-history">Your record</a><a href="#hetty">About Hetty</a></nav>
+      <nav aria-label="Desk navigation"><a href="#instruction">The desk</a><a href="#on-desk">On your desk</a><a href="#paper-history">Your record</a><a href="#hetty">About Hetty</a></nav>
     </header>
     <main id="main-content" className={styles.main}>
       <div className={styles.mode}><span>HETTY / BASE</span><strong>PAPER TRADING</strong><span>Live estimates. No real funds move.</span></div>
-      <div className={styles.grid}>
+      <div className={styles.grid} data-review={reviewActive ? 'true' : 'false'}>
         <section className={styles.introduction} aria-labelledby="desk-title">
           <p className={styles.eyebrow}>WELCOME TO CLAFLIN</p>
           <h1 id="desk-title">Your trading<br /><em>desk.</em></h1>
           <p>A clear view of the trade before you make it. Explore Coinbase Tokenized Stocks on Base, review the terms, and decide for yourself.</p>
           <p className={styles.welcomeNote}>Hetty’s desk is open for paper trading. Start with a stock.</p>
-          <div className={styles.instrument}><DeskInstrument stage={desk.state.stage === 'review' ? 'confirmation' : 'arrival'} /></div>
+          <HettyStatus desk={desk} />
+          <div className={styles.instrumentShell} data-stage={instrumentStage}>
+            <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument stage={instrumentStage} /></div>
+            <p className={styles.instrumentCaption} aria-hidden="true"><span>CLAFLIN / DESK INSTRUMENT</span>ENAMEL · BRASS · LIGHT</p>
+          </div>
         </section>
         <TradeTicket desk={desk} />
         <aside className={styles.support} aria-label="Your broker and instruction input">
@@ -36,6 +44,7 @@ export function WorkingDesk() {
             <span>YOUR AI BROKER</span><h2>{hetty.name}.</h2><p>{hetty.approach}</p>
             <details><summary>About Hetty</summary><p>Hetty is an AI character inspired by historical finance, not a historical person or a licensed human broker. Her role is to help make trading decisions clear, not to make them for you.</p><p>Live conversations are not connected in this release. You can prepare an instruction directly or use optional dictation below.</p></details>
           </div>
+          <div id="on-desk"><DeskBoard desk={desk} /></div>
           <VoiceIntent onApply={desk.edit} disabled={desk.state.stage === 'loading'} />
         </aside>
       </div>

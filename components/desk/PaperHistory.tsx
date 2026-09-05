@@ -1,9 +1,10 @@
 'use client';
 
+import { memo } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import styles from './WorkingDesk.module.css';
 
-export function PaperHistory({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
+export const PaperHistory = memo(function PaperHistory({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
   const { records, historyReady, storageError, loadHistory, edit, removeRecord } = desk;
   return <section id="paper-history" className={styles.history} aria-labelledby="history-title">
     <div><p className={styles.eyebrow}>RETURN TO YOUR WORK</p><h2 id="history-title">Your paper record.</h2><p>Saved in this browser. Simulations, not live positions.</p></div>
@@ -19,4 +20,4 @@ export function PaperHistory({ desk }: { desk: ReturnType<typeof useTradingDesk>
       </details>
     </article>)}
   </section>;
-}
+});

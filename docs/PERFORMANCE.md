@@ -60,3 +60,9 @@ Measure and inspect:
 - Return-to-work latency and correctness, with missing or stale records included.
 
 Basic failure visibility belongs in beta. Choose monitoring and telemetry from the questions above, avoid recording sensitive conversation content by default, and set performance targets from measurements. Provider/runtime checks are described in [Voice Transport](WIDGET_ARCHITECTURE.md); safe read-only retry behavior is described in [Error Resilience](ERROR_RESILIENCE.md).
+
+## Implemented on feat/desk-immersion-quest (2026-09-05)
+
+- Review countdown uses a local `useReviewClock` only while `stage === 'review'` — the desk tree no longer re-renders every second.
+- Aerodrome reader batches concurrent `eth_call`s (`batchMaxCount: 25`), pins Base via `staticNetwork`, and overlaps quote + Chainlink feed after identity checks.
+- Desk instrument waits for intersection + `requestIdleCallback` before loading Three.js; reduced-motion keeps the enamel fallback.

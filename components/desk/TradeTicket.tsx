@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
+import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { TradeIntent } from '@/lib/trading/domain';
@@ -8,20 +9,38 @@ import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
 
-export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
-  const { state, now, historyReady, error, edit, requestQuote, save, cancel } = desk;
+export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
+  const { state, historyReady, error, edit, requestQuote, save, cancel } = desk;
   const instrument = DESK_INSTRUMENTS.find(s => s.id === state.draft.instrumentId);
   const quote = state.quote;
-  const expired = quote ? !estimateUsable(quote, now) : false;
   const review = useRef<HTMLElement | null>(null);
-  useEffect(() => { if (state.stage === 'review') review.current?.focus(); }, [state.stage]);
+  const recorded = state.stage === 'saved';
+  const now = useReviewClock(state.stage === 'review');
+  const expired = quote ? !estimateUsable(quote, now) : false;
+  useEffect(() => { if (state.stage === 'review' || recorded) review.current?.focus(); }, [state.stage, recorded]);
   const date = (ms: number) => new Date(ms).toLocaleString();
 
-  return <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title">
+  const slipActive = Boolean(quote) && (state.stage === 'review' || recorded || state.stage === 'loading');
+  const paperNumber = recorded ? 'REC' : slipActive ? 'SLIP' : '01';
+  const paperSub = recorded
+    ? 'PAPER RECORD / THIS BROWSER'
+    : slipActive
+      ? 'QUOTATION / FOR YOUR REVIEW'
+      : 'HETTY’S DESK / BASE';
+
+  return <section
+    id="instruction"
+    className={`${styles.ticket}${slipActive ? ` ${styles.quotationSlip}` : ''}${recorded ? ` ${styles.ticketRecorded}` : ''}`}
+    aria-labelledby="instruction-title"
+    data-slip={slipActive ? 'true' : 'false'}
+    data-acknowledged={recorded ? 'true' : 'false'}
+  >
     <div className={styles.paperTop}>
-      <HouseMark small /><span>CLAFLIN &amp; CO.<small>HETTY’S DESK / BASE</small></span><span>01</span>
+      <HouseMark small />
+      <span>CLAFLIN &amp; CO.<small>{paperSub}</small></span>
+      <span className={styles.paperNumber}>{paperNumber}</span>
     </div>
-    <h2 id="instruction-title">What would you like to trade?</h2>
+    <h2 id="instruction-title">{recorded ? 'Paper recorded.' : slipActive ? 'Quotation slip.' : 'What would you like to trade?'}</h2>
     <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
       <label htmlFor="stock">Stock</label>
       <select id="stock" value={state.draft.instrumentId} required onChange={e => edit({ ...state.draft, instrumentId: e.target.value })}>
@@ -34,18 +53,18 @@ export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> 
         <div><label htmlFor="amount">{state.draft.side === 'buy' ? 'USDC to spend' : `${instrument?.symbol || 'Stock'} tokens to sell`}</label><input id="amount" inputMode="decimal" autoComplete="off" placeholder={state.draft.side === 'buy' ? 'Amount in USDC' : 'Token quantity'} maxLength={40} value={state.draft.amount} onChange={e => edit({ ...state.draft, amount: e.target.value })} required /></div>
       </div>
       <p className={styles.product}>{state.draft.side === 'buy' ? 'You choose the spend. The estimate shows how many tokens you would receive.' : 'You choose the token quantity. The estimate shows how much USDC you would receive.'}</p>
-      <button className={styles.primary} type="submit" disabled={state.stage === 'loading'}>{state.stage === 'loading' ? 'Preparing your estimate…' : quote ? 'Refresh estimate' : 'Review estimate'}<span aria-hidden="true">→</span></button>
+      <button className={styles.primary} type="submit" disabled={state.stage === 'loading' || recorded}>{state.stage === 'loading' ? 'Preparing your estimate…' : quote && !recorded ? 'Refresh estimate' : recorded ? 'Estimate locked to this record' : 'Review estimate'}<span aria-hidden="true">→</span></button>
     </form>
     {(state.stage === 'loading' || state.stage === 'review') && <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>}
     {(error || state.message) && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{error || state.message}</p>}
-    {quote && <section ref={review} tabIndex={-1} className={styles.review} aria-labelledby="review-title">
-      <div className={styles.reviewHeading}><h3 id="review-title">For your review.</h3><span>{state.stage === 'saved' ? 'RECORDED / PAPER TRADE' : expired ? 'EXPIRED' : 'PAPER ESTIMATE'}</span></div>
-      <dl>
-        <div><dt>You would spend</dt><dd>{quote.inputAmount} {quote.inputSymbol}</dd></div>
-        <div><dt>You would receive</dt><dd>{quote.outputAmount} {quote.outputSymbol}</dd></div>
+    {quote && <section ref={review} tabIndex={-1} className={`${styles.review} ${styles.slipBody}`} aria-labelledby="review-title">
+      <div className={styles.reviewHeading}><h3 id="review-title">{recorded ? 'Acknowledged.' : 'For your review.'}</h3><span>{recorded ? 'RECORDED / PAPER TRADE' : expired ? 'EXPIRED' : 'PAPER ESTIMATE'}</span></div>
+      <dl className={styles.slipLedger}>
+        <div className={styles.slipHighlight}><dt>You would spend</dt><dd>{quote.inputAmount} {quote.inputSymbol}</dd></div>
+        <div className={styles.slipHighlight}><dt>You would receive</dt><dd>{quote.outputAmount} {quote.outputSymbol}</dd></div>
         <div><dt>Venue</dt><dd>Aerodrome · Base</dd></div>
         <div><dt>As of</dt><dd>{date(quote.blockTimestamp * 1000)}</dd></div>
-        <div><dt>Review window</dt><dd>{state.stage === 'saved' ? 'Recorded estimate' : expired ? 'Expired — refresh to record' : <span aria-live="off">{Math.max(0, Math.ceil((quote.expiresAt - now) / 1000))}s remaining</span>}</dd></div>
+        <div><dt>Review window</dt><dd>{recorded ? 'Recorded estimate' : expired ? 'Expired — refresh to record' : <span aria-live="off">{Math.max(0, Math.ceil((quote.expiresAt - now) / 1000))}s remaining</span>}</dd></div>
       </dl>
       {expired && state.stage === 'review' && <p role="status" className={styles.notice}>This estimate has expired. Refresh it before recording.</p>}
       <p className={styles.assumptions}>This paper trade uses the quoted output, including pool swap fees. No additional slippage, gas or Claflin charges are applied. The estimate is not reserved; no real order will be placed.</p>
@@ -61,12 +80,22 @@ export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> 
         <p className={styles.localConsent}>Recording saves this simulation in this browser, visible to anyone using this browser profile. It does not sync to an account.</p>
         <button type="button" className={styles.primary} disabled={expired || !historyReady} onClick={save}>Record paper trade<span aria-hidden="true">→</span></button>
       </>}
+      {recorded && <>
+        <button type="button" className={`${styles.primary} ${styles.acknowledgedAction}`} disabled>
+          <span className={styles.checkMark} aria-hidden="true">✓</span>
+          <span>Paper recorded</span>
+        </button>
+        <p className={styles.receiptStatus} role="status">
+          {quote.intent.side === 'buy' ? 'Buy' : 'Sell'} recorded in this browser only. Nothing moved onchain. Edit the draft to start a new instruction.
+        </p>
+        <button className={styles.secondary} type="button" onClick={() => edit(state.draft)}>Start a new draft</button>
+      </>}
     </section>}
     <details className={styles.productDetails}><summary>About these products</summary>
       <p>These are Coinbase-issued tokenized products on Base, not an order on a traditional stock exchange. Live access is restricted to eligible users in permitted jurisdictions outside the US.</p>
       <p>This release is paper-only. Account eligibility, funding and holdings are not checked. Paper requests are capped at 10,000 USDC per buy or 1,000 tokens per sell; these caps are not a measure of safe liquidity.</p>
       {instrument && <p>{instrument.name} · {instrument.decimals} decimal places<br /><code>{instrument.contractAddress}</code></p>}
     </details>
-    <p className={styles.paperFoot}>YOUR INSTRUCTION. YOUR DECISION.</p>
+    <p className={styles.paperFoot}>{recorded ? 'RECORDED. YOUR DECISION STOOD.' : 'YOUR INSTRUCTION. YOUR DECISION.'}</p>
   </section>;
-}
+});
