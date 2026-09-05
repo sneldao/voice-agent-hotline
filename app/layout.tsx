@@ -32,10 +32,11 @@ export const viewport: Viewport = {
   themeColor: '#15251f',
 };
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL;
+// Set NEXT_PUBLIC_APP_URL in your deployment environment; the fallback is a placeholder.
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://claflin.co';
 
 export const metadata: Metadata = {
-  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  metadataBase: new URL(siteUrl),
   title: {
     default: HOUSE.title,
     template: '%s | Claflin',
