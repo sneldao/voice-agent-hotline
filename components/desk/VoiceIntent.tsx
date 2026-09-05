@@ -19,6 +19,8 @@ export function VoiceIntent({ onApply, disabled }: { onApply(intent: TradeIntent
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const recognition = useRef<Recognition | null>(null);
+  /* Browser speech recognition support is only available client-side. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const speech = window as SpeechWindow;
     setSupported(Boolean(speech.SpeechRecognition || speech.webkitSpeechRecognition));
@@ -29,6 +31,7 @@ export function VoiceIntent({ onApply, disabled }: { onApply(intent: TradeIntent
       }
     };
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => { if (disabled) recognition.current?.abort(); }, [disabled]);
   function start() {
     const speech = window as SpeechWindow;

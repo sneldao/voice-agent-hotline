@@ -21,6 +21,9 @@ export function useTradingDesk() {
     try { setRecords(loadPaperRecords(window.localStorage)); setHistoryReady(true); setStorageError(null); }
     catch { setHistoryReady(false); setStorageError('Your paper history could not be read. Nothing has been changed. Check browser storage before saving.'); }
   }
+  /* Loading initial paper history and syncing with browser storage is intentionally done in an effect;
+     localStorage is not available during SSR and the storage event is an external subscription. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadHistory();
     setNow(Date.now());
@@ -28,6 +31,7 @@ export function useTradingDesk() {
     window.addEventListener('storage', loadHistory);
     return () => { clearInterval(timer); request.current?.abort(); window.removeEventListener('storage', loadHistory); };
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function edit(draft: TradeIntent) {
     request.current?.abort();

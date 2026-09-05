@@ -317,7 +317,6 @@ export class ERC8004Service {
       for (const log of receipt.logs) {
         try {
           // Skip type check for viem - its eventName type is too strict
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const decoded: any = (decodeEventLog as any)({
             abi: ERC8004_IDENTITY_ABI,
             eventName: 'Transfer',
@@ -424,7 +423,6 @@ export class ERC8004Service {
       let delegationId: Hash | undefined;
       for (const log of receipt.logs) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const decoded: any = (decodeEventLog as any)({
             abi: ERC8004_DELEGATION_ABI,
             eventName: 'DelegationCreated',

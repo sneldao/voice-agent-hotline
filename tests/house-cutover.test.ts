@@ -40,7 +40,7 @@ describe('one canonical house', () => {
   it('retires marketplace distribution without intercepting quote or webhook infrastructure', () => {
     for (const path of ['/api/agents', '/api/agents/', '/api/agents/general_helper', '/api/sdk/register', '/api/ratings']) assert.equal(isRetiredMarketplaceApi(path), true);
     for (const path of ['/api/stocks/quote', '/api/webhooks/elevenlabs', '/api/payments/settle', '/api/agentship']) assert.equal(isRetiredMarketplaceApi(path), false);
-    assert.match(source('proxy.ts'), /isRetiredMarketplaceApi/);
+    assert.match(source('middleware.ts'), /isRetiredMarketplaceApi/);
   });
   it('aligns metadata, manifest, and error copy without fabricated call state', () => {
     assert.match(source('app/layout.tsx'), /HOUSE.title/);
