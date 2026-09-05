@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { intentFromSpeech } from '@/lib/trading/workflow';
 import type { TradeIntent } from '@/lib/trading/domain';
 import styles from './WorkingDesk.module.css';
@@ -13,14 +13,13 @@ type Recognition = {
 };
 type SpeechWindow = Window & { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
 
-export function VoiceIntent({ onApply, disabled }: { onApply(intent: TradeIntent): void; disabled: boolean }) {
+export const VoiceIntent = memo(function VoiceIntent({ onApply, disabled }: { onApply(intent: TradeIntent): void; disabled: boolean }) {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const recognition = useRef<Recognition | null>(null);
   /* Browser speech recognition support is only available client-side. */
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const speech = window as SpeechWindow;
     setSupported(Boolean(speech.SpeechRecognition || speech.webkitSpeechRecognition));
@@ -31,7 +30,6 @@ export function VoiceIntent({ onApply, disabled }: { onApply(intent: TradeIntent
       }
     };
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => { if (disabled) recognition.current?.abort(); }, [disabled]);
   function start() {
     const speech = window as SpeechWindow;
@@ -61,4 +59,4 @@ export function VoiceIntent({ onApply, disabled }: { onApply(intent: TradeIntent
     <p>This replaces your draft and clears any previous estimate. Check the details before requesting a new estimate.</p>
     {error && <p role="alert">{error}</p>}
   </details>;
-}
+});

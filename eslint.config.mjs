@@ -12,6 +12,9 @@ const config = [
       'react-hooks/purity': 'warn',
       'react-hooks/refs': 'warn',
       'react-hooks/exhaustive-deps': 'warn',
+      // We intentionally memoize the trading desk surface and callbacks;
+      // React Compiler is not enabled and the legacy rules are not a signal here.
+      'react-hooks/preserve-manual-memoization': 'off',
     },
   },
   {

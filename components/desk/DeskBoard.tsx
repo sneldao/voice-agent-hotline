@@ -1,10 +1,11 @@
 'use client';
 
+import { memo } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import styles from './WorkingDesk.module.css';
 
-export function DeskBoard({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
+export const DeskBoard = memo(function DeskBoard({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
   const { state, records, historyReady, edit } = desk;
   const draftInstrument = DESK_INSTRUMENTS.find(s => s.id === state.draft.instrumentId);
   const latest = records[0];
@@ -58,4 +59,4 @@ export function DeskBoard({ desk }: { desk: ReturnType<typeof useTradingDesk> })
       </ul>
     </section>
   );
-}
+});

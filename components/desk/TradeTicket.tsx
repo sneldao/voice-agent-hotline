@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
@@ -9,7 +9,7 @@ import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
 
-export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
+export const TradeTicket = memo(function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
   const { state, historyReady, error, edit, requestQuote, save, cancel } = desk;
   const instrument = DESK_INSTRUMENTS.find(s => s.id === state.draft.instrumentId);
   const quote = state.quote;
@@ -98,4 +98,4 @@ export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> 
     </details>
     <p className={styles.paperFoot}>{recorded ? 'RECORDED. YOUR DECISION STOOD.' : 'YOUR INSTRUCTION. YOUR DECISION.'}</p>
   </section>;
-}
+});

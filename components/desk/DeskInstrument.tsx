@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { DeskInstrumentController, DeskInstrumentStage } from '@/lib/desk-instrument';
 import styles from './DeskInstrument.module.css';
 
@@ -10,7 +10,7 @@ function stageCaption(stage: DeskInstrumentStage) {
   return 'HETTY — AT THE DESK';
 }
 
-export function DeskInstrument({ stage, label = 'PAPER TRADING / NO LIVE ORDERS' }: { stage: DeskInstrumentStage; label?: string }) {
+export const DeskInstrument = memo(function DeskInstrument({ stage, label = 'PAPER TRADING / NO LIVE ORDERS' }: { stage: DeskInstrumentStage; label?: string }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<DeskInstrumentController | null>(null);
@@ -123,4 +123,4 @@ export function DeskInstrument({ stage, label = 'PAPER TRADING / NO LIVE ORDERS'
       <canvas ref={canvasRef} className={styles.instrumentCanvas} aria-hidden="true" />
     </div>
   );
-}
+});

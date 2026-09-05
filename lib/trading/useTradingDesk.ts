@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { parseIntent, type TradeIntent } from './domain';
 import { deskReducer, estimateUsable, initialDesk, parseEstimate } from './workflow';
 import { deletePaperRecord, loadPaperRecords, savePaperRecord, type PaperRecord } from './paper-records';
@@ -87,5 +87,9 @@ export function useTradingDesk() {
     } catch { setStorageError('This paper record could not be deleted. Check browser storage and try again.'); }
   }, [loadHistory, state.draft, state.quote?.id]);
 
-  return { state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord };
+  // The desk object is explicitly memoized so parent re-renders don't create new references for children.
+  return useMemo(
+    () => ({ state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord }),
+    [state, records, historyReady, storageError, error, edit, requestQuote, save, cancel, loadHistory, removeRecord],
+  );
 }

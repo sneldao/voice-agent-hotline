@@ -1,11 +1,12 @@
 'use client';
 
+import { memo } from 'react';
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { estimateUsable } from '@/lib/trading/workflow';
 import { useReviewClock } from '@/lib/trading/useReviewClock';
 import styles from './WorkingDesk.module.css';
 
-export function HettyStatus({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
+export const HettyStatus = memo(function HettyStatus({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
   const { state } = desk;
   const quote = state.quote;
   const now = useReviewClock(state.stage === 'review');
@@ -37,4 +38,4 @@ export function HettyStatus({ desk }: { desk: ReturnType<typeof useTradingDesk> 
       {line}
     </p>
   );
-}
+});
