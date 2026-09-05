@@ -16,6 +16,7 @@ export function WorkingDesk() {
   const desk = useTradingDesk();
   const hetty = HOUSE_DESKS[0];
   const reviewActive = desk.state.stage === 'review' || desk.state.stage === 'loading' || desk.state.stage === 'saved';
+  const instrumentStage = desk.state.stage === 'review' || desk.state.stage === 'saved' ? 'confirmation' : 'arrival';
 
   return <div className={styles.workspace}>
     <div className={styles.room} aria-hidden="true"><div className={styles.window}><i /><i /><i /></div><div className={styles.lightPool} /></div>
@@ -32,7 +33,10 @@ export function WorkingDesk() {
           <p>A clear view of the trade before you make it. Explore Coinbase Tokenized Stocks on Base, review the terms, and decide for yourself.</p>
           <p className={styles.welcomeNote}>Hetty’s desk is open for paper trading. Start with a stock.</p>
           <HettyStatus desk={desk} />
-          <div className={styles.instrument} data-stage={desk.state.stage === 'review' ? 'confirmation' : 'arrival'}><DeskInstrument stage={desk.state.stage === 'review' ? 'confirmation' : 'arrival'} /></div>
+          <div className={styles.instrumentShell} data-stage={instrumentStage}>
+            <div className={styles.instrument} data-stage={instrumentStage}><DeskInstrument stage={instrumentStage} /></div>
+            <p className={styles.instrumentCaption} aria-hidden="true"><span>CLAFLIN / DESK INSTRUMENT</span>ENAMEL · BRASS · LIGHT</p>
+          </div>
         </section>
         <TradeTicket desk={desk} />
         <aside className={styles.support} aria-label="Your broker and instruction input">

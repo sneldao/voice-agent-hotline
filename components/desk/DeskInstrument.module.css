@@ -18,4 +18,11 @@
   .fallbackDisplay { font-size: 7px; }
   .fallbackDial { border-width: 5px; }
 }
-@media (prefers-reduced-motion: reduce) { .instrumentCanvas { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .instrumentCanvas { transition: none; opacity: 0 !important; pointer-events: none; }
+  .instrument[data-reduced-motion="true"] .instrumentFallback { opacity: 1 !important; }
+  .instrument[data-reduced-motion="true"] .fallbackDisplay { font-size: clamp(8px, .85vw, 11px); }
+}
+.instrument[data-reduced-motion="true"] .instrumentCanvas { opacity: 0 !important; }
+.instrument[data-reduced-motion="true"] .instrumentFallback { opacity: 1 !important; }
+
