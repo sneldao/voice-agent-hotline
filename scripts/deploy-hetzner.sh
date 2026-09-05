@@ -10,7 +10,7 @@ set -euo pipefail
 # swaps the `current` symlink.
 #
 # Server layout:
-#   /opt/voice-hotline/
+#   /opt/claflin/
 #     ├── .env.hetzner          (server secrets — never touched)
 #     ├── ecosystem.config.js   (PM2 config — rarely changes)
 #     ├── .git/                 (for git operations if needed)
@@ -29,7 +29,7 @@ set -euo pipefail
 # ================================================
 
 REMOTE_HOST="snel-bot"
-REMOTE_DIR="/opt/voice-hotline"
+REMOTE_DIR="/opt/claflin"
 RELEASES_DIR="$REMOTE_DIR/releases"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 RELEASE_PATH="$RELEASES_DIR/$TIMESTAMP"
@@ -69,12 +69,12 @@ ssh "$REMOTE_HOST" "ln -sfn $RELEASE_PATH $REMOTE_DIR/current"
 
 echo ""
 echo "=== Step 6: Restart PM2 ==="
-ssh "$REMOTE_HOST" "pm2 delete voice-hotline 2>/dev/null || true; cd $REMOTE_DIR && pm2 start ecosystem.config.js && pm2 save"
+ssh "$REMOTE_HOST" "pm2 delete claflin 2>/dev/null || true; cd $REMOTE_DIR && pm2 start ecosystem.config.js && pm2 save"
 
 echo ""
 echo "=== Step 7: Health check ==="
 sleep 3
-HEALTH=$(ssh "$REMOTE_HOST" "curl -sf -o /dev/null -w '%{http_code}' http://localhost:3042/api/agents 2>/dev/null || echo 'failed'")
+HEALTH=$(ssh "$REMOTE_HOST" "curl -sf -o /dev/null -w '%{http_code}' http://localhost:3042/ 2>/dev/null || echo 'failed'")
 if echo "$HEALTH" | grep -qE '^(2|4)0[0-9]$'; then
   echo "✅ Deployment successful! API responded with HTTP $HEALTH."
 else
@@ -82,10 +82,10 @@ else
   # Find the previous release (second-to-last symlink target)
   PREV=$(ssh "$REMOTE_HOST" "ls -1t $RELEASES_DIR | sed -n '2p'")
   if [ -n "$PREV" ]; then
-    ssh "$REMOTE_HOST" "ln -sfn $RELEASES_DIR/$PREV $REMOTE_DIR/current && pm2 delete voice-hotline 2>/dev/null || true; cd $REMOTE_DIR && pm2 start ecosystem.config.js && pm2 save"
+    ssh "$REMOTE_HOST" "ln -sfn $RELEASES_DIR/$PREV $REMOTE_DIR/current && pm2 delete claflin 2>/dev/null || true; cd $REMOTE_DIR && pm2 start ecosystem.config.js && pm2 save"
     echo "⏪ Rolled back to $PREV"
   else
-    echo "❌ No previous release to roll back to. Check: pm2 logs voice-hotline"
+    echo "❌ No previous release to roll back to. Check: pm2 logs claflin"
   fi
 fi
 

@@ -9,12 +9,12 @@ deploy:
 
 # Tail PM2 logs
 logs:
-	ssh snel-bot "pm2 logs voice-hotline --nostream --lines 50"
+	ssh snel-bot "pm2 logs claflin --nostream --lines 50"
 
 # Check process status
 status:
-	ssh snel-bot "pm2 status voice-hotline"
+	ssh snel-bot "pm2 status claflin"
 
 # Restart without rebuilding
 restart:
-	ssh snel-bot "pm2 restart voice-hotline"
+	ssh snel-bot "pm2 restart claflin"
