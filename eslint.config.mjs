@@ -1,0 +1,20 @@
+import next from 'eslint-config-next/core-web-vitals';
+
+export default [
+  ...next,
+  {
+    rules: {
+      'react/no-unescaped-entities': 'off',
+      // The legacy voice/wallet hooks trip the new react-hooks 7.x rules.
+      // These are warnings until the remaining voice code is removed or refactored.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
+  },
+  {
+    ignores: ['.next/', 'out/', 'node_modules/'],
+  },
+];

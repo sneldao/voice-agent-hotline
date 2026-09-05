@@ -1,148 +1,80 @@
-# Claflin — voice-native broker desk
+# Claflin — your trading desk
 
-A voice-first trading desk. Pick up the line, ask about tokenized stocks, and place paper trades by voice. The first Claflin broker is **Hetty** — conservative, independent, and obsessed with confirmation before execution.
+**A voice-first trading product expressed as a Deco-futurist brokerage house.** Clients express an intent, understand the product and terms, authorize a decision, and verify the result. Voice, research, publications and personalization support that job.
 
-**Live:** [your-claflin-app.vercel.app](https://your-claflin-app.vercel.app)  
-**API:** [api.your-claflin-app.com](https://api.your-claflin-app.com) (Hetzner VPS, port 3042)
+Hetty / Base comes first, followed by Jesse Livermore / Solana, Isabel Benham / Robinhood Chain, and then an Arbitrum desk. These are curated AI characters and mandates, not an open marketplace or a claim of current live execution.
 
----
+## One front door
 
-## Quick Start
+`/` is Hetty's desk. No welcome wizard, directory, personality questionnaire, free-call funnel, automatic microphone request, wallet bootstrapping, ratings or streaks precede the work.
+
+The current release supports **paper trading with live venue estimates**:
+
+1. Choose a Coinbase tokenized stock on Base.
+2. Specify a USDC spend to buy, or a token quantity to sell.
+3. Review a verified, time-limited estimate.
+4. Edit, refresh, cancel, or explicitly record a paper trade.
+5. Return to the browser-local record or use it as a new draft.
+
+No stock or amount is preselected. Paper records are simulations, not wallet positions or call receipts. They are visible to anyone using that browser profile, do not sync to an account, and can be explicitly deleted.
+
+**Voice boundary:** optional browser dictation or a typed instruction updates the same draft. It is not a live Hetty conversation and never authorizes a trade. The structured broker-tool bridge remains unimplemented.
+
+**Live execution boundary:** there is no transaction construction, signing or submission in the desk. Account eligibility, funding, allowances, router compatibility and outcome reconciliation remain release gates. Paper trading does not establish eligibility for the live products.
+
+## Local development
 
 ```bash
-git clone https://github.com/sneldao/claflin.git
-cd claflin
 pnpm install
-cp .env.local.example .env.local
-# Fill in your API keys (ElevenLabs, Upstash, WalletConnect, etc.)
 pnpm dev
 ```
 
-Seed the Hetty broker and tools in ElevenLabs:
+Open `/`. Wallet, ElevenLabs and Redis setup are not prerequisites for the current paper desk. The read-only quote service uses Base's public RPC by default; configure `BASE_RPC_URL` for an appropriate production provider. Configure `NEXT_PUBLIC_APP_URL` for deployment metadata. Do not expose provider credentials through public environment variables.
 
-```bash
-pnpm tsx scripts/seed-elevenlabs.ts
-```
+The old client routes—including `/desk`, `/marketplace`, `/demo`, `/profile`, `/dashboard`, `/list-your-broker`, broker profiles and the old admin pages—redirect to `/`. `/desk-study` and `/widget-probe` are development-only references, absent from client navigation and unavailable in production.
 
-Then seed the directory:
+Public marketplace APIs (`/api/agents` and descendants, `/api/ratings`, `/api/sdk/register`) return **410 Gone** through the routing layer. Directory seeding, public broker submission and onboarding analytics are not setup steps or product milestones. No database rows were deleted by this cutover.
 
-```bash
-curl -X POST https://your-claflin-app.vercel.app/api/agents/seed
-```
+## Code organization
 
----
-
-## Tech Stack
-
-| Layer | |
+| Responsibility | Source |
 |---|---|
-| Frontend | Next.js 16, React 19, Tailwind CSS, Fraunces (display) + JetBrains Mono (codes) + IBM Plex Sans (body) |
-| Voice | ElevenLabs Conversational AI via controlled `<elevenlabs-convai>` widget (`components/WidgetEngine.tsx`) |
-| Payments | x402 / USDC on Arbitrum via MetaMask Smart Accounts — 80/20 platform/broker split (ledgered until PaymentRouter) |
-| Settlement | 1Shot Permissionless Relayer — gasless on-chain settlement |
-| Identity | ERC-8004 delegation registry (Arbitrum Sepolia, testnet) |
-| LLM | Venice AI (privacy-first research) |
-| Tools | Firecrawl (web research), Coinbase / broker APIs via Composio (where available) |
-| Storage | Upstash Redis |
-| Infra | Vercel (frontend) + Hetzner VPS (API, PM2 standalone) |
+| House identity, desk sequence and capability labels | `lib/house.ts` |
+| Root document and desk composition | `app/layout.tsx`, `app/page.tsx`, `components/desk/WorkingDesk.tsx` |
+| Intent, estimate and paper-record interaction | `lib/trading/useTradingDesk.ts` |
+| Ticket and record presentation | `components/desk/TradeTicket.tsx`, `components/desk/PaperHistory.tsx` |
+| House mark and optional instrument rendering | `components/desk/HouseMark.tsx`, `components/desk/DeskInstrument.tsx`, `lib/desk-instrument.ts` |
+| Explicit units and canonical catalog | `lib/trading/domain.ts`, `lib/trading/catalog.ts`, `lib/tokenized-stocks.ts` |
+| Read-only estimate service and RPC integration | `lib/trading/quotes.ts`, `lib/trading/aerodrome.ts` |
+| Thin HTTP boundary | `lib/trading/http.ts`, `app/api/stocks/quote/route.ts` |
+| Shared draft/review transitions and local persistence | `lib/trading/workflow.ts`, `lib/trading/paper-records.ts` |
 
----
+Trading uses decimal strings and integer base units. The service verifies chain, pool/factory, token order, decimals and output at a recent block. Estimates are never called executable orders. Reference observations have explicit freshness and uncertainty labels.
 
-## Brokers
+Older voice, billing, registry and webhook modules remain implementation scaffolding, not the client-facing identity system. They are not mounted by the root layout. Arbitrum billing and identity configuration are independent of Base trading. Retained settlement is not a stock execution adapter.
 
-| Broker | Specialty | Voice |
-|---|---|---|
-| **Hetty** | Tokenized stocks, conservative execution, confirmation-first voice trading | Adam |
-| Benham | Fundamental research and earnings analysis | Josh |
-| Woodhull | Growth & momentum, thematic baskets | Antoni |
-| Claflin Concierge | Account questions, hand-offs, and desk routing | Rachel |
-| Baruch *(planned)* | Macro, rates, and real-time market news | Steve |
-| Marks *(planned)* | Risk, position sizing, and portfolio health | Sarah |
+## Verification
 
-The canonical broker registry lives in `lib/agent-registry.ts`; display personas live in `lib/agent-personas.ts`. The `general_helper` entry (Hetty) is the default concierge in `components/DiscoverTab.tsx`.
+- `pnpm test` — domain, quote, paper-record, route-cutover and retained infrastructure tests.
+- `pnpm typecheck` — TypeScript verification.
+- `pnpm exec next build --webpack` — production compilation without the repository's destructive standalone postbuild cleanup. Deployment packaging is a separate operation.
+- `pnpm lint` has an existing ESLint 9 / legacy `.eslintrc.json` configuration mismatch; do not change security or tooling policies to mask failures.
+- Current cutover checks use source contracts and HTTP responses, not a browser automation session. Earlier paper-desk browser checks do not establish visual acceptance of every subsequent change.
 
----
+## Product rules
 
-## Architecture
+- The old approach is retired, not a compatibility target. There are no existing-user or collaborator constraints requiring it to remain in the product.
+- Preserve useful implementation capabilities selectively; do not preserve the old discovery, onboarding or billing-led experience.
+- Give the client one coherent place to work. Explain permissions and terms at the relevant action rather than build a prerequisite tour.
+- Keep paper mode, product identity and material terms clear. Put technical metadata in the relevant details, not the welcome headline.
+- A provider configuration or historical token listing is not evidence of operational readiness.
+- Use the existing Next.js/React/TypeScript, ethers, Zod, Tailwind and Three.js stack; do not introduce a framework migration for this cutover.
 
-```
-Voice Layer (ElevenLabs ConvAI widget) → Webhook Handler (tool routing)
-  → Skill Execution (web research, quote lookup, simulated trade intent)
-    → Settlement (x402 → 1Shot relayer → Arbitrum)
-```
+## Canonical documentation
 
-- **WidgetEngine** mounts a single offscreen `<elevenlabs-convai>` element via `WidgetEngineProvider` and controls it programmatically.
-- **ActiveCall** is the broker-desk console during a conversation: live cost ticker, cap selector, and mute/hang-up.
-- **Broker desk** (`components/DiscoverTab.tsx` + `DirectoryRow`) is the directory — mono dial codes, live activity, per-minute price.
-- **CostPanel** is the first-class cost surface: per-minute rate, optional cap ($0.50 / $1 / $2 / $5 / Open), live ticker with soft "30s left on the line" warnings.
-- **LiveActivity** ticker shows "3 on the line · 17 in the last hour" from `/api/activity/live` — fails soft and hides if there's no activity.
-- **Webhook** routes tool calls per-broker and handles x402 payment negotiation.
-- **DelegationRegistry** (ERC-8004, Arbitrum Sepolia) manages broker permissions.
-
----
-
-## Contract
-
-| Contract | Network | Address |
-|---|---|---|
-| DelegationRegistry (ERC-8004) | Arbitrum Sepolia (chain 421614) | `0xb17A8dC3E37B9b95282cEA6594c1dFAa16026D00` |
-| ERC-8004 Identity (reference) | Arbitrum Sepolia | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
-| ERC-8004 Reputation (reference) | Arbitrum Sepolia | `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
-
-The Identity and Reputation contracts are ERC-8004 reference deployments. The DelegationRegistry is this project's `contracts/DelegationRegistry.sol`.
-
----
-
-## Key Env Vars
-
-```
-ELEVENLABS_API_KEY              # Required — voice agent API
-ELEVENLABS_CONVERSATIONAL_ENABLED=true
-
-VENICE_API_KEY                  # Venice AI inference key
-
-UPSTASH_REDIS_REST_URL          # Data persistence
-UPSTASH_REDIS_REST_TOKEN
-
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
-
-ARBITRUM_RPC_URL                # https://sepolia-rollup.arbitrum.io/rpc (default)
-PAYMENT_RECEIVER                # Platform wallet (20% of every settled call)
-PLATFORM_WALLET                 # Same role as PAYMENT_RECEIVER (alias used by settlement)
-
-NEXT_PUBLIC_ERC8004_DELEGATION_ADDRESS
-NEXT_PUBLIC_PLATFORM_ADDRESS
-
-ONESHOT_RELAYER_URL             # https://relayer.1shotapi.com (default)
-```
-
-See `.env.local.example` for the full list with defaults.
-
----
-
-## Repo Conventions
-
-- `app/` — Next.js routes only. Reusable components live in `components/`.
-- `lib/` — domain helpers, data layer, hooks.
-- `app/api/activity/live` — proof-of-life endpoint for the broker-desk ticker.
-- `.githooks/pre-commit` — installs on `pnpm install`; scans for common secret shapes (Upstash, AWS, GitHub, Stripe, ElevenLabs, generic base64url ≥40 chars).
-- The project uses pnpm. A stale `package-lock.json` was removed; do not reintroduce it.
-
----
-
-## Docs
-
-- [`ROADMAP.md`](ROADMAP.md) — Claflin product status, completed phases, beta plan, and roadmap to real-money execution
-- [`docs/AGENTIC_ARCHITECTURE.md`](docs/AGENTIC_ARCHITECTURE.md) — broker lifecycle, on-chain identity, payment flow
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Vercel + Hetzner dual deploy
-- [`docs/HETZNER_DEPLOYMENT.md`](docs/HETZNER_DEPLOYMENT.md) — `make deploy` walkthrough
-- [`docs/SECURITY_ARCHITECTURE_COMPARISON.md`](docs/SECURITY_ARCHITECTURE_COMPARISON.md) — payment security model
-- [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — current perf hot spots
-- [`docs/WIDGET_ARCHITECTURE.md`](docs/WIDGET_ARCHITECTURE.md) — voice widget control layer
-- [`docs/REDIS_KEYS.md`](docs/REDIS_KEYS.md) — Redis key naming conventions and data structures
-- [`docs/ERROR_RESILIENCE.md`](docs/ERROR_RESILIENCE.md) — how Claflin survives CORS and backend hiccups
-- [`docs/STREAMING_INTEGRATION.md`](docs/STREAMING_INTEGRATION.md) — historical note on Superfluid / WDK (inactive)
-
----
-
-Built for Hetty · MIT
+- [Product Direction](docs/PRODUCT_DIRECTION.md): enduring product and design decisions.
+- [Roadmap](ROADMAP.md): current state and next release gates.
+- [Architecture](docs/AGENTIC_ARCHITECTURE.md): domain boundaries, integration evidence and retained implementation references.
+- [Performance](docs/PERFORMANCE.md): runtime requirements and verification.
+- [Deployment](docs/DEPLOYMENT.md) and [Hetzner deployment](docs/HETZNER_DEPLOYMENT.md): infrastructure reference; deploy frontend and API versions together when proxying `/api/*`.
+- [Widget architecture](docs/WIDGET_ARCHITECTURE.md), [Redis keys](docs/REDIS_KEYS.md), and [payment security](docs/SECURITY_ARCHITECTURE_COMPARISON.md): retained service references, not the primary client experience.

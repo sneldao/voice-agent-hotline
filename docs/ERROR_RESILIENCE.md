@@ -51,9 +51,15 @@ For direct cross-origin hits (embedded widgets, SDK consumers):
 - SWR keeps previous data, retries with a capped outer backoff, and exposes
   `errorKind` / `isRetrying`.
 
-## The UX contract
+## Client recovery requirements
 
-| Situation | What the user sees |
+[Product Direction](PRODUCT_DIRECTION.md) owns the target experience. Recovery should preserve the client's work, state what did and did not happen, and offer a safe next action. The current mascot, skeleton rows, and "redial" wording below are implementation descriptions, not a requirement to preserve the operator-themed presentation.
+
+Automatic retries here concern read-only data availability. They do not authorize restarting a microphone session, replaying a paper instruction, or retrying a payment. Delayed transcripts, unsaved instructions, and unsettled call receipts must remain distinct, truthful states. Retaining stale data is not evidence that it is current.
+
+## Current directory-era presentation
+
+| Situation | Current presentation |
 |---|---|
 | First load | Skeleton rows; after 4s, "Warming up the broker desk…" |
 | Cold-start failure (no cache) | `ConnectionError`: desk bell mascot, friendly headline, "Ring again" button, visible auto-redial countdown (5s→10s→20s→30s), instant retry on `online` event |
@@ -66,7 +72,9 @@ Accessibility: the failure headline/message is announced once via
 `role="alert"`; the per-second countdown is `aria-hidden` (screen readers get
 a static "we keep redialing" note instead of being spammed).
 
-## Verified
+## Previously recorded verification
+
+The following results were recorded before the September 5 documentation alignment; they were not rerun for this docs-only change. Revalidate them when modifying the proxy or retry implementation.
 
 - `OPTIONS /api/agents` → 204 with full CORS headers (was: no handler).
 - `GET /api/agents` returning 500 **still carries** `Access-Control-Allow-Origin`.

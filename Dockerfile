@@ -26,6 +26,12 @@ ENV NEXT_PUBLIC_ERC8004_ENABLED=false
 ENV UPSTASH_REDIS_REST_URL=https://placeholder.upstash.io
 ENV UPSTASH_REDIS_REST_TOKEN=placeholder
 
+# Pin production mode explicitly. If NODE_ENV=development leaks in (CI shell,
+# env-file sourcing), `next build` compiles but crashes prerendering Next's
+# built-in /_not-found and /_global-error with a null-React hooks error.
+# See package.json "build" script — same fix, defense in depth.
+ENV NODE_ENV=production
+
 RUN npm run build
 
 # ── Stage 3: Production ──────────────────────

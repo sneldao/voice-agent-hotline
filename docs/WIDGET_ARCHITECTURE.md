@@ -1,217 +1,76 @@
-# Widget-First Architecture Plan
+# Voice Transport: Widget Engine
 
-## Status
+## Scope and status
 
-Current phase: **Widget engine implemented and verified in browser**.
+**Updated:** 2026-09-05. The controlled ElevenLabs widget engine is implemented. Historical browser observations below are dated evidence, not a guarantee of current provider behavior or a completed end-to-end client experience.
 
-The app now uses a controlled `<elevenlabs-convai>` widget engine:
-- `components/WidgetEngine.tsx` provides a global `WidgetEngineProvider` that mounts a single offscreen widget element and exposes imperative control via React context.
-- `lib/useWidgetConversation.ts` is the new conversation hook — same interface as the old `useElevenLabsConversation` but drives the widget instead of the raw SDK.
-- `components/ActiveCall.tsx` now uses `useWidgetConversation` instead of the legacy SDK hook.
-- `app/layout.tsx` wraps the app in `<WidgetEngineProvider>` — no more hardcoded visible widget.
-- The legacy `useElevenLabsConversation` hook and `ElevenLabsWidget` component have been removed.
-- `app/widget-probe/page.tsx` and `components/WidgetProbe.tsx` remain as the internal runtime probe for verifying widget behavior.
+[Product Direction](PRODUCT_DIRECTION.md) owns the visible experience: the client's working desk with Hetty. [ROADMAP.md](../ROADMAP.md) owns priorities and verification gates. This document owns voice transport and its evidence requirements. It does not require preserving the directory, five-step onboarding, or operator-console UI.
 
-Next phase: open `/widget-probe` in a real browser, verify which events fire, then confirm the full call flow works end-to-end through the new hook.
+## Why a controlled widget
 
----
+The original May 2026 investigation reported negotiation timeouts through direct `Conversation.startSession()` use while the official `<elevenlabs-convai>` widget connected successfully in the probe. The implementation moved to a single controlled widget rather than a visible vendor widget or multiple competing voice sessions.
 
-## Context
+The transport is supporting infrastructure. Keep provider presets, agent IDs, and connection mechanics out of the primary client journey, while clearly identifying Hetty as AI and explaining microphone use.
 
-We discovered that ElevenLabs' `Conversation.startSession()` SDK method fails with "negotiation timed out" on our domain, but the official `<elevenlabs-convai>` widget works perfectly. The widget uses the same underlying infrastructure but handles WebRTC negotiation, token management, and agent dispatch internally.
+## Implementation map
 
-**Decision:** Rebuild the voice layer around the widget instead of the raw SDK.
+| Layer | Source | Responsibility |
+|---|---|---|
+| Mounted voice engine | `components/WidgetEngine.tsx` | `WidgetEngineProvider` mounts one offscreen widget and exposes control through context; adapts to provider runtime capabilities. |
+| Conversation lifecycle | `lib/useWidgetConversation.ts` | Starts/ends conversations, tracks connection/duration/cost, accepts budget/time limits, and consumes transcript delivery. |
+| Call launch | `app/page.tsx`, `lib/product-launch.ts`, `components/AgentPreviewSheet.tsx` | Selects broker and handles pre-call entry; launch/cap inconsistencies remain open in the roadmap. |
+| Visible conversation | `components/ActiveCall.tsx` | Currently call telemetry, controls, and transcript; target working-desk surfaces should use real lifecycle and tool state. |
+| Session authorization | `app/api/webrtc/signal/route.ts` | Backend session/signed-URL path used by the conversation hook. |
+| Tool and transcript delivery | `app/api/webhooks/elevenlabs/route.ts`, `app/api/transcripts/route.ts` | Provider callbacks and transcript delivery to the client; do not assume widget-native transcript events. |
+| Internal runtime probe | `app/widget-probe/page.tsx`, `components/WidgetProbe.tsx` | Inspect actual provider methods, shadow DOM, events, and lifecycle behavior. Not a client destination. |
 
----
+Do not assume `display: none` preserves provider audio/lifecycle behavior. Maintain a mounted, visually suppressed engine and verify its operation when changing visibility or control paths.
 
-## Current State (broken)
+## Historical probe: 2026-05-13
 
-```
-User taps agent → useElevenLabsConversation hook → Conversation.startSession({ agentId })
-                                                    ↓
-                                              LiveKit room connects
-                                              Mic track published
-                                              AI agent never joins ← FAILS HERE
-                                              Negotiation times out
-```
+The previous investigation recorded these observations at `/widget-probe`:
 
-## Target State (widget-first)
+| Question | Observation at that time |
+|---|---|
+| Imperative methods on host element? | No usable conversation methods; lifecycle callbacks only. |
+| Shadow DOM? | Open shadow root with one button and no inputs. |
+| Start/end control? | Clicking the shadow button toggled the conversation. |
+| Mute/volume methods? | Not exposed on the host element. |
+| Custom events on host? | None observed. |
+| Signed URL mode? | Worked with a backend-issued signed URL. |
+| Offscreen operation? | Rendered and responded off-viewport. |
+| Transcript events? | Not emitted by the widget; webhook reconciliation required. |
 
-```
-User taps agent → Widget controller sets agent-id → widget.startConversation()
-                                                    ↓
-                                              Widget handles everything internally
-                                              AI agent joins and speaks ← WORKS
-                                              Our UI observes state via widget events
-```
+These findings explain the control adapters and fallback strategies. They must not be rewritten as "the widget exposes startConversation events" or "all controls work" without new evidence. The old SDK migration plan is historical; it is not pending product work.
 
----
+## Current transcript path and limitations
 
-## Architecture
+`useWidgetConversation` contains a fetch-based SSE reader for `/api/transcripts?callId=...`. The webhook/API path, not an assumed widget event, supplies transcript material. Some source comments still describe an older post-call-only arrangement; verify actual provider event timing, session correlation, and delivery before promising live transcription.
 
-### Layer 1: Widget Instance (global, visually suppressed)
+Show a truthful waiting/unavailable state when no transcript has arrived. An animated waveform is not evidence that speech was transcribed. A transcript is also not evidence that a paper instruction was confirmed and persisted; those need separate structured state and records.
 
-A single `<elevenlabs-convai>` element lives in the layout/provider. It is the actual voice engine. We control it programmatically while the custom Claflin UI remains the visible experience.
+## Required client-facing behavior
 
-Important: do **not** assume `display: none` is safe. First prove the widget can start, capture audio, emit state, and end while visually suppressed. Prefer an offscreen or zero-opacity mounted container if the widget needs layout/audio lifecycle hooks.
+These requirements are release gates, not blanket claims about current behavior:
 
-```tsx
-// In layout or a global provider
-<elevenlabs-convai
-  id="claflin-widget"
-  agent-id=""           // Set dynamically before starting
-  className="sr-only-widget-engine"
-/>
-```
+- **Consent:** an explicit call action precedes microphone activation; permission is requested in context. Cancel/back does not leave capture or a billable session running.
+- **Connection:** distinguish connecting, connected, failed, and ended using reliable transport evidence. An optimistic timeout or decorative "patching" sequence must not certify a successful connection.
+- **Controls:** verify real mute, speaker, and hang-up behavior. Do not show a control as successful merely because local UI state changed; expose unsupported/unavailable states honestly.
+- **Budget:** the reviewed cap and trial terms must reach the hook and be enforced. `ActiveCall` currently chooses its own five-minute paid cap and a two-minute trial limit; a cap control elsewhere is not proof of end-to-end propagation.
+- **Recovery:** do not double-start sessions, replay a paper instruction, or duplicate a payment during retry/reconnection. Preserve useful work and state what was saved or remains pending.
+- **Completion:** ending voice, saving a work record, and settling the call payment are separate outcomes. Surface delayed or failed records without claiming success.
+- **Accessibility:** keyboard operation, clear status, readable text, and reduced-motion behavior are required. Optional ambience must not compete with voice; no sound-on autoplay or forced spatial gesture.
 
-### Layer 2: Widget Controller Hook
+## Verification protocol
 
-A new `useWidgetConversation` hook that:
-- Finds the widget DOM element
-- Sets `agent-id` attribute when starting a call
-- Calls `widget.startConversation()` / `widget.endConversation()`
-- Tracks duration, cost, and connection state
-- Exposes the same interface as the old `useElevenLabsConversation` hook
+When voice implementation changes, record the date, browser/device, build, relevant configuration mode, observed behavior, and remaining limitations. Do not record credentials or private conversation content in diagnostics.
 
-```ts
-interface WidgetConversationReturn {
-  state: ConversationState;
-  transcripts: TranscriptMessage[];
-  isMuted: boolean;
-  startConversation: () => Promise<boolean>;
-  endConversation: () => void;
-  toggleMute: () => void;
-  setVolume: (volume: number) => void;
-}
-```
+1. Use the internal probe to inspect actual widget capabilities rather than assume the historical contract still holds.
+2. Test one explicit launch through each client entry path, including eligible trial and paid modes, with the intended broker and exact reviewed terms.
+3. Verify permission denial, cancellation while connecting, failed connection, retry, mute/speaker behavior, hang-up, and capture cleanup.
+4. Verify time/cost cap termination and usage handling during reconnect; distinguish zero-charge trial presentation from paid cost computation.
+5. Verify transcript timing and call-ID correlation through callback, API, UI, and stored records. Exercise delayed/missing delivery.
+6. Verify work-record persistence and receipt/payment states independently, including decline and failure. Tests that incur charges, create records, or settle funds require an appropriate explicitly approved test setup.
+7. Repeat relevant interactions at mobile widths, with keyboard, reduced motion, and ambience off. Clean up only the browser/session started for that test.
 
-### Layer 3: Agent Selection (unchanged)
-
-The existing flow stays the same:
-- User taps agent card → `handleSelectAgent` → opens preview or starts call
-- VoiceRouter mic → connects to General Helper
-- Agent ID mapping resolves registry keys to ElevenLabs agent IDs
-
-### Layer 4: ActiveCall UI (unchanged)
-
-The `ActiveCall` component keeps its new operator-console UI (duration, waveform, mute, end call). It should use the new hook instead of the old SDK hook once widget control is proven.
-
----
-
-## What Changes
-
-| Component | Before | After |
-|-----------|--------|-------|
-| Voice engine | `Conversation.startSession()` | `<elevenlabs-convai>` widget ✅ |
-| Connection management | Our code (broken) | Widget internal (works) ✅ |
-| Hook | `useElevenLabsConversation` | `useWidgetConversation` ✅ |
-| Layout | Hardcoded visible test widget | `WidgetEngineProvider` (offscreen) ✅ |
-| ActiveCall | Uses old hook | Uses `useWidgetConversation` ✅ |
-| VoiceRouter | Calls `onCallAgent` | Same — just triggers the widget ✅ |
-
-## What Stays The Same
-
-- Agent registry and ID mapping
-- Redis agent data
-- DiscoverTab UI
-- AgentPreviewSheet
-- VoiceRouter (one-tap concierge)
-- ActiveCall UI (operator console, duration, controls, transcript)
-- Payment settlement
-- Call history
-
----
-
-## Probe Results (2026-05-13)
-
-Browser test at `/widget-probe` confirmed:
-
-| Question | Answer |
-|----------|--------|
-| Imperative methods on host element? | **No** — only lifecycle callbacks (`connectedCallback`, `disconnectedCallback`, `attributeChangedCallback`, `_vdomComponent`) |
-| Shadow DOM? | **Open** shadowRoot with 1 button, 0 inputs |
-| Start conversation how? | Click the shadow DOM button (toggles conversation on/off) |
-| End conversation how? | Click the same shadow DOM button again |
-| Mute/volume methods? | **Not exposed** on host element |
-| Custom events emitted? | **None** observed on host element |
-| Signed URL mode? | **Works** — backend returns valid `wss://` signed URL |
-| Widget works offscreen? | **Yes** — renders and responds when positioned off-viewport |
-| Transcript events? | **Not emitted** — use webhook reconciliation for final records |
-
-### Implications for Architecture
-
-- `WidgetEngine.startConversation()` retries shadow button click with polling (widget needs time to render after attribute change)
-- `WidgetEngine.endConversation()` clicks the same button to toggle off
-- Connection state is detected via MutationObserver on shadow DOM + optimistic timeout
-- Transcripts come from ElevenLabs webhook, not widget events
-- Mute/volume controls are best-effort (try methods, no guarantee)
-
----
-
-## Implementation Steps
-
-1. **Spike widget control** — use `/widget-probe` to verify methods/events on the real custom element:
-   - dynamic `agent-id` or `signed-url`
-   - start conversation
-   - end conversation
-   - mute/unmute if exposed
-   - state/connection events
-   - transcript events or webhook-only transcript fallback
-   - behavior when visually suppressed
-2. **Record the probe results** in this document: detected methods, observed events, usable visibility mode, and transcript strategy.
-3. **Replace the hardcoded layout widget** with a single controlled widget engine.
-4. **Create `useWidgetConversation` hook** with the same public shape `ActiveCall` expects where possible.
-5. **Update `ActiveCall` to use `useWidgetConversation`**.
-6. **Decide transcript source of truth**:
-   - widget events if reliable
-   - ElevenLabs webhook reconciliation if widget events are incomplete
-7. **Add signed-url/session metadata** if wallet-aware call history, usage tracking, or billing correlation is needed.
-8. **~~Remove old `useElevenLabsConversation` and `ElevenLabsWidget`~~** ✅ Done — deleted after widget parity confirmed.
-9. **Test end-to-end** — tap agent → operator UI opens → widget starts → voice works → call ends → receipt/transcript persists.
-
----
-
-## Risks & Mitigations
-
-| Risk | Mitigation |
-|------|-----------|
-| Widget doesn't expose enough events for our UI | Prefer official events; use webhook reconciliation for transcripts; MutationObserver is last resort |
-| Widget fails when `display: none` | Keep it mounted but visually suppressed/offscreen instead of display-none |
-| Widget doesn't support programmatic mute/volume | Hide unsupported controls or fall back only if we can access media safely |
-| Multiple simultaneous widgets needed | Only one call at a time — swap agent-id between calls |
-| Public `agent-id` limits tracking | Move to signed-url flow with call/session metadata |
-
----
-
-## Progress Log
-
-- **2026-05-13:** Browser `SpeechRecognition` router issue identified. Direction changed to delegate voice handling to ElevenLabs.
-- **2026-05-13:** Voice Router simplified to one-tap concierge launcher.
-- **2026-05-13:** Switchboard UI redesign implemented across discovery, router, agent cards, header, nav, and active-call screens.
-- **2026-05-13:** Internal `/widget-probe` page added to inspect the widget runtime contract before building `useWidgetConversation`.
-- **2026-05-13:** Current verification passed: `npm run typecheck`, `npm test`, `npm run build`.
-- **2026-05-13:** Widget engine implemented: `WidgetEngineProvider` (global controlled widget), `useWidgetConversation` hook, `ActiveCall` swapped to widget hook, hardcoded layout widget removed.
-- **2026-05-13:** Browser probe completed: shadow button is the control path, no imperative methods, signed URLs work, no custom events emitted.
-- **2026-05-13:** Old SDK plumbing removed: deleted `useElevenLabsConversation`, deleted `ElevenLabsWidget`, extracted `useWebRTCSupport` to its own file. All docs updated to "implemented" status.
-
----
-
-## Timeline Estimate
-
-The old 45-minute estimate was too optimistic because the widget control/event contract still needs proof. Treat the next phase as:
-- 30-60 minutes for the widget control spike
-- 1-2 hours for `useWidgetConversation` plus `ActiveCall` swap if events are clean
-- additional time if transcript, mute, or signed-url behavior needs server-side reconciliation
-
----
-
-## Alternative Considered: Signed URL Flow
-
-The widget also supports `signed-url` attribute for authenticated sessions. If we need per-user auth later:
-
-```
-Backend: GET /api/get-signed-url?agentId=X → calls ElevenLabs API → returns signed URL
-Frontend: widget.setAttribute('signed-url', url) → widget.startConversation()
-```
-
-This would let us track usage per wallet address and correlate ElevenLabs conversations with Claflin call IDs. Public `agent-id` may be enough for a demo, but signed URLs are preferred before relying on receipts, billing, or per-user analytics.
+Use the repository's `pnpm test`, `pnpm typecheck`, `pnpm lint`, and `pnpm build` commands as appropriate to code changes. Passing them does not replace runtime/provider verification. No fresh voice-session or payment validation was performed for the September 5 documentation alignment.

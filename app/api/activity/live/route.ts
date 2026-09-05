@@ -30,6 +30,8 @@ export async function GET() {
     let active = 0;
     let lastHour = 0;
     const activeAgentIds = new Set<string>();
+    // Per-agent activity for the live ticker wire: calls started last hour.
+    const agentCallsLastHour = new Map<string, number>();
     const seen = new Set<string>();
 
     for (const r of results || []) {
@@ -45,7 +47,8 @@ export async function GET() {
         active++;
         if (call.agent_id) activeAgentIds.add(call.agent_id);
       }
-      if (startedAt >= oneHourAgo) {
+      if (startedAt >= oneHourAgo && call.agent_id) {
+        agentCallsLastHour.set(call.agent_id, (agentCallsLastHour.get(call.agent_id) || 0) + 1);
         lastHour++;
       }
     }
@@ -54,6 +57,11 @@ export async function GET() {
       active,
       lastHour,
       activeAgentIds: Array.from(activeAgentIds),
+      agentActivity: Array.from(agentCallsLastHour.entries()).map(([id, calls]) => ({
+        id,
+        calls,
+        active: activeAgentIds.has(id),
+      })),
     });
   } catch (err: any) {
     console.error('[activity/live] error:', err);

@@ -22,16 +22,66 @@ const TAPE: Array<{ sym: string; price: string; delta: string; up: boolean }> = 
   { sym: 'WEST UNION', price: '73⅜', delta: '-⅝', up: false },
 ];
 
-export function TickerTape() {
+export interface TapeLiveQuote {
+  id: string;
+  name: string;
+  /** Calls started in the last hour (real data from /api/activity/live). */
+  calls: number;
+  /** Broker currently has an active call. */
+  active: boolean;
+}
+
+/**
+ * OdometerText — each character flips in once on mount (CSS `odometer-flip`),
+ * staggered left-to-right like a mechanical counter settling. Runs once;
+ * disabled under prefers-reduced-motion via CSS.
+ */
+function OdometerText({ text, delay = 0 }: { text: string; delay?: number }) {
+  return (
+    <span className="tabular-nums" aria-label={text}>
+      {text.split('').map((ch, i) => (
+        <span
+          key={`${i}-${ch}`}
+          className="odometer-digit"
+          style={{ animationDelay: `${delay + i * 45}ms` }}
+          aria-hidden="true"
+        >
+          {ch}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function TickerTape({ live }: { live?: TapeLiveQuote[] }) {
+  const liveQuotes = (live ?? []).filter(q => q.active || q.calls > 0).slice(0, 6);
   return (
     <div className="ticker-tape" role="marquee" aria-label="Yesterday's closing quotations">
       <div className="ticker-tape__track">
         {[0, 1].map((copy) => (
           <div className="ticker-tape__group" key={copy} aria-hidden={copy === 1}>
+            {liveQuotes.length > 0 && (
+              <span className="ticker-tape__quote ticker-tape__quote--live-header">
+                <span className="ticker-tape__sym">● LIVE WIRE</span>
+              </span>
+            )}
+            {liveQuotes.map((q) => (
+              <span className="ticker-tape__quote" key={`${copy}-live-${q.id}`}>
+                <span className="ticker-tape__sym">{q.name.toUpperCase()}</span>
+                <span className="ticker-tape__price">
+                  <OdometerText text={String(q.calls)} delay={copy === 1 ? 400 : 0} />
+                </span>
+                <span className={`ticker-tape__delta ${q.active ? 'is-up' : ''}`}>
+                  {q.active ? '● ON THE LINE' : '/ HR'}
+                </span>
+              </span>
+            ))}
             {TAPE.map(({ sym, price, delta, up }) => (
               <span className="ticker-tape__quote" key={`${copy}-${sym}`}>
                 <span className="ticker-tape__sym">{sym}</span>
-                <span className="ticker-tape__price">{price}</span>
+                <span className="ticker-tape__price">
+                  <OdometerText text={price} delay={(copy === 1 ? 400 : 0) + 600} />
+                </span>
                 <span className={`ticker-tape__delta ${up ? 'is-up' : 'is-down'}`}>
                   {up ? '▲' : '▼'} {delta}
                 </span>

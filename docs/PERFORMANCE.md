@@ -1,137 +1,62 @@
 # Performance Notes
 
-## Current hot spots
+**Scope:** Source-based implementation notes and verification priorities, updated 2026-09-05. These are not measured performance results.
 
-After the directory rewrite and live-activity ticker, the perf-sensitive
-surfaces are:
+[Product Direction](PRODUCT_DIRECTION.md) sets the priority: facilitate intended trades through a responsive desk. [ROADMAP.md](../ROADMAP.md) owns sequencing. Optimize time to a valid quote, clear review, reliable execution, and verified outcome—not time spent reading or talking. Publications, ranking, and the scene must not sit on the critical trading path.
 
-1. **Marketplace directory** (`components/DiscoverTab.tsx` + `components/DirectoryRow.tsx`)
-2. **Active call** (`components/ActiveCall.tsx` + the cost ticker)
-3. **Live activity polling** (`components/LiveActivity.tsx` + `/api/activity/live`)
+## Priorities for the client journey
 
-The patterns below are what the codebase actually relies on to keep
-these fast.
+1. **Arrival:** render direct instrument/intent entry and actual coverage/mode without waiting for letters, personalization, activity, or decorative media.
+2. **Preparation:** resolve product/account/access and obtain a valid quote promptly; keep voice permission/connection honest and cancellable. Separate provider latency from UI and scene work.
+3. **Review:** keep quote validity, terms, fees, account, and explicit authorization stable and responsive. Content refresh must not move controls or silently replace reviewed terms.
+4. **Execution and outcome:** submit once, track real adapter/venue/chain states, and reconcile the position and receipt. Measure quote-to-submission latency without weakening expiry or approval checks. Call settlement is separate.
+5. **Return:** recover verified orders/positions and pending intents without replaying an introduction or requiring content consumption.
 
----
+Establish measured baselines and budgets before adding substantial imagery, ambience, or dimensional rendering. Record the device, network, build mode, scenario, and result. No numerical improvement or release claim should be inferred from the existence of an optimization.
 
-## 1. Marketplace directory
+## Current source map
 
-### Staggered reveal
-
-`DirectoryRow` has a `revealDelay` prop. `DiscoverTab` passes
-`Math.min(idx, 8) * 70` so the first 9 rows animate in over ~600ms
-and rows past 9 are not staggered (capped to prevent long delays on
-large directories).
-
-```tsx
-// components/DiscoverTab.tsx
-{agents.map((agent, idx) => (
-  <DirectoryRow
-    key={agent.id}
-    agent={agent}
-    revealDelay={Math.min(idx, 8) * 70}
-    ...
-  />
-))}
-```
-
-The animation is a CSS keyframe (`@keyframes directory-row-reveal`)
-that runs once on mount — no JS per frame, no `requestAnimationFrame`
-loop, so a 50-row directory costs the same as a 9-row one.
-
-### Dial code count-up
-
-Each row's dial code counts up from 000 to the agent's deterministic
-3-digit code on first mount, using `lib/useCountUp.ts`. The hook uses
-a single `requestAnimationFrame` per row, 720ms duration, easeOutCubic.
-For large directories this would be N concurrent RAFs — fine for the
-current ~5 agents, but if the directory grows past ~20, the count-up
-should be replaced with a CSS-only clip-path reveal.
-
-`useCountUp` respects `prefers-reduced-motion` and short-circuits to
-the final value if the user opts out.
-
-### Search debouncing
-
-`app/page.tsx` debounces search and category changes together with a
-300ms timer. Without the debounce, every keystroke triggers a SWR
-refetch against `/api/agents`. The debounce + `page` reset (back to 1)
-are co-located in one `useEffect` to avoid split-state.
-
----
-
-## 2. Active call
-
-### Live cost ticker
-
-`components/CostPanel.tsx` animates a progress bar and a status
-message on every tick (typically once per second). The animation is
-CSS-driven (`transition: width 0.4s ease, background-position 0.4s ease`),
-and the status messages use `AnimatePresence mode="wait"` to crossfade
-when the threshold (low / critical / empty) changes — this avoids
-the FLIP-style layout shift you'd get from `v-if`-ing them in place.
-
-The ticker never causes a re-render of `ActiveCall` itself — it's a
-memoized child that receives `liveCost` as a prop.
-
-### Transcript rendering
-
-Transcripts come from the ElevenLabs webhook (`app/api/webhooks/elevenlabs/route.ts`)
-and are streamed to the client via SWR. The `ActiveCall` component
-debounces the transcript fetch to 2s so a long call doesn't hammer
-the API on every transcript chunk.
-
----
-
-## 3. Live activity polling
-
-`LiveActivity` and `DiscoverTab` both poll `/api/activity/live` every
-30 seconds. The endpoint is a single Redis pipeline fetch of
-`call_index:all` followed by `hgetall` for each session — no
-aggregation work, no sorted-set updates, no per-call write amplification.
-
-The 30s interval is a tradeoff: shorter feels more "live" but
-generates more API traffic and Redis reads. 30s is the right default
-for the directory ticker; if the product grows a chatty "5 people
-are calling right now" feature, the interval should drop to 10s
-and the endpoint should cache for 5s at the edge.
-
-The component **fails soft**: if the fetch errors, the ticker just
-stays hidden. We never block the marketplace on the activity
-endpoint.
-
----
-
-## Patterns we use to keep things fast
-
-| Pattern | Where | Why |
+| Surface | Current mechanism | Caveat or next verification |
 |---|---|---|
-| `React.memo` on list items | `DirectoryRow`, `Stars`, `AgentCardSkeleton` (when used) | Prevents re-renders when a sibling row's state changes |
-| `useMemo` for derived data | Directory counts, persona lookups in `lib/agent-personas.ts` | Avoids recomputing on every render |
-| `useCallback` on event handlers | `onSelect`, `onVoicePreview`, `onLoadMore` | Stable references so memoized children don't re-render |
-| Single-poll, multi-consumer | `LiveActivity` and `DiscoverTab` both read the same endpoint on independent intervals | Simpler than a shared SWR cache; refresh is cheap |
-| `AnimatePresence mode="wait"` | Cost panel status messages, onboarding steps | Crossfade without layout shift |
-| `transition` not `animation` | Directory row hover, cost bar, header wallet chip | GPU-accelerated, easier to interrupt |
+| Initial page | `app/page.tsx` renders `WorkingDesk` directly. No global wallet/widget providers, onboarding, directory or call meter are mounted. | Verify the normal root entry, not only an alternate preview route. No measured speed improvement is claimed from source changes alone. |
+| Trade preparation | `useTradingDesk` coordinates explicit requests with aborts and stale-response guards; `TradeTicket` owns the review surface. | No quote request before an explicit action. Recheck expiry at save even if background timers were throttled. |
+| Rendering | `DeskInstrument` dynamically imports Three.js; the form and records remain HTML. Production styles are separate from the development study. | Rendering must not block preparing or reviewing an instruction; verify reduced-motion, hidden state, fallback and cleanup. |
+| Return visits | `PaperHistory` reads only browser-local paper records; no directory/activity polling is required. | Storage failures are visible; paper records must not appear as real positions or cross-device memory. |
+| Voice | Optional browser dictation feeds the shared draft. The old widget and provider scripts are not loaded by the root layout. | Actual broker conversation and authenticated tool events are pending integration, not hidden active services. |
 
----
+## Engineering constraints
 
-## Patterns we explicitly avoid
+- Keep background activity and decorative assets off the critical path; nonessential failures should not block the desk.
+- Stop unnecessary media and update loops when hidden or unmounted. Keep one voice session and clean up its capture/listeners explicitly.
+- Prefer event-driven transform/opacity transitions where motion adds information. `transition` alone does not guarantee compositor execution; width and layout changes need measurement.
+- Keep reduced-motion and ambience-off modes complete. Do not require animation completion before controls become usable.
+- Reserve stable space for changing status, amounts, and working records. Preserve readable rates/caps on mobile rather than hiding them to fit the layout.
+- Treat data freshness separately from caching success. Stale quotes, delayed transcripts, and unavailable activity need appropriate labeling.
+- Use memoization only where profiling justifies it; do not claim constant rendering cost for larger lists or zero parent re-renders without evidence.
 
-- **Skeleton-card grids** — replaced with a single "switchboard warming up" placeholder (`components/Skeletons.tsx`). One moment is more memorable than five.
-- **Per-frame JS animations** — count-up and stagger are CSS-driven or RAF-throttled. The only `requestAnimationFrame` in the codebase is in `useCountUp`, and it's debounced to the row's mount.
-- **Real-time revalidation on tab focus** — would re-trigger the directory's 300ms-debounced search fetch every time the user tabs back. Disabled in `app/page.tsx`.
-- **Long polling / WebSocket for activity** — overkill for a 30s ticker; the poll is two HTTP requests per minute per tab.
+## Target adaptive and publishing surfaces
 
----
+These are planned requirements, not capabilities of the current use-case ranking or `/desk-study`.
 
-## Monitoring
+- Render a stable default desk and the selected edition without waiting for personalization or optional news. Keep an unavailable-data state rather than invent a morning letter or quote.
+- Cache shared publication editions by version and entitlement. Scope private context and personalized views to the correct client; privacy boundaries take precedence over cache reuse.
+- Batch quote/headline updates at a cadence appropriate to the data contract and visible surfaces. Do not rebuild the 3D scene or rerank the whole desk on every tick.
+- Preserve the current reading passage, keyboard focus, pinned work, and confirmation ticket while background relevance changes. Announce significant corrections/staleness without streaming every market tick to assistive technology.
+- Expiry and permission checks remain authoritative even when UI refresh is throttled. A visible old quote must not remain actionable because the desk is idle or hidden.
+- Suspend optional news polling and rendering when appropriate; revalidate freshness on return. Do not let cached "why shown" reasons survive deleted history or revoked consent.
+- Measure first letter readability, passage-to-conversation context transfer, update latency, and return-to-work correctness alongside load/render cost. No optimization for sensational click-through or paid-minute consumption.
 
-The repo doesn't ship a perf-monitoring integration. Recommended
-additions when scale demands them:
+## Verification
 
-- **Vercel Analytics** for web vitals on the Vercel deployment
-- **A lightweight `/api/health` probe** that returns p50/p95 latency
-  for the Upstash read path (would need to be added to the API
-  surface, currently absent)
-- **React DevTools Profiler** to find re-render hot spots during
-  development
+For implementation changes, use the relevant `pnpm test`, `pnpm typecheck`, and `pnpm exec next build --webpack` commands, then perform scoped runtime checks when authorized. The direct build avoids destructive standalone postbuild cleanup; the existing `pnpm lint` configuration limitation is documented in the README. Development compilation time is not production load performance.
+
+Measure and inspect:
+
+- First usable arrival and call action on representative desktop and mobile devices/networks.
+- Microphone permission, connection latency, cancel/retry, and transport failure.
+- Input responsiveness, audio quality, and render activity during conversation.
+- Actual cap termination and delayed transcript/work-record/payment states.
+- Layout shifts, contrast, keyboard focus, narrow-screen overflow, reduced motion, and muted ambience.
+- Return-to-work latency and correctness, with missing or stale records included.
+
+Basic failure visibility belongs in beta. Choose monitoring and telemetry from the questions above, avoid recording sensitive conversation content by default, and set performance targets from measurements. Provider/runtime checks are described in [Voice Transport](WIDGET_ARCHITECTURE.md); safe read-only retry behavior is described in [Error Resilience](ERROR_RESILIENCE.md).

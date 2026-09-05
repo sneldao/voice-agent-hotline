@@ -11,7 +11,7 @@ The active payment model is **x402 USDC on Arbitrum** with gasless
 settlement via the 1Shot Permissionless Relayer — see
 `lib/payment-settlement.ts` and `app/api/payments/`. This is the
 documented model in `docs/AGENTIC_ARCHITECTURE.md#payment-flow` and
-is what every call settles through.
+is the paid-call settlement path, not a charge on eligible trial calls or a guarantee that every settlement succeeds. Call payments are separate from paper-trade instructions.
 
 ## Why the Streaming Path Was Removed
 
@@ -49,10 +49,6 @@ Removed in this cleanup:
 - The `paymentMode === 'streaming'` / `streamingPreflight` branches
   in `ActiveCall.tsx`
 
-## If You Want Streaming Back
+## Future payment changes are gated
 
-If the product needs subscription or continuous-stream use cases
-later, the right move is not to revive the deleted code. The x402
-model already supports per-call micro-billing; adding a session-key /
-delegated-streaming layer on top of x402 (or pulling in a 2025+
-protocol like Superfluid's SuperVNet) is the cleaner path.
+This is a historical implementation note, not a proposal to reintroduce streaming or subscriptions. [Product Direction](PRODUCT_DIRECTION.md) prioritizes a useful relationship with Hetty, not longer calls or protocol breadth. [ROADMAP.md](../ROADMAP.md) defines the gate: demonstrate a concrete client or operational need, then separately review consent, caps, settlement correctness, and complexity before selecting an approach. Do not revive removed integrations as a default next step.

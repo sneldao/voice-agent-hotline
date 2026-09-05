@@ -362,10 +362,10 @@ export function ActiveCall({
 
   return (
     <div className="switchboard-shell fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-[#0b0806]">
-      <div className="w-full border-b border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl">
+      <div className="brass-edge w-full border-b border-amber-100/15 bakelite-panel">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between p-4">
           <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-amber-100/25 bg-red-950/45">
+          <div className="brass-ring flex h-10 w-10 items-center justify-center rounded-full">
             <span className="text-lg">{agent.avatar || agent.name.charAt(0)}</span>
           </div>
           <div>
@@ -426,7 +426,7 @@ export function ActiveCall({
 
         {/* Transcript — collapsed by default; tap to expand. Collapsed shows
             the latest line so users know talking is being registered. */}
-        <div className="mb-4 w-full max-w-md rounded-xl border border-amber-100/15 bg-[#17100d]/85">
+        <div className="bakelite-panel mb-4 w-full max-w-md rounded-xl">
           <button
             type="button"
             onClick={() => setTranscriptOpen(o => !o)}
@@ -448,12 +448,11 @@ export function ActiveCall({
           </button>
           {transcriptOpen ? (
             <div id="call-transcript" className="h-48 overflow-y-auto border-t border-amber-100/10 p-4">
-          {/* TODO: Wire the ElevenLabs webhook (app/api/webhooks/elevenlabs/) to an SSE or
-              WebSocket endpoint so the frontend receives transcript chunks in real time during
-              the call, rather than only after it ends. */}
+          {/* Live transcripts stream via /api/transcripts (SSE) when the
+              ElevenLabs webhook relays transcript events for this call. */}
           {transcripts.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">
-                Live transcript unavailable during this call. Check call history for the full transcript after the call ends.
+                The line is quiet — start talking and the transcript will print here. A full transcript is also saved to call history.
               </p>
             ) : (
               transcripts.map((t, i) => (
@@ -508,7 +507,7 @@ export function ActiveCall({
       </div>
 
       {/* Controls */}
-      <div className="w-full border-t border-amber-100/15 bg-[#120d0a]/92 backdrop-blur-xl">
+      <div className="brass-edge bakelite-panel w-full border-t border-amber-100/15">
         <div className="mx-auto w-full max-w-2xl p-6">
         <div className="flex items-center justify-center gap-4">
           <button

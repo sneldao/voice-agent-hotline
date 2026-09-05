@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { PhoneCall, Wallet, LogOut, ChevronDown, Radio, Sparkles, BarChart3, Mic, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { TickerTape } from '@/components/TickerTape';
+import { TickerTape, type TapeLiveQuote } from '@/components/TickerTape';
 
 interface HeaderProps {
   connected: boolean;
@@ -14,6 +14,8 @@ interface HeaderProps {
   onDisconnect?: () => void;
   /** Navigate to the Profile tab (used by the Interests dropdown item) */
   onNavigateToProfile?: () => void;
+  /** Real broker activity for the live ticker wire (from /api/activity/live). */
+  tapeLive?: TapeLiveQuote[];
 }
 
 export function Header({
@@ -24,6 +26,7 @@ export function Header({
   onConnect,
   onDisconnect,
   onNavigateToProfile,
+  tapeLive,
 }: HeaderProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -144,7 +147,7 @@ export function Header({
         </div>
       </div>
       {/* Period ticker tape — ambient quotes, pure CSS marquee */}
-      <TickerTape />
+      <TickerTape live={tapeLive} />
     </header>
   );
 }

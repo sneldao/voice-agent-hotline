@@ -157,6 +157,22 @@ export function CallSummary({
     <div className="fixed inset-0 z-50 bg-[#0b0806]/95 backdrop-blur-sm overflow-y-auto">
       <div className="min-h-screen p-4">
         <div className="max-w-2xl mx-auto">
+          {/* Ticker-tape receipt — the call prints out like a wire strip */}
+          <div className="tape-receipt rounded-sm mb-6" role="status" aria-label="Call receipt">
+            <div className="tape-receipt__strip font-mono text-[11px] uppercase tracking-[0.14em] text-amber-100/80">
+              <span className="text-amber-300">CLAFLIN &amp; CO</span>
+              <span>CALL Nº {String(callId || '0000').slice(-6).toUpperCase()}</span>
+              <span>{agent.name.toUpperCase()}</span>
+              <span>
+                {Math.floor(duration / 60)}M {duration % 60}S
+              </span>
+              <span className="text-amber-200">${cost.toFixed(4)}</span>
+              <span className={status === 'settled' || status === 'free' ? 'text-emerald-300' : 'text-amber-300'}>
+                {status === 'settled' ? '✓ SETTLED ON ARBITRUM' : status === 'free' ? '✓ NO CHARGE' : status === 'processing' ? '… SETTLING' : '— PENDING'}
+              </span>
+            </div>
+          </div>
+
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">

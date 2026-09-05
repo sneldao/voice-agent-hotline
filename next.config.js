@@ -76,6 +76,21 @@ const nextConfig = {
     };
   },
 
+  // Retired marketplace/directory/voice pages all fold back to Hetty's desk.
+  // (Pages are deleted; this keeps any old bookmarks/external links from 404ing.)
+  async redirects() {
+    return [
+      { source: '/admin/:path*', destination: '/', permanent: true },
+      { source: '/broker/:id', destination: '/', permanent: true },
+      { source: '/dashboard', destination: '/', permanent: true },
+      { source: '/demo', destination: '/', permanent: true },
+      { source: '/list-your-broker', destination: '/', permanent: true },
+      { source: '/marketplace', destination: '/', permanent: true },
+      { source: '/profile', destination: '/', permanent: true },
+      { source: '/widget-probe', destination: '/', permanent: true },
+    ];
+  },
+
   // Webpack configuration to suppress third-party warnings and handle client-only modules
   webpack: (config, { isServer }) => {
     // Mark client-only modules as external on server to prevent bundling during SSR

@@ -12,10 +12,20 @@ import { useEffect, useState } from 'react';
  * in background tabs, instant refresh on return).
  */
 
+export interface AgentActivity {
+  id: string;
+  /** Calls started in the last hour. */
+  calls: number;
+  /** Broker currently has an active call. */
+  active: boolean;
+}
+
 export interface LiveActivityData {
   active: number;
   lastHour: number;
   activeAgentIds: string[];
+  /** Per-agent call counts for the live ticker wire (optional for back-compat). */
+  agentActivity?: AgentActivity[];
 }
 
 const POLL_INTERVAL_MS = 30_000;

@@ -196,11 +196,20 @@ export async function POST(request: Request) {
           getSignedUrl(elevenLabsAgentId),
         ]);
 
+        // Attach our callId as a dynamic variable so the ElevenLabs webhook
+        // can echo it back on transcript events — this is the bridge that
+        // lets the frontend's SSE subscription (/api/transcripts?callId=…)
+        // receive live transcripts keyed by OUR call id, not ElevenLabs'
+        // conversation id. Unknown params are ignored by ElevenLabs.
+        const bridgedSignedUrl = `${signedUrl}${
+          signedUrl.includes('?') ? '&' : '?'
+        }dynamic_vars=${encodeURIComponent(JSON.stringify({ claflin_call_id: callId }))}`;
+
         return Response.json({
           type: 'token',
           callId,
           token,
-          signedUrl,
+          signedUrl: bridgedSignedUrl,
           elevenLabsAgentId,
           connectionType: 'webrtc',
           voiceId,

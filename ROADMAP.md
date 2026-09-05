@@ -1,100 +1,83 @@
 # Claflin Roadmap
 
-## Current Status: Hetty Beta
+**Updated: 2026-09-05.** The old directory/onboarding product is retired. Claflin is a curated, trade-first brokerage house with one coherent client desk. There are no existing-user or collaborator requirements to preserve the former experience.
 
-The core voice loop is complete and honest. All payment flows settle real USDC on Arbitrum. All revenue splits are ledgered accurately. No fake features remain. The product is now focused on one thing: **voice-native tokenized stock trading with a confirmation layer**, starting with the first broker, **Hetty**.
+[Product Direction](docs/PRODUCT_DIRECTION.md) owns the experience. [Architecture](docs/AGENTIC_ARCHITECTURE.md) owns contracts and integration evidence. This roadmap owns sequencing and release gates.
 
-### What works today
+## Current product
 
-| Capability | Status |
+- `/` is Hetty's desk. `/desk` is an alias, not a second product. Former marketplace, demo, profile, dashboard, broker-profile, listing and admin pages redirect to `/`.
+- No onboarding wizard, broker questionnaire, directory, ratings, streaks or free-call funnel is mounted. Root rendering does not initialize wallets, voice widgets, use-case personalization or call billing.
+- The desk has an empty initial stock/amount, a concise house introduction, explicit paper mode, a trade ticket and local paper history. Product, price-source and simulation details are disclosed in context.
+- Manual input and optional dictated/typed instructions update the same draft. Browser dictation is not a Hetty conversation. The authenticated broker-tool bridge is not implemented.
+- Read-only Aerodrome estimates use `MixedRouteQuoterV3`, the verified factory selector and canonical USDC pool identities. Buy amounts are USDC spend; sell amounts are token quantity. Amount math uses strings and integers.
+- The workflow supports review, edits, expiry, refresh, cancellation and explicit recording of simulated outcomes in browser-local storage. No wallet signing, account eligibility, order submission or real position reconciliation is implemented.
+- Public broker discovery/listing and ratings APIs return 410 through the routing layer. Former provider/settlement modules remain source infrastructure, not the product's identity or navigation model. No database deletion was performed.
+- `/desk-study` and `/widget-probe` are development references only and return not-found in production.
+
+## Immediate opportunity
+
+The user supplied Base's September 2 Builder Quest announcement for projects helping people trade or use Coinbase Tokenized Stocks on Base, with a $5,000 prize pool and Loom/X plus form submission. Confirm current terms, deadline and permitted demo modes before submitting. The quest motivates a coherent working demonstration; it does not justify fabricated execution or a return to marketplace breadth.
+
+## 1. Finish the first useful client journey
+
+**Implemented foundation:** canonical root entry; house-first copy and navigation; four configured paper-quote candidates; exact-input estimates; explicit review and local paper records.
+
+Remaining acceptance work:
+
+- Review the normal first visit, return visit, unavailable quote and expired review against the desired quality—not only component styling.
+- Verify understandable product/unit distinctions, keyboard/mobile/reduced-motion behavior and actionable error recovery.
+- Keep essential state stable; background updates must not replace the instrument, amount or terms under review.
+- Measure user comprehension and intent-to-reviewed-estimate friction. Do not measure success by paid minutes, onboarding completion or trading frequency.
+
+**Exit evidence:** a client reaches useful work without a tour and can explain the product, amount, paper status, estimate and recorded result. Automated checks supplement rather than substitute for product acceptance.
+
+## 2. Connect Hetty to the shared instruction
+
+- Implement a structured, authenticated tool/event bridge from the voice provider into the same trading service and draft model.
+- Let Hetty clarify intent and explain the actual returned estimate. Web search is research context, never the pricing source.
+- Preserve microphone consent, clear call terms and actual transport state. Do not reintroduce the old call funnel or automatically launch calls from query parameters.
+- Keep broker identity/mandate in the house model, provider IDs in integration configuration, and trading authority outside the prompt.
+- Reuse existing voice infrastructure only where verified; do not reproduce its old UI or claim post-call transcripts are live tool events.
+
+**Exit evidence:** speaking and manual editing manipulate the same instruction; revisions invalidate review; provider failures cannot fabricate quotes or approval. Dictation alone does not satisfy this milestone.
+
+## 3. Establish account access and transaction preparation
+
+- Decide the client wallet/account and funding model, and the applicable eligibility policy for Coinbase Tokenized Stocks.
+- Verify the execution router against the actual factory and selected pools. The historical router constant is not execution acceptance evidence.
+- Bind a proposal to product, account, chain, side, exact amounts, fee/slippage bounds and validity. Separate token allowances from swap authorization.
+- Check account-specific token policy/pauses, balances and required permissions. Observe corporate-action/multiplier changes consistently.
+- Add deterministic and appropriate test-environment fixtures for rejection, wrong chain, stale data, expiry, changed terms and failed simulation.
+
+**Exit evidence:** an exact, independently reviewable transaction proposal with no silent account switch, bridging or reused authority. No funds move during preparation.
+
+## 4. Release controlled live trading
+
+- Complete product/access/compliance and security review for the selected products, users, venues and limits.
+- Validate user authorization, submission, duplicate prevention and reconciliation in an explicitly approved live setup.
+- Distinguish acknowledged, pending, filled, reverted, rejected, expired and unknown outcomes; reconcile ambiguity before retrying.
+- Establish monitoring, incident/disable controls and client recovery paths. Call-payment receipts remain separate from trade receipts.
+
+**Exit evidence:** authorized transactions reconcile to venue/chain evidence and actual balances. Paper or testnet success alone does not establish live readiness.
+
+## 5. Add supporting depth and specialist desks
+
+Research, reviewed market letters, saved interests and explainable adaptation support trade discovery and understanding. They are not required reading before a direct instruction. Avoid a CMS, infinite news feed or autonomous thematic basket project ahead of reliable trading.
+
+| Desk | Sequence and gate |
 |---|---|
-| Voice calls via ElevenLabs Conversational AI | Live |
-| Per-minute billing in USDC on Arbitrum | Live |
-| On-chain settlement via 1Shot relayer | Live |
-| 80/20 platform/broker revenue split (Redis ledger) | Live |
-| Trial calls (2-min, server-tracked, one per IP) | Live |
-| Broker self-registration + admin review | Live |
-| Broker earnings dashboard with per-call breakdown | Live |
-| ERC-8004 identity minting (Arbitrum Sepolia) | Live |
-| Admin panel with wallet-based EIP-191 auth | Live |
-| Rate limiting (Redis-backed) | Live |
-| Webhook tool routing (Firecrawl, Composio, Venice) | Live |
-| Brand, metadata, and broker-desk UX refocused on Claflin/Hetty | Done |
+| Hetty / Base | First. Coinbase Tokenized Stocks, verified products, explicit access and execution policy. |
+| Jesse Livermore / Solana | Second. Distinct instruments, signing/execution adapter and accountable handoff. |
+| Isabel Benham / Robinhood Chain | Third. Network choice settled; token rights, eligibility, venue and integration remain to be verified. |
+| Arbitrum desk | Fourth. Mandate and broker to be defined; existing billing infrastructure does not move it forward in the sequence. |
 
-### What is NOT built (and documented as such)
+Handoffs may carry permitted context, never silent transaction authority or funds. Further route options require independent product/provider verification and transparent terms. One rejected 0x NVDAc request and an Odos infrastructure error do not establish a universal aggregator prohibition.
 
-| Gap | Status | Why |
-|---|---|---|
-| Real-money order execution / broker integrations | Phase B — requires regulated brokerage or Coinbase Advanced Trade APIs | Paper-trading intent capture first; real money only after compliance + execution review |
-| Atomic on-chain 80/20 split | Phase B — requires PaymentRouter contract | Redis ledger is accurate; manual withdrawal works for current volume |
-| Auto-approve broker listing | Not built — manual review is intentional for quality control | Curated desk during beta |
-| Multi-broker marketplace beyond Hetty | Planned | Benham, Woodhull, and Claflin Concierge are planned personas |
-| Phone number inbound (PSTN) | Not built — requires telephony provider | Future channel once voice UX is proven |
-| Monitoring / observability | Not built | Premature without production traffic patterns |
-| Load testing | Not built | Premature without production traffic patterns |
+## Not backlog
 
----
+Do not revive open broker registration, marketplace rankings, personality quizzes, calling streaks, per-minute discovery, the old onboarding wizard or migration work for nonexistent legacy users. Preserve useful code selectively, not the old product structure.
 
-## Phase 0–4 (Complete)
+## Verification and evidence
 
-### Phase 0 — Honesty Baseline
-- README and architecture docs updated to clarify 80/20 split is ledgered, not on-chain
-- All "fake" features either removed or labeled honestly
-
-### Phase 1 — Correct Money
-- Billing cap enforcement: `min(elapsed * rate, cap)` with auto-termination
-- SSOT consolidation: all hardcoded chain IDs, USDC addresses, fee constants replaced with imports from `lib/arbitrum-chain.ts` and `lib/fees.ts`
-- Dead code deletion: ~3,400 lines (PaymentFlow, intent-architecture, reputation-staking, 4 fake API routes)
-- Settle route secured with EIP-191 wallet signature verification
-- Skills honest refusal: BookingSkill.cancel and OrderingSkill.track return honest errors instead of fake success
-
-### Phase 2 — Operator UX Coherence
-- AgentPreviewSheet restyled to broker-desk amber theme
-- Billing explainer: cap → talk → approve exact USDC → tx hash
-- Voice preview theater fixed: HEAD-probes audio files before showing play button
-
-### Phase 3 — Architecture Consolidation
-- In-memory rate limiter replaced with Redis-backed `RedisRateLimiter`
-- Payment entrypoint unified: `lib/payments/index.ts` reexports settlement only
-- Redis key naming conventions documented (`docs/REDIS_KEYS.md`)
-
-### Phase 4 — Real Two-Sided Utility
-- Trial calls: server-side tracking via `/api/free-call` (IP fingerprint, 30-day TTL, 2-min cap)
-- Earnings breakdown: `/api/agents/earnings` reads split-payment ledger per call, dashboard shows per-call breakdown
-- Admin wallet auth: EIP-191 signature verification for approve/reject/delete
-
-### Phase 4b — Brand Refocus
-- Product renamed from VOISSS to **Claflin**
-- First broker persona defined: **Hetty** — conservative, confirmation-first, tokenized-stock specialist
-- App metadata, manifest, layout, README, and error/copy surfaces updated to Claflin/Hetty
-- `app/list-your-agent` reorganized to `app/list-your-broker`
-- `/api/agents` still the canonical API; user-facing copy refers to brokers
-
----
-
-## Next: Hetty Beta (Current Priority)
-
-**Pause building. Get 5-10 real users through the full flow:**
-1. Open broker desk → call Hetty → paper-trade a tokenized stock → confirm by voice
-2. Get 2-3 real broker candidates registered and approved
-3. Watch where they get stuck, what they complain about, what they try that doesn't work
-4. Fix those things
-5. Then decide whether real-money execution or multi-broker scale is the right next investment
-
----
-
-## Phase 5 — Scale (After Beta)
-
-Informed by real traffic patterns:
-- Redis-backed session management at scale
-- Additional broker personas: Benham (research), Woodhull (growth/momentum), Claflin Concierge (routing)
-- Optional regulated brokerage integration for real-money US stock execution
-- PaymentRouter contract for atomic 80/20 split
-
----
-
-## Opportunities under evaluation
-
-- **Coinbase / Robinhood / Alpaca API layer** for paper → real-money graduation
-- **Base migration** for lower-cost settlement after execution is proven
-- **ERC-8004 reputation & delegation market** for broker discovery and user delegation
+The preceding paper slice passed unit/type/build checks and mocked browser lifecycle checks, with a separate read-only mainnet estimate. The cutover adds source/route/identity regression checks and HTTP verification; no browser automation is required for this pass. Neither set of checks claims a validated live voice or trading release.

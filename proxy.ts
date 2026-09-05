@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isRetiredMarketplaceApi } from './lib/house';
 
 /**
  * Central CORS layer for every /api/* route.
@@ -60,6 +61,13 @@ export function proxy(request: NextRequest) {
   // is down, otherwise the browser masks the real outage as a CORS error.
   if (request.method === 'OPTIONS') {
     return applyCorsHeaders(request, new NextResponse(null, { status: 204 }));
+  }
+
+  if (isRetiredMarketplaceApi(request.nextUrl.pathname)) {
+    return applyCorsHeaders(request, NextResponse.json(
+      { error: 'marketplace_retired', message: 'Claflin is a curated brokerage house. Public broker listing, marketplace discovery, and ratings have been retired.' },
+      { status: 410, headers: { 'Cache-Control': 'no-store' } },
+    ));
   }
 
   const response = NextResponse.next();

@@ -338,15 +338,31 @@ export async function POST(req: NextRequest) {
           isFinal: is_final !== false,
         };
 
-        // Store in Redis for persistence
+        // Store in Redis for persistence. RPUSH (oldest first) — the SSE
+        // endpoint streams entries by index (llen/lrange) and assumes
+        // chronological order; LPUSH here previously inverted it.
         const { redis } = await import('@/lib/redis');
         const key = `transcript:${conversation_id}`;
-        await redis.lpush(key, JSON.stringify(transcriptData));
-        // Keep last 100 transcript segments per conversation
-        await redis.ltrim(key, 0, 99);
+        const payload = JSON.stringify(transcriptData);
+        await redis.rpush(key, payload);
+        await redis.expire(key, 3600); // transcripts only matter during/just after the call
 
         // Publish to Redis pub/sub for real-time SSE streaming
-        await redis.publish(`transcript:${conversation_id}`, JSON.stringify(transcriptData));
+        await redis.publish(key, payload);
+
+        // Dual-key write: if the call carried our own claflin_call_id (passed
+        // to ElevenLabs as a dynamic variable in the signed URL), also stream
+        // under that key so the frontend's SSE subscription receives it.
+        const claflinCallId =
+          body.claflin_call_id ||
+          body.dynamic_vars?.claflin_call_id ||
+          body.data?.dynamic_vars?.claflin_call_id;
+        if (typeof claflinCallId === 'string' && claflinCallId) {
+          const aliasKey = `transcript:${claflinCallId}`;
+          await redis.rpush(aliasKey, payload);
+          await redis.expire(aliasKey, 3600);
+          await redis.publish(aliasKey, payload);
+        }
 
         console.log(`[ElevenLabs Webhook] Transcript event for ${conversation_id}: "${String(text).slice(0, 50)}..."`);
       }
