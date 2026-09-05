@@ -2,11 +2,13 @@
 
 import type { useTradingDesk } from '@/lib/trading/useTradingDesk';
 import { estimateUsable } from '@/lib/trading/workflow';
+import { useReviewClock } from '@/lib/trading/useReviewClock';
 import styles from './WorkingDesk.module.css';
 
 export function HettyStatus({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
-  const { state, now } = desk;
+  const { state } = desk;
   const quote = state.quote;
+  const now = useReviewClock(state.stage === 'review');
   const expired = quote ? !estimateUsable(quote, now) : false;
   const remaining = quote ? Math.max(0, Math.ceil((quote.expiresAt - now) / 1000)) : 0;
 

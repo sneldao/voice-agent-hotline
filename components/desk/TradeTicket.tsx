@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useReviewClock } from '@/lib/trading/useReviewClock';
 import { DESK_INSTRUMENTS } from '@/lib/trading/catalog';
 import { estimateUsable } from '@/lib/trading/workflow';
 import type { TradeIntent } from '@/lib/trading/domain';
@@ -9,12 +10,13 @@ import { HouseMark } from './HouseMark';
 import styles from './WorkingDesk.module.css';
 
 export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> }) {
-  const { state, now, historyReady, error, edit, requestQuote, save, cancel } = desk;
+  const { state, historyReady, error, edit, requestQuote, save, cancel } = desk;
   const instrument = DESK_INSTRUMENTS.find(s => s.id === state.draft.instrumentId);
   const quote = state.quote;
-  const expired = quote ? !estimateUsable(quote, now) : false;
   const review = useRef<HTMLElement | null>(null);
   const recorded = state.stage === 'saved';
+  const now = useReviewClock(state.stage === 'review');
+  const expired = quote ? !estimateUsable(quote, now) : false;
   useEffect(() => { if (state.stage === 'review' || recorded) review.current?.focus(); }, [state.stage, recorded]);
   const date = (ms: number) => new Date(ms).toLocaleString();
 
