@@ -17,11 +17,13 @@ export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> 
   useEffect(() => { if (state.stage === 'review') review.current?.focus(); }, [state.stage]);
   const date = (ms: number) => new Date(ms).toLocaleString();
 
-  return <section id="instruction" className={styles.ticket} aria-labelledby="instruction-title">
+  const slipActive = Boolean(quote) && (state.stage === 'review' || state.stage === 'saved' || state.stage === 'loading');
+
+  return <section id="instruction" className={`${styles.ticket}${slipActive ? ` ${styles.quotationSlip}` : ''}`} aria-labelledby="instruction-title" data-slip={slipActive ? 'true' : 'false'}>
     <div className={styles.paperTop}>
-      <HouseMark small /><span>CLAFLIN &amp; CO.<small>HETTY’S DESK / BASE</small></span><span>01</span>
+      <HouseMark small /><span>CLAFLIN &amp; CO.<small>HETTY’S DESK / BASE</small></span><span>{slipActive ? 'SLIP' : '01'}</span>
     </div>
-    <h2 id="instruction-title">What would you like to trade?</h2>
+    <h2 id="instruction-title">{slipActive ? 'Quotation slip.' : 'What would you like to trade?'}</h2>
     <form onSubmit={e => { e.preventDefault(); void requestQuote(); }}>
       <label htmlFor="stock">Stock</label>
       <select id="stock" value={state.draft.instrumentId} required onChange={e => edit({ ...state.draft, instrumentId: e.target.value })}>
@@ -38,11 +40,11 @@ export function TradeTicket({ desk }: { desk: ReturnType<typeof useTradingDesk> 
     </form>
     {(state.stage === 'loading' || state.stage === 'review') && <button className={styles.secondary} type="button" onClick={cancel}>Cancel instruction</button>}
     {(error || state.message) && <p role={error || state.stage === 'draft' ? 'alert' : 'status'} className={styles.notice}>{error || state.message}</p>}
-    {quote && <section ref={review} tabIndex={-1} className={styles.review} aria-labelledby="review-title">
+    {quote && <section ref={review} tabIndex={-1} className={`${styles.review} ${styles.slipBody}`} aria-labelledby="review-title">
       <div className={styles.reviewHeading}><h3 id="review-title">For your review.</h3><span>{state.stage === 'saved' ? 'RECORDED / PAPER TRADE' : expired ? 'EXPIRED' : 'PAPER ESTIMATE'}</span></div>
-      <dl>
-        <div><dt>You would spend</dt><dd>{quote.inputAmount} {quote.inputSymbol}</dd></div>
-        <div><dt>You would receive</dt><dd>{quote.outputAmount} {quote.outputSymbol}</dd></div>
+      <dl className={styles.slipLedger}>
+        <div className={styles.slipHighlight}><dt>You would spend</dt><dd>{quote.inputAmount} {quote.inputSymbol}</dd></div>
+        <div className={styles.slipHighlight}><dt>You would receive</dt><dd>{quote.outputAmount} {quote.outputSymbol}</dd></div>
         <div><dt>Venue</dt><dd>Aerodrome · Base</dd></div>
         <div><dt>As of</dt><dd>{date(quote.blockTimestamp * 1000)}</dd></div>
         <div><dt>Review window</dt><dd>{state.stage === 'saved' ? 'Recorded estimate' : expired ? 'Expired — refresh to record' : <span aria-live="off">{Math.max(0, Math.ceil((quote.expiresAt - now) / 1000))}s remaining</span>}</dd></div>

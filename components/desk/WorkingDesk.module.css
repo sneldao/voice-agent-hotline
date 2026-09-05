@@ -147,3 +147,22 @@
   .fields { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .review dl > div { gap: 12px; }
 }
+
+.hettyStatus { margin-top: 22px !important; max-width: 380px; padding: 14px 16px; border-left: 2px solid var(--desk-brass); background: #0c181466; color: var(--desk-ink); font: 15px/1.55 var(--font-display), serif; }
+.hettyStatusLabel { display: block; margin-bottom: 8px; font: 9px/1 var(--font-mono), monospace; letter-spacing: .16em; color: var(--desk-brass); }
+.board { margin: 28px 0 8px; padding-top: 22px; border-top: 1px solid var(--desk-line); }
+.boardTitle { font: 26px/1.2 var(--font-display), serif !important; margin: 12px 0 14px !important; color: var(--desk-ink); }
+.boardEmpty { color: var(--desk-muted); font-size: 13px; line-height: 1.7; margin: 0 !important; }
+.boardList { list-style: none; padding: 0; margin: 0; }
+.boardList li { display: grid; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--desk-line); }
+.boardTag { font: 9px/1 var(--font-mono), monospace; letter-spacing: .14em; color: var(--desk-brass); }
+.boardList strong { font: 16px/1.35 var(--font-display), serif; font-weight: 400; color: var(--desk-ink); overflow-wrap: anywhere; }
+.boardList button { justify-self: start; border: 1px solid var(--desk-brass-dim); color: var(--desk-brass); background: transparent; padding: 10px 12px; min-height: 44px; font-size: 12px; }
+.quotationSlip { box-shadow: 6px 10px 0 #9f9478, 0 22px 60px #0006; transform: translateY(-2px); }
+.slipBody { background: #27362b08; margin-inline: -12px; padding-inline: 12px; border-radius: 0; }
+.slipLedger .slipHighlight dd { font-size: 15px; color: var(--desk-paper-ink); letter-spacing: -.01em; }
+.slipLedger .slipHighlight { padding-block: 14px; }
+.grid[data-review="true"] .instrument { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .quotationSlip { transform: none; }
+}
